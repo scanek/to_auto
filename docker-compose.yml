@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  autotracker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: autotracker
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DATA_DIR=/app/data
+      - UPLOAD_DIR=/app/data/uploads
+      - DATABASE_URL=sqlite+aiosqlite:////app/data/autotracker.db
+    volumes:
+      - autotracker_data:/app/data
+
+volumes:
+  autotracker_data:
+    driver: local
