@@ -8,6 +8,7 @@ from fastapi.responses import FileResponse
 from app.core.config import settings, UPLOAD_DIR
 from app.db.session import init_db
 from app.api import (
+    auth,
     vehicles,
     service,
     fuel,
@@ -48,6 +49,7 @@ app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 
 # Include Routers
 api_v1_prefix = settings.API_V1_STR
+app.include_router(auth.router, prefix=api_v1_prefix)
 app.include_router(vehicles.router, prefix=api_v1_prefix)
 app.include_router(service.router, prefix=api_v1_prefix)
 app.include_router(fuel.router, prefix=api_v1_prefix)

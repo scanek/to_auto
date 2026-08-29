@@ -6,6 +6,7 @@ import aiofiles
 from app.core.config import UPLOAD_DIR
 from app.db.session import get_db
 from app.models.attachment import Attachment
+from app.core.security import require_admin
 
 router = APIRouter(prefix="/uploads", tags=["Uploads"])
 
@@ -17,6 +18,7 @@ async def upload_file(
     fuel_log_id: int = Query(None),
     document_id: int = Query(None),
     db: AsyncSession = Depends(get_db),
+    admin: bool = Depends(require_admin),
 ):
     if not file.filename:
         raise HTTPException(status_code=400, detail="Имя файла не указано")

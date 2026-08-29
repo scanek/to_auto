@@ -5,6 +5,7 @@ from app.models.reminder import MaintenancePlan
 from app.models.document import DocumentNote
 from app.models.attachment import Attachment
 from app.models.tyre import TyreSet
+from app.models.setting import Setting
 
 __all__ = [
     "Vehicle",
@@ -16,4 +17,5 @@ __all__ = [
     "DocumentNote",
     "Attachment",
     "TyreSet",
+    "Setting",
 ]

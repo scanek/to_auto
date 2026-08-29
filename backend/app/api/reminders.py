@@ -1,3 +1,4 @@
+import datetime
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,6 +8,7 @@ from app.models.vehicle import Vehicle
 from app.models.reminder import MaintenancePlan
 from app.schemas.reminder import MaintenancePlanCreate, MaintenancePlanUpdate, MaintenancePlanResponse
 from app.services.reminder_service import compute_reminder_status, sync_reminder_baselines
+from app.core.security import require_admin
 
 router = APIRouter(prefix="/reminders", tags=["Maintenance Planner & Reminders"])
 
@@ -41,7 +43,12 @@ async def get_reminders(
     return responses
 
 @router.post("", response_model=MaintenancePlanResponse, status_code=status.HTTP_201_CREATED)
-async def create_reminder(payload: MaintenancePlanCreate, vehicle_id: int = Query(...), db: AsyncSession = Depends(get_db)):
+async def create_reminder(
+    payload: MaintenancePlanCreate,
+    vehicle_id: int = Query(...),
+    db: AsyncSession = Depends(get_db),
+    admin: bool = Depends(require_admin),
+):
     veh_res = await db.execute(select(Vehicle).where(Vehicle.id == vehicle_id))
     vehicle = veh_res.scalar_one_or_none()
     if not vehicle:
@@ -63,7 +70,12 @@ async def create_reminder(payload: MaintenancePlanCreate, vehicle_id: int = Quer
     return resp
 
 @router.put("/{plan_id}", response_model=MaintenancePlanResponse)
-async def update_reminder(plan_id: int, payload: MaintenancePlanUpdate, db: AsyncSession = Depends(get_db)):
+async def update_reminder(
+    plan_id: int,
+    payload: MaintenancePlanUpdate,
+    db: AsyncSession = Depends(get_db),
+    admin: bool = Depends(require_admin),
+):
     result = await db.execute(select(MaintenancePlan).where(MaintenancePlan.id == plan_id))
     plan = result.scalar_one_or_none()
     if not plan:
@@ -91,9 +103,9 @@ async def mark_reminder_done(
     odometer: float = Query(None, description="Пробег при выполнении"),
     hours: float = Query(None, description="Моточасы при выполнении"),
     db: AsyncSession = Depends(get_db),
+    admin: bool = Depends(require_admin),
 ):
     """Resets reminder to current odometer and date when completed."""
-    import datetime
     result = await db.execute(select(MaintenancePlan).where(MaintenancePlan.id == plan_id))
     plan = result.scalar_one_or_none()
     if not plan:
@@ -124,7 +136,11 @@ async def mark_reminder_done(
     return resp
 
 @router.delete("/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_reminder(plan_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_reminder(
+    plan_id: int,
+    db: AsyncSession = Depends(get_db),
+    admin: bool = Depends(require_admin),
+):
     result = await db.execute(select(MaintenancePlan).where(MaintenancePlan.id == plan_id))
     plan = result.scalar_one_or_none()
     if not plan:

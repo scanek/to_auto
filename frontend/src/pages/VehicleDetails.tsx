@@ -47,6 +47,7 @@ import { ProgressBar } from '../components/ProgressBar';
 
 interface VehicleDetailsProps {
   vehicle: Vehicle;
+  isAuthenticated: boolean;
   onBack: () => void;
   onRefreshVehicle: () => Promise<void>;
   onOpenServiceModal: (type?: 'service' | 'repair' | 'upgrade', record?: ServiceRecord) => void;
@@ -58,6 +59,7 @@ interface VehicleDetailsProps {
 
 export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   vehicle,
+  isAuthenticated,
   onBack,
   onRefreshVehicle,
   onOpenServiceModal,
@@ -314,29 +316,33 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
 
           {/* Quick Actions Buttons */}
           <div className="grid grid-cols-3 sm:flex sm:flex-wrap items-center gap-1.5 sm:gap-2">
-            <button
-              onClick={() => onOpenServiceModal('service')}
-              className="flex items-center justify-center space-x-1 bg-brand-500 hover:bg-brand-600 active:scale-95 text-white px-2.5 sm:px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-brand-500/20"
-            >
-              <Plus className="w-4 h-4 flex-shrink-0" />
-              <span>Запись ТО</span>
-            </button>
+            {isAuthenticated && (
+              <>
+                <button
+                  onClick={() => onOpenServiceModal('service')}
+                  className="flex items-center justify-center space-x-1 bg-brand-500 hover:bg-brand-600 active:scale-95 text-white px-2.5 sm:px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-brand-500/20"
+                >
+                  <Plus className="w-4 h-4 flex-shrink-0" />
+                  <span>Запись ТО</span>
+                </button>
 
-            <button
-              onClick={() => onOpenFuelModal()}
-              className="flex items-center justify-center space-x-1 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-2.5 sm:px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-600/20"
-            >
-              <Fuel className="w-4 h-4 flex-shrink-0" />
-              <span>Заправка</span>
-            </button>
+                <button
+                  onClick={() => onOpenFuelModal()}
+                  className="flex items-center justify-center space-x-1 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-2.5 sm:px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-600/20"
+                >
+                  <Fuel className="w-4 h-4 flex-shrink-0" />
+                  <span>Заправка</span>
+                </button>
 
-            <button
-              onClick={() => onOpenReminderModal()}
-              className="flex items-center justify-center space-x-1 bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-200 px-2.5 sm:px-3.5 py-2 rounded-xl text-xs font-semibold border border-slate-200 dark:border-dark-700 transition-all"
-            >
-              <CalendarClock className="w-4 h-4 text-amber-500 flex-shrink-0" />
-              <span>Регламент</span>
-            </button>
+                <button
+                  onClick={() => onOpenReminderModal()}
+                  className="flex items-center justify-center space-x-1 bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-200 px-2.5 sm:px-3.5 py-2 rounded-xl text-xs font-semibold border border-slate-200 dark:border-dark-700 transition-all"
+                >
+                  <CalendarClock className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                  <span>Регламент</span>
+                </button>
+              </>
+            )}
 
             <a
               href={`/api/v1/export/excel/${vehicle.id}`}
@@ -367,7 +373,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
             <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block mb-0.5">
               Пробег
             </span>
-            {editingOdometer ? (
+            {editingOdometer && isAuthenticated ? (
               <div className="flex items-center space-x-1 mt-1">
                 <input
                   type="number"
@@ -384,13 +390,15 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               </div>
             ) : (
               <div
-                onClick={() => setEditingOdometer(true)}
-                className="flex items-center space-x-1.5 cursor-pointer group"
+                onClick={() => isAuthenticated && setEditingOdometer(true)}
+                className={`flex items-center space-x-1.5 ${isAuthenticated ? 'cursor-pointer group' : ''}`}
               >
-                <span className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white font-mono group-hover:text-brand-500 transition-colors">
+                <span className={`text-sm sm:text-base font-extrabold text-slate-900 dark:text-white font-mono ${isAuthenticated ? 'group-hover:text-brand-500 transition-colors' : ''}`}>
                   {Math.round(vehicle.current_odometer).toLocaleString('ru-RU')} {vehicle.distance_unit}
                 </span>
-                <Edit2 className="w-3 h-3 text-slate-400 group-hover:text-brand-500 flex-shrink-0" />
+                {isAuthenticated && (
+                  <Edit2 className="w-3 h-3 text-slate-400 group-hover:text-brand-500 flex-shrink-0" />
+                )}
               </div>
             )}
           </div>
@@ -400,7 +408,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
             <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block mb-0.5">
               Моточасы
             </span>
-            {editingHours ? (
+            {editingHours && isAuthenticated ? (
               <div className="flex items-center space-x-1 mt-1">
                 <input
                   type="number"
@@ -417,13 +425,15 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               </div>
             ) : (
               <div
-                onClick={() => setEditingHours(true)}
-                className="flex items-center space-x-1.5 cursor-pointer group"
+                onClick={() => isAuthenticated && setEditingHours(true)}
+                className={`flex items-center space-x-1.5 ${isAuthenticated ? 'cursor-pointer group' : ''}`}
               >
-                <span className="text-sm sm:text-base font-extrabold text-cyan-600 dark:text-cyan-400 font-mono group-hover:text-cyan-500 transition-colors">
+                <span className={`text-sm sm:text-base font-extrabold text-cyan-600 dark:text-cyan-400 font-mono ${isAuthenticated ? 'group-hover:text-cyan-500 transition-colors' : ''}`}>
                   {Math.round(vehicle.current_engine_hours || 0)} м/ч
                 </span>
-                <Edit2 className="w-3 h-3 text-slate-400 group-hover:text-cyan-500 flex-shrink-0" />
+                {isAuthenticated && (
+                  <Edit2 className="w-3 h-3 text-slate-400 group-hover:text-cyan-500 flex-shrink-0" />
+                )}
               </div>
             )}
           </div>
@@ -486,22 +496,24 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-center space-x-1 flex-shrink-0">
-                <button
-                  onClick={() => handleSeasonSwap('summer')}
-                  className="px-2 py-1 rounded-lg text-[11px] font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 transition-all"
-                  title="Поставить летний комплект"
-                >
-                  ☀️ Лето
-                </button>
-                <button
-                  onClick={() => handleSeasonSwap('winter')}
-                  className="px-2 py-1 rounded-lg text-[11px] font-bold bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30 transition-all"
-                  title="Поставить зимний комплект"
-                >
-                  ❄️ Зима
-                </button>
-              </div>
+              {isAuthenticated && (
+                <div className="flex items-center space-x-1 flex-shrink-0">
+                  <button
+                    onClick={() => handleSeasonSwap('summer')}
+                    className="px-2 py-1 rounded-lg text-[11px] font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 transition-all"
+                    title="Поставить летний комплект"
+                  >
+                    ☀️ Лето
+                  </button>
+                  <button
+                    onClick={() => handleSeasonSwap('winter')}
+                    className="px-2 py-1 rounded-lg text-[11px] font-bold bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30 transition-all"
+                    title="Поставить зимний комплект"
+                  >
+                    ❄️ Зима
+                  </button>
+                </div>
+              )}
             </div>
 
             {activeTyre && (
@@ -543,12 +555,14 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 </div>
               </div>
 
-              <button
-                onClick={() => onOpenDocModal()}
-                className="px-2 py-1 rounded-lg text-[11px] font-bold bg-slate-200 dark:bg-dark-800 hover:bg-brand-500 hover:text-white text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-dark-700 transition-all flex-shrink-0"
-              >
-                + Полис
-              </button>
+              {isAuthenticated && (
+                <button
+                  onClick={() => onOpenDocModal()}
+                  className="px-2 py-1 rounded-lg text-[11px] font-bold bg-slate-200 dark:bg-dark-800 hover:bg-brand-500 hover:text-white text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-dark-700 transition-all flex-shrink-0"
+                >
+                  + Полис
+                </button>
+              )}
             </div>
 
             {activeInsurances.length > 0 && (
@@ -611,13 +625,15 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 История записей ({displayedServiceRecords.length})
               </span>
-              <button
-                onClick={() => onOpenServiceModal(activeTab as any)}
-                className="flex items-center space-x-1.5 text-xs font-bold text-brand-500 hover:text-brand-600 bg-brand-500/10 border border-brand-500/20 px-3 py-1.5 rounded-lg transition-colors"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Добавить запись</span>
-              </button>
+              {isAuthenticated && (
+                <button
+                  onClick={() => onOpenServiceModal(activeTab as any)}
+                  className="flex items-center space-x-1.5 text-xs font-bold text-brand-500 hover:text-brand-600 bg-brand-500/10 border border-brand-500/20 px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Добавить запись</span>
+                </button>
+              )}
             </div>
 
             {displayedServiceRecords.length === 0 ? (
@@ -627,13 +643,15 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
                   Зафиксируйте выполненные работы, замену расходников или ремонт с ценами и запчастями.
                 </p>
-                <button
-                  onClick={() => onOpenServiceModal(activeTab as any)}
-                  className="inline-flex items-center space-x-1.5 bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-xl text-xs font-bold"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Добавить запись</span>
-                </button>
+                {isAuthenticated && (
+                  <button
+                    onClick={() => onOpenServiceModal(activeTab as any)}
+                    className="inline-flex items-center space-x-1.5 bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-xl text-xs font-bold"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Добавить запись</span>
+                  </button>
+                )}
               </div>
             ) : (
               <div className="space-y-3">
@@ -694,20 +712,22 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                           )}
                         </div>
 
-                        <div className="flex items-center space-x-1 pl-2 border-l border-slate-200 dark:border-dark-750">
-                          <button
-                            onClick={() => onOpenServiceModal(rec.record_type, rec)}
-                            className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-dark-750 rounded-lg"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteService(rec.id)}
-                            className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                        {isAuthenticated && (
+                          <div className="flex items-center space-x-1 pl-2 border-l border-slate-200 dark:border-dark-750">
+                            <button
+                              onClick={() => onOpenServiceModal(rec.record_type, rec)}
+                              className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-dark-750 rounded-lg"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteService(rec.id)}
+                              className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -776,13 +796,15 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 План регламентов ТО и износа ({reminders.length})
               </span>
-              <button
-                onClick={() => onOpenReminderModal()}
-                className="flex items-center space-x-1.5 text-xs font-bold text-amber-600 dark:text-amber-400 hover:text-amber-500 bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-lg transition-colors"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Новый регламент</span>
-              </button>
+              {isAuthenticated && (
+                <button
+                  onClick={() => onOpenReminderModal()}
+                  className="flex items-center space-x-1.5 text-xs font-bold text-amber-600 dark:text-amber-400 hover:text-amber-500 bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Новый регламент</span>
+                </button>
+              )}
             </div>
 
             {reminders.length === 0 ? (
@@ -792,13 +814,15 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
                   Добавьте регламент замены масла, фильтров, свечей или колодок, и система заранее предупредит о необходимости ТО.
                 </p>
-                <button
-                  onClick={() => onOpenReminderModal()}
-                  className="inline-flex items-center space-x-1.5 bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-xl text-xs font-bold"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Создать регламент</span>
-                </button>
+                {isAuthenticated && (
+                  <button
+                    onClick={() => onOpenReminderModal()}
+                    className="inline-flex items-center space-x-1.5 bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-xl text-xs font-bold"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Создать регламент</span>
+                  </button>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
@@ -850,20 +874,22 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                           )}
                         </div>
 
-                        <div className="flex items-center space-x-1 flex-shrink-0">
-                          <button
-                            onClick={() => onOpenReminderModal(rem)}
-                            className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-dark-750"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteReminder(rem.id)}
-                            className="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg hover:bg-rose-500/10"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                        {isAuthenticated && (
+                          <div className="flex items-center space-x-1 flex-shrink-0">
+                            <button
+                              onClick={() => onOpenReminderModal(rem)}
+                              className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-dark-750"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteReminder(rem.id)}
+                              className="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg hover:bg-rose-500/10"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
                       </div>
 
                       {/* Progress bar */}
@@ -914,13 +940,15 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                           {rem.last_service_hours ? ` (${rem.last_service_hours} м/ч)` : ''}
                         </div>
 
-                        <button
-                          onClick={() => handleMarkReminderDone(rem.id)}
-                          className="flex items-center space-x-1 bg-slate-100 hover:bg-emerald-600 hover:text-white dark:bg-dark-800 text-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-lg text-xs font-semibold border border-slate-200 dark:border-dark-700 transition-all flex-shrink-0"
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                          <span>Выполнено</span>
-                        </button>
+                        {isAuthenticated && (
+                          <button
+                            onClick={() => handleMarkReminderDone(rem.id)}
+                            className="flex items-center space-x-1 bg-slate-100 hover:bg-emerald-600 hover:text-white dark:bg-dark-800 text-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-lg text-xs font-semibold border border-slate-200 dark:border-dark-700 transition-all flex-shrink-0"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                            <span>Выполнено</span>
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
@@ -937,38 +965,42 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Комплекты шин и дисков ({tyres.length})
               </span>
-              <button
-                onClick={() => onOpenTyreModal()}
-                className="flex items-center space-x-1.5 text-xs font-bold text-brand-500 hover:text-brand-600 bg-brand-500/10 border border-brand-500/20 px-3 py-1.5 rounded-lg transition-colors"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Добавить комплект</span>
-              </button>
+              {isAuthenticated && (
+                <button
+                  onClick={() => onOpenTyreModal()}
+                  className="flex items-center space-x-1.5 text-xs font-bold text-brand-500 hover:text-brand-600 bg-brand-500/10 border border-brand-500/20 px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Добавить комплект</span>
+                </button>
+              )}
             </div>
 
             {/* Quick Season Swap Banner */}
-            <div className="bg-white dark:bg-dark-850 border border-blue-500/30 rounded-2xl p-3.5 sm:p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-              <div className="flex items-center space-x-2">
-                <RefreshCw className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                <span className="text-xs font-bold text-slate-900 dark:text-white">
-                  Сезонная переобувка в 1 клик:
-                </span>
+            {isAuthenticated && (
+              <div className="bg-white dark:bg-dark-850 border border-blue-500/30 rounded-2xl p-3.5 sm:p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div className="flex items-center space-x-2">
+                  <RefreshCw className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                  <span className="text-xs font-bold text-slate-900 dark:text-white">
+                    Сезонная переобувка в 1 клик:
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:flex items-center gap-2">
+                  <button
+                    onClick={() => handleSeasonSwap('summer')}
+                    className="px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex items-center justify-center space-x-1 shadow-sm transition"
+                  >
+                    <span>☀️ Летний комплект</span>
+                  </button>
+                  <button
+                    onClick={() => handleSeasonSwap('winter')}
+                    className="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center space-x-1 shadow-sm transition"
+                  >
+                    <span>❄️ Зимний комплект</span>
+                  </button>
+                </div>
               </div>
-              <div className="grid grid-cols-2 sm:flex items-center gap-2">
-                <button
-                  onClick={() => handleSeasonSwap('summer')}
-                  className="px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex items-center justify-center space-x-1 shadow-sm transition"
-                >
-                  <span>☀️ Летний комплект</span>
-                </button>
-                <button
-                  onClick={() => handleSeasonSwap('winter')}
-                  className="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center space-x-1 shadow-sm transition"
-                >
-                  <span>❄️ Зимний комплект</span>
-                </button>
-              </div>
-            </div>
+            )}
 
             {tyres.length === 0 ? (
               <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-8 sm:p-10 text-center space-y-3">
@@ -977,13 +1009,15 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
                   Ведите учет летнего и зимнего комплектов резины, глубины остатка протектора в мм и пробега.
                 </p>
-                <button
-                  onClick={() => onOpenTyreModal()}
-                  className="inline-flex items-center space-x-1.5 bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-xl text-xs font-bold"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Добавить комплект</span>
-                </button>
+                {isAuthenticated && (
+                  <button
+                    onClick={() => onOpenTyreModal()}
+                    className="inline-flex items-center space-x-1.5 bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-xl text-xs font-bold"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Добавить комплект</span>
+                  </button>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
@@ -1020,20 +1054,22 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                         )}
                       </div>
 
-                      <div className="flex items-center space-x-1 flex-shrink-0">
-                        <button
-                          onClick={() => onOpenTyreModal(t)}
-                          className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-dark-750"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteTyre(t.id)}
-                          className="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg hover:bg-rose-500/10"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+                      {isAuthenticated && (
+                        <div className="flex items-center space-x-1 flex-shrink-0">
+                          <button
+                            onClick={() => onOpenTyreModal(t)}
+                            className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-dark-750"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteTyre(t.id)}
+                            className="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg hover:bg-rose-500/10"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 bg-slate-50 dark:bg-dark-900/80 p-2.5 sm:p-3 rounded-xl border border-slate-200 dark:border-dark-750 text-xs">
@@ -1066,13 +1102,15 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                       </div>
 
                       {!t.is_active ? (
-                        <button
-                          onClick={() => handleActivateTyre(t.id)}
-                          className="flex items-center space-x-1 bg-slate-100 dark:bg-dark-800 hover:bg-brand-500 hover:text-white text-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-lg text-xs font-semibold border border-slate-200 dark:border-dark-700 transition-all flex-shrink-0"
-                        >
-                          <Disc className="w-3.5 h-3.5" />
-                          <span>На авто</span>
-                        </button>
+                        isAuthenticated ? (
+                          <button
+                            onClick={() => handleActivateTyre(t.id)}
+                            className="flex items-center space-x-1 bg-slate-100 dark:bg-dark-800 hover:bg-brand-500 hover:text-white text-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-lg text-xs font-semibold border border-slate-200 dark:border-dark-700 transition-all flex-shrink-0"
+                          >
+                            <Disc className="w-3.5 h-3.5" />
+                            <span>На авто</span>
+                          </button>
+                        ) : null
                       ) : (
                         <span className="text-emerald-600 dark:text-emerald-400 font-bold text-[11px] flex items-center gap-1 flex-shrink-0">
                           <CheckCircle className="w-3.5 h-3.5" />
@@ -1094,13 +1132,15 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Журнал заправок ({fuelLogs.length})
               </span>
-              <button
-                onClick={() => onOpenFuelModal()}
-                className="flex items-center space-x-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-lg transition-colors"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Добавить заправку</span>
-              </button>
+              {isAuthenticated && (
+                <button
+                  onClick={() => onOpenFuelModal()}
+                  className="flex items-center space-x-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Добавить заправку</span>
+                </button>
+              )}
             </div>
 
             {fuelLogs.length === 0 ? (
@@ -1110,13 +1150,15 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
                   Вносите данные о заправках полного бака для точного расчета расхода топлива и стоимости 1 км.
                 </p>
-                <button
-                  onClick={() => onOpenFuelModal()}
-                  className="inline-flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Добавить заправку</span>
-                </button>
+                {isAuthenticated && (
+                  <button
+                    onClick={() => onOpenFuelModal()}
+                    className="inline-flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Добавить заправку</span>
+                  </button>
+                )}
               </div>
             ) : (
               <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl overflow-hidden shadow-sm">
@@ -1131,7 +1173,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                         <th className="p-3">Расход</th>
                         <th className="p-3">Сумма</th>
                         <th className="p-3">АЗС / Топливо</th>
-                        <th className="p-3 text-right">Действия</th>
+                        {isAuthenticated && <th className="p-3 text-right">Действия</th>}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200 dark:divide-dark-750 text-slate-700 dark:text-slate-300">
@@ -1170,20 +1212,22 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                               '—'
                             )}
                           </td>
-                          <td className="p-3 text-right whitespace-nowrap">
-                            <button
-                              onClick={() => onOpenFuelModal(f)}
-                              className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white mr-1"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteFuel(f.id)}
-                              className="p-1 text-slate-400 hover:text-rose-500"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </td>
+                          {isAuthenticated && (
+                            <td className="p-3 text-right whitespace-nowrap">
+                              <button
+                                onClick={() => onOpenFuelModal(f)}
+                                className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white mr-1"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteFuel(f.id)}
+                                className="p-1 text-slate-400 hover:text-rose-500"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
@@ -1319,13 +1363,15 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Документы, страховки и сроки ({documents.length})
               </span>
-              <button
-                onClick={() => onOpenDocModal()}
-                className="flex items-center space-x-1.5 text-xs font-bold text-brand-500 hover:text-brand-600 bg-brand-500/10 border border-brand-500/20 px-3 py-1.5 rounded-lg transition-colors"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Добавить документ</span>
-              </button>
+              {isAuthenticated && (
+                <button
+                  onClick={() => onOpenDocModal()}
+                  className="flex items-center space-x-1.5 text-xs font-bold text-brand-500 hover:text-brand-600 bg-brand-500/10 border border-brand-500/20 px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Добавить документ</span>
+                </button>
+              )}
             </div>
 
             {documents.length === 0 ? (
@@ -1335,13 +1381,15 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
                   Сохраняйте полисы ОСАГО/КАСКО, диагностические карты техосмотра и важные заметки с напоминанием о сроках окончания.
                 </p>
-                <button
-                  onClick={() => onOpenDocModal()}
-                  className="inline-flex items-center space-x-1.5 bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-xl text-xs font-bold"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Добавить документ</span>
-                </button>
+                {isAuthenticated && (
+                  <button
+                    onClick={() => onOpenDocModal()}
+                    className="inline-flex items-center space-x-1.5 bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-xl text-xs font-bold"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Добавить документ</span>
+                  </button>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
@@ -1373,20 +1421,22 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                         )}
                       </div>
 
-                      <div className="flex items-center space-x-1 flex-shrink-0">
-                        <button
-                          onClick={() => onOpenDocModal(doc)}
-                          className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-dark-750"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteDoc(doc.id)}
-                          className="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg hover:bg-rose-500/10"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+                      {isAuthenticated && (
+                        <div className="flex items-center space-x-1 flex-shrink-0">
+                          <button
+                            onClick={() => onOpenDocModal(doc)}
+                            className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-dark-750"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteDoc(doc.id)}
+                            className="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg hover:bg-rose-500/10"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                     {doc.expiration_date && (

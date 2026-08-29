@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Vehicle, ServiceRecord, FuelLog, MaintenancePlan, DocumentNote, TyreSet } from './types';
 import { api } from './services/api';
 import { Navbar } from './components/Navbar';
@@ -12,11 +12,29 @@ import { DocumentModal } from './components/DocumentModal';
 import { TyreModal } from './components/TyreModal';
 import { ImportBackupModal } from './components/ImportBackupModal';
 import { InstallAppModal } from './components/InstallAppModal';
+import { PinModal } from './components/PinModal';
 
 export function App() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Authentication state (Owner / Guest mode)
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
+  const [isPinModalOpen, setIsPinModalOpen] = useState(false);
+
+  const checkAuthStatus = useCallback(async () => {
+    try {
+      const status = await api.getAuthStatus();
+      setIsAuthenticated(status.is_authenticated);
+    } catch (err) {
+      console.error('Failed to check auth status', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    checkAuthStatus();
+  }, [checkAuthStatus]);
 
   // Theme state ('dark' | 'light')
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
@@ -260,11 +278,13 @@ export function App() {
         vehicles={vehicles}
         selectedVehicle={selectedVehicle}
         theme={theme}
+        isAuthenticated={isAuthenticated}
         onToggleTheme={handleToggleTheme}
         onSelectVehicle={setSelectedVehicle}
         onAddVehicle={handleOpenAddVehicle}
         onOpenImportModal={() => setIsImportModalOpen(true)}
         onOpenInstallModal={handleOpenInstall}
+        onOpenPinModal={() => setIsPinModalOpen(true)}
       />
 
       <main className="flex-1">
@@ -275,6 +295,7 @@ export function App() {
         ) : selectedVehicle ? (
           <VehicleDetails
             vehicle={selectedVehicle}
+            isAuthenticated={isAuthenticated}
             onBack={() => setSelectedVehicle(null)}
             onRefreshVehicle={loadVehicles}
             onOpenServiceModal={handleOpenServiceModal}
@@ -286,6 +307,7 @@ export function App() {
         ) : (
           <Garage
             vehicles={vehicles}
+            isAuthenticated={isAuthenticated}
             onSelectVehicle={setSelectedVehicle}
             onAddVehicle={handleOpenAddVehicle}
             onEditVehicle={handleOpenEditVehicle}
@@ -294,6 +316,20 @@ export function App() {
           />
         )}
       </main>
+
+      <PinModal
+        isOpen={isPinModalOpen}
+        onClose={() => setIsPinModalOpen(false)}
+        isAuthenticated={isAuthenticated}
+        onAuthSuccess={() => {
+          setIsAuthenticated(true);
+          checkAuthStatus();
+        }}
+        onLogout={() => {
+          setIsAuthenticated(false);
+          checkAuthStatus();
+        }}
+      />
 
       <InstallAppModal
         isOpen={isInstallModalOpen}

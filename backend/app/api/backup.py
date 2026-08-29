@@ -14,11 +14,16 @@ from app.models import (
     TyreSet,
 )
 from app.services.reminder_service import is_item_match_for_plan
+from app.core.security import require_admin
 
 router = APIRouter(prefix="/backup", tags=["Backup & Restore"])
 
 @router.post("/import")
-async def import_backup(data: Dict[str, Any] = Body(...), db: AsyncSession = Depends(get_db)):
+async def import_backup(
+    data: Dict[str, Any] = Body(...),
+    db: AsyncSession = Depends(get_db),
+    admin: bool = Depends(require_admin),
+):
     """
     Imports a complete backup from either AutoTracker or car-maintenance-app v2.5.
     """

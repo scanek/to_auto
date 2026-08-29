@@ -7,6 +7,7 @@ from app.db.session import get_db
 from app.models.vehicle import Vehicle
 from app.models.document import DocumentNote
 from app.schemas.document import DocumentNoteCreate, DocumentNoteUpdate, DocumentNoteResponse
+from app.core.security import require_admin
 
 router = APIRouter(prefix="/documents", tags=["Documents & Notes"])
 
@@ -31,7 +32,12 @@ async def get_documents(
     return responses
 
 @router.post("", response_model=DocumentNoteResponse, status_code=status.HTTP_201_CREATED)
-async def create_document(payload: DocumentNoteCreate, vehicle_id: int = Query(...), db: AsyncSession = Depends(get_db)):
+async def create_document(
+    payload: DocumentNoteCreate,
+    vehicle_id: int = Query(...),
+    db: AsyncSession = Depends(get_db),
+    admin: bool = Depends(require_admin),
+):
     veh_res = await db.execute(select(Vehicle).where(Vehicle.id == vehicle_id))
     if not veh_res.scalar_one_or_none():
         raise HTTPException(status_code=404, detail="Автомобиль не найден")
@@ -49,7 +55,12 @@ async def create_document(payload: DocumentNoteCreate, vehicle_id: int = Query(.
     return resp
 
 @router.put("/{doc_id}", response_model=DocumentNoteResponse)
-async def update_document(doc_id: int, payload: DocumentNoteUpdate, db: AsyncSession = Depends(get_db)):
+async def update_document(
+    doc_id: int,
+    payload: DocumentNoteUpdate,
+    db: AsyncSession = Depends(get_db),
+    admin: bool = Depends(require_admin),
+):
     result = await db.execute(select(DocumentNote).where(DocumentNote.id == doc_id))
     doc = result.scalar_one_or_none()
     if not doc:
@@ -70,7 +81,11 @@ async def update_document(doc_id: int, payload: DocumentNoteUpdate, db: AsyncSes
     return resp
 
 @router.delete("/{doc_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_document(doc_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_document(
+    doc_id: int,
+    db: AsyncSession = Depends(get_db),
+    admin: bool = Depends(require_admin),
+):
     result = await db.execute(select(DocumentNote).where(DocumentNote.id == doc_id))
     doc = result.scalar_one_or_none()
     if not doc:

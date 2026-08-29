@@ -1,3 +1,4 @@
+import datetime
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,6 +7,7 @@ from app.db.session import get_db
 from app.models.vehicle import Vehicle
 from app.models.tyre import TyreSet
 from app.schemas.tyre import TyreSetCreate, TyreSetUpdate, TyreSetResponse
+from app.core.security import require_admin
 
 router = APIRouter(prefix="/tyres", tags=["Tyres & Wheels"])
 
@@ -20,7 +22,12 @@ async def get_tyre_sets(
     return [TyreSetResponse.model_validate(t) for t in tyres]
 
 @router.post("", response_model=TyreSetResponse, status_code=status.HTTP_201_CREATED)
-async def create_tyre_set(payload: TyreSetCreate, vehicle_id: int = Query(...), db: AsyncSession = Depends(get_db)):
+async def create_tyre_set(
+    payload: TyreSetCreate,
+    vehicle_id: int = Query(...),
+    db: AsyncSession = Depends(get_db),
+    admin: bool = Depends(require_admin),
+):
     veh_res = await db.execute(select(Vehicle).where(Vehicle.id == vehicle_id))
     if not veh_res.scalar_one_or_none():
         raise HTTPException(status_code=404, detail="Автомобиль не найден")
@@ -39,7 +46,12 @@ async def create_tyre_set(payload: TyreSetCreate, vehicle_id: int = Query(...), 
     return TyreSetResponse.model_validate(tyre)
 
 @router.put("/{tyre_id}", response_model=TyreSetResponse)
-async def update_tyre_set(tyre_id: int, payload: TyreSetUpdate, db: AsyncSession = Depends(get_db)):
+async def update_tyre_set(
+    tyre_id: int,
+    payload: TyreSetUpdate,
+    db: AsyncSession = Depends(get_db),
+    admin: bool = Depends(require_admin),
+):
     result = await db.execute(select(TyreSet).where(TyreSet.id == tyre_id))
     tyre = result.scalar_one_or_none()
     if not tyre:
@@ -62,8 +74,12 @@ async def update_tyre_set(tyre_id: int, payload: TyreSetUpdate, db: AsyncSession
     return TyreSetResponse.model_validate(tyre)
 
 @router.post("/{tyre_id}/activate", response_model=TyreSetResponse)
-async def activate_tyre_set(tyre_id: int, mileage: float = Query(None), db: AsyncSession = Depends(get_db)):
-    import datetime
+async def activate_tyre_set(
+    tyre_id: int,
+    mileage: float = Query(None),
+    db: AsyncSession = Depends(get_db),
+    admin: bool = Depends(require_admin),
+):
     result = await db.execute(select(TyreSet).where(TyreSet.id == tyre_id))
     tyre = result.scalar_one_or_none()
     if not tyre:
@@ -84,7 +100,11 @@ async def activate_tyre_set(tyre_id: int, mileage: float = Query(None), db: Asyn
     return TyreSetResponse.model_validate(tyre)
 
 @router.delete("/{tyre_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_tyre_set(tyre_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_tyre_set(
+    tyre_id: int,
+    db: AsyncSession = Depends(get_db),
+    admin: bool = Depends(require_admin),
+):
     result = await db.execute(select(TyreSet).where(TyreSet.id == tyre_id))
     tyre = result.scalar_one_or_none()
     if not tyre:

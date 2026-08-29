@@ -14,6 +14,7 @@ import { Vehicle } from '../types';
 
 interface GarageProps {
   vehicles: Vehicle[];
+  isAuthenticated: boolean;
   onSelectVehicle: (v: Vehicle) => void;
   onAddVehicle: () => void;
   onEditVehicle: (v: Vehicle) => void;
@@ -23,6 +24,7 @@ interface GarageProps {
 
 export const Garage: React.FC<GarageProps> = ({
   vehicles,
+  isAuthenticated,
   onSelectVehicle,
   onAddVehicle,
   onEditVehicle,
@@ -100,22 +102,24 @@ export const Garage: React.FC<GarageProps> = ({
               Выберите автомобиль для просмотра журнала обслуживания, заправок и аналитики
             </p>
           </div>
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={onOpenImportModal}
-              className="flex items-center space-x-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm"
-            >
-              <UploadCloud className="w-4 h-4" />
-              <span>Импорт бэкапа</span>
-            </button>
-            <button
-              onClick={onAddVehicle}
-              className="flex items-center space-x-1.5 bg-brand-500 hover:bg-brand-600 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-md shadow-brand-500/20"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Добавить авто</span>
-            </button>
-          </div>
+          {isAuthenticated && (
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={onOpenImportModal}
+                className="flex items-center space-x-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm"
+              >
+                <UploadCloud className="w-4 h-4" />
+                <span>Импорт бэкапа</span>
+              </button>
+              <button
+                onClick={onAddVehicle}
+                className="flex items-center space-x-1.5 bg-brand-500 hover:bg-brand-600 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-md shadow-brand-500/20"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Добавить авто</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {vehicles.length === 0 ? (
@@ -126,25 +130,29 @@ export const Garage: React.FC<GarageProps> = ({
             <div>
               <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">Гараж пока пуст</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto mt-1">
-                Вы можете восстановить все данные и историю обслуживания из файла бэкапа или добавить автомобиль вручную.
+                {isAuthenticated
+                  ? 'Вы можете восстановить все данные и историю обслуживания из файла бэкапа или добавить автомобиль вручную.'
+                  : 'В гараже нет добавленных автомобилей.'}
               </p>
             </div>
-            <div className="flex flex-wrap items-center justify-center gap-2.5 pt-2">
-              <button
-                onClick={onOpenImportModal}
-                className="inline-flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-lg shadow-emerald-600/25 active:scale-95"
-              >
-                <UploadCloud className="w-4 h-4" />
-                <span>📥 Восстановить из бэкапа JSON</span>
-              </button>
-              <button
-                onClick={onAddVehicle}
-                className="inline-flex items-center space-x-2 bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-dark-700 px-4 py-2.5 rounded-xl text-xs font-bold transition-all"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Добавить автомобиль</span>
-              </button>
-            </div>
+            {isAuthenticated && (
+              <div className="flex flex-wrap items-center justify-center gap-2.5 pt-2">
+                <button
+                  onClick={onOpenImportModal}
+                  className="inline-flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-lg shadow-emerald-600/25 active:scale-95"
+                >
+                  <UploadCloud className="w-4 h-4" />
+                  <span>📥 Восстановить из бэкапа JSON</span>
+                </button>
+                <button
+                  onClick={onAddVehicle}
+                  className="inline-flex items-center space-x-2 bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-dark-700 px-4 py-2.5 rounded-xl text-xs font-bold transition-all"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Добавить автомобиль</span>
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
@@ -206,26 +214,28 @@ export const Garage: React.FC<GarageProps> = ({
                         </h3>
                         {v.engine && <p className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate">{v.engine}</p>}
                       </div>
-                      <div className="flex items-center space-x-1 flex-shrink-0">
-                        <button
-                          onClick={() => onEditVehicle(v)}
-                          className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-dark-750 rounded-lg transition-colors"
-                          title="Редактировать"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (confirm(`Удалить ${v.make} ${v.model} и все связанные записи?`)) {
-                              onDeleteVehicle(v.id);
-                            }
-                          }}
-                          className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors"
-                          title="Удалить"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+                      {isAuthenticated && (
+                        <div className="flex items-center space-x-1 flex-shrink-0">
+                          <button
+                            onClick={() => onEditVehicle(v)}
+                            className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-dark-750 rounded-lg transition-colors"
+                            title="Редактировать"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (confirm(`Удалить ${v.make} ${v.model} и все связанные записи?`)) {
+                                onDeleteVehicle(v.id);
+                              }
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors"
+                            title="Удалить"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                     {/* Metrics Grid */}

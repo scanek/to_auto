@@ -7,6 +7,7 @@ from app.models.vehicle import Vehicle
 from app.models.fuel import FuelLog
 from app.schemas.fuel import FuelLogCreate, FuelLogUpdate, FuelLogResponse
 from app.services.fuel_service import recalculate_fuel_logs
+from app.core.security import require_admin
 
 router = APIRouter(prefix="/fuel-logs", tags=["Fuel Logs"])
 
@@ -21,7 +22,12 @@ async def get_fuel_logs(
     return [FuelLogResponse.model_validate(f) for f in logs]
 
 @router.post("", response_model=FuelLogResponse, status_code=status.HTTP_201_CREATED)
-async def create_fuel_log(payload: FuelLogCreate, vehicle_id: int = Query(...), db: AsyncSession = Depends(get_db)):
+async def create_fuel_log(
+    payload: FuelLogCreate,
+    vehicle_id: int = Query(...),
+    db: AsyncSession = Depends(get_db),
+    admin: bool = Depends(require_admin),
+):
     veh_res = await db.execute(select(Vehicle).where(Vehicle.id == vehicle_id))
     vehicle = veh_res.scalar_one_or_none()
     if not vehicle:
@@ -50,7 +56,12 @@ async def create_fuel_log(payload: FuelLogCreate, vehicle_id: int = Query(...), 
     return FuelLogResponse.model_validate(log)
 
 @router.put("/{log_id}", response_model=FuelLogResponse)
-async def update_fuel_log(log_id: int, payload: FuelLogUpdate, db: AsyncSession = Depends(get_db)):
+async def update_fuel_log(
+    log_id: int,
+    payload: FuelLogUpdate,
+    db: AsyncSession = Depends(get_db),
+    admin: bool = Depends(require_admin),
+):
     result = await db.execute(select(FuelLog).where(FuelLog.id == log_id))
     log = result.scalar_one_or_none()
     if not log:
@@ -67,7 +78,11 @@ async def update_fuel_log(log_id: int, payload: FuelLogUpdate, db: AsyncSession 
     return FuelLogResponse.model_validate(log)
 
 @router.delete("/{log_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_fuel_log(log_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_fuel_log(
+    log_id: int,
+    db: AsyncSession = Depends(get_db),
+    admin: bool = Depends(require_admin),
+):
     result = await db.execute(select(FuelLog).where(FuelLog.id == log_id))
     log = result.scalar_one_or_none()
     if not log:

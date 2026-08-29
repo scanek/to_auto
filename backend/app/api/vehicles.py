@@ -11,6 +11,7 @@ from app.models.tyre import TyreSet
 from app.models.document import DocumentNote
 from app.schemas.vehicle import VehicleCreate, VehicleUpdate, VehicleResponse
 from app.services.reminder_service import compute_reminder_status
+from app.core.security import require_admin
 
 router = APIRouter(prefix="/vehicles", tags=["Vehicles"])
 
@@ -74,7 +75,11 @@ async def get_vehicles(db: AsyncSession = Depends(get_db)):
     return responses
 
 @router.post("", response_model=VehicleResponse, status_code=status.HTTP_201_CREATED)
-async def create_vehicle(payload: VehicleCreate, db: AsyncSession = Depends(get_db)):
+async def create_vehicle(
+    payload: VehicleCreate,
+    db: AsyncSession = Depends(get_db),
+    admin: bool = Depends(require_admin),
+):
     data = payload.model_dump()
     if not data.get("current_odometer") and data.get("starting_odometer"):
         data["current_odometer"] = data["starting_odometer"]
@@ -97,7 +102,12 @@ async def get_vehicle(vehicle_id: int, db: AsyncSession = Depends(get_db)):
     return resp
 
 @router.put("/{vehicle_id}", response_model=VehicleResponse)
-async def update_vehicle(vehicle_id: int, payload: VehicleUpdate, db: AsyncSession = Depends(get_db)):
+async def update_vehicle(
+    vehicle_id: int,
+    payload: VehicleUpdate,
+    db: AsyncSession = Depends(get_db),
+    admin: bool = Depends(require_admin),
+):
     result = await db.execute(select(Vehicle).where(Vehicle.id == vehicle_id))
     vehicle = result.scalar_one_or_none()
     if not vehicle:
@@ -112,7 +122,11 @@ async def update_vehicle(vehicle_id: int, payload: VehicleUpdate, db: AsyncSessi
     return VehicleResponse.model_validate(vehicle)
 
 @router.delete("/{vehicle_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_vehicle(vehicle_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_vehicle(
+    vehicle_id: int,
+    db: AsyncSession = Depends(get_db),
+    admin: bool = Depends(require_admin),
+):
     result = await db.execute(select(Vehicle).where(Vehicle.id == vehicle_id))
     vehicle = result.scalar_one_or_none()
     if not vehicle:

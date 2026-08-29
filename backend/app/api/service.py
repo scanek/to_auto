@@ -8,6 +8,7 @@ from app.models.vehicle import Vehicle
 from app.models.service import ServiceRecord, ServiceItem, RecordType
 from app.models.reminder import MaintenancePlan
 from app.schemas.service import ServiceRecordCreate, ServiceRecordUpdate, ServiceRecordResponse
+from app.core.security import require_admin
 
 router = APIRouter(prefix="/service-records", tags=["Service Records"])
 
@@ -37,7 +38,12 @@ async def get_service_records(
     return responses
 
 @router.post("", response_model=ServiceRecordResponse, status_code=status.HTTP_201_CREATED)
-async def create_service_record(payload: ServiceRecordCreate, vehicle_id: int = Query(...), db: AsyncSession = Depends(get_db)):
+async def create_service_record(
+    payload: ServiceRecordCreate,
+    vehicle_id: int = Query(...),
+    db: AsyncSession = Depends(get_db),
+    admin: bool = Depends(require_admin),
+):
     veh_res = await db.execute(select(Vehicle).where(Vehicle.id == vehicle_id))
     vehicle = veh_res.scalar_one_or_none()
     if not vehicle:
@@ -114,7 +120,12 @@ async def get_service_record(record_id: int, db: AsyncSession = Depends(get_db))
     return resp
 
 @router.put("/{record_id}", response_model=ServiceRecordResponse)
-async def update_service_record(record_id: int, payload: ServiceRecordUpdate, db: AsyncSession = Depends(get_db)):
+async def update_service_record(
+    record_id: int,
+    payload: ServiceRecordUpdate,
+    db: AsyncSession = Depends(get_db),
+    admin: bool = Depends(require_admin),
+):
     result = await db.execute(
         select(ServiceRecord)
         .where(ServiceRecord.id == record_id)
@@ -158,7 +169,11 @@ async def update_service_record(record_id: int, payload: ServiceRecordUpdate, db
     return resp
 
 @router.delete("/{record_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_service_record(record_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_service_record(
+    record_id: int,
+    db: AsyncSession = Depends(get_db),
+    admin: bool = Depends(require_admin),
+):
     result = await db.execute(select(ServiceRecord).where(ServiceRecord.id == record_id))
     record = result.scalar_one_or_none()
     if not record:
