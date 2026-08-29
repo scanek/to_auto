@@ -286,11 +286,11 @@ export function App() {
         )}
       </main>
 
-      {/* Modals */}
       <InstallAppModal
         isOpen={isInstallModalOpen}
         onClose={() => setIsInstallModalOpen(false)}
         isIOS={isIOS}
+        hasNativePrompt={!!deferredPrompt}
         onNativeInstall={handleNativeInstall}
       />
 

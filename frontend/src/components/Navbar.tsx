@@ -50,21 +50,21 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Actions */}
-        <div className="flex items-center space-x-1.5 sm:space-x-2 flex-shrink-0">
-          {/* Install App Button */}
+        <div className="flex items-center space-x-1 sm:space-x-1.5 flex-shrink-0">
+          {/* Compact Install App Button */}
           <button
             onClick={onOpenInstallModal}
-            className="flex items-center space-x-1 bg-brand-500/10 hover:bg-brand-500/20 text-brand-600 dark:text-brand-400 border border-brand-500/30 px-2 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm"
-            title="Установить приложение на телефон"
+            className="flex items-center space-x-1 bg-brand-500/10 hover:bg-brand-500/20 text-brand-600 dark:text-brand-400 border border-brand-500/20 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] font-semibold transition-all shadow-sm"
+            title="Установить приложение на телефон или рабочий стол"
           >
-            <Smartphone className="w-4 h-4 text-brand-500 flex-shrink-0" />
-            <span className="hidden lg:inline">Установить</span>
+            <Smartphone className="w-3.5 h-3.5 text-brand-500 flex-shrink-0" />
+            <span className="hidden sm:inline">Приложение</span>
           </button>
 
           {/* Theme Toggle (Sun / Moon) */}
           <button
             onClick={onToggleTheme}
-            className="p-1.5 sm:p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-dark-700 transition-colors"
+            className="p-1 sm:p-1.5 rounded-lg sm:rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-dark-700 transition-colors"
             title={theme === 'dark' ? 'Включить светлую тему' : 'Включить темную тему'}
           >
             {theme === 'dark' ? (
@@ -75,10 +75,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
 
           {vehicles.length > 0 && (
-            <div className="flex items-center bg-slate-100 dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-xl p-0.5 sm:p-1">
+            <div className="flex items-center bg-slate-100 dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-lg sm:rounded-xl p-0.5">
               <button
                 onClick={() => onSelectVehicle(null)}
-                className={`px-2 sm:px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                className={`px-2 py-1 rounded-md sm:rounded-lg text-[11px] sm:text-xs font-medium transition-all ${
                   !selectedVehicle
                     ? 'bg-brand-500 text-white shadow-sm'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -90,32 +90,26 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <span className="hidden sm:inline">Гараж ({vehicles.length})</span>
                 </div>
               </button>
-              {selectedVehicle && (
-                <div className="hidden lg:flex items-center text-xs text-slate-700 dark:text-slate-300 px-2 py-0.5 bg-white dark:bg-dark-800 rounded-md font-medium border border-slate-200 dark:border-dark-750 ml-1 truncate max-w-[120px]">
-                  <span className="text-brand-500 mr-1.5">●</span>
-                  <span className="truncate">{selectedVehicle.make}</span>
-                </div>
-              )}
             </div>
           )}
 
           {/* Import Backup Button */}
           <button
             onClick={onOpenImportModal}
-            className="flex items-center space-x-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 px-2 sm:px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm"
+            className="flex items-center space-x-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold transition-all shadow-sm"
             title="Восстановить историю из бэкапа JSON"
           >
-            <UploadCloud className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+            <UploadCloud className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
             <span className="hidden md:inline">Импорт</span>
           </button>
 
           {/* Add Vehicle Button */}
           <button
             onClick={onAddVehicle}
-            className="flex items-center space-x-1 bg-brand-500 hover:bg-brand-600 active:scale-95 text-white px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold shadow-md shadow-brand-500/20 transition-all"
+            className="flex items-center space-x-1 bg-brand-500 hover:bg-brand-600 active:scale-95 text-white px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold shadow-md shadow-brand-500/20 transition-all"
             title="Добавить новый автомобиль"
           >
-            <Plus className="w-4 h-4 flex-shrink-0" />
+            <Plus className="w-3.5 h-3.5 flex-shrink-0" />
             <span className="hidden sm:inline">Авто</span>
           </button>
         </div>
