@@ -253,7 +253,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
             );
           })}
           <div className="pt-1.5 border-t border-slate-100 dark:border-dark-750 flex items-center justify-between font-bold text-xs">
-            <span className="text-slate-700 dark:text-slate-300">Итого за месяц:</span>
+            <span className="text-slate-700 dark:text-slate-300">Итого:</span>
             <span className="text-brand-600 dark:text-brand-400 font-mono">
               {totalMonth.toLocaleString('ru-RU')} {vehicle.currency}
             </span>
@@ -264,22 +264,33 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
     return null;
   };
 
+  const navTabs = [
+    { id: 'service', label: 'ТО', icon: Wrench, count: serviceRecords.filter(r => r.record_type === 'service').length },
+    { id: 'repairs', label: 'Ремонт', icon: AlertTriangle, count: serviceRecords.filter(r => r.record_type === 'repair').length },
+    { id: 'upgrades', label: 'Тюнинг', icon: Sparkles, count: serviceRecords.filter(r => r.record_type === 'upgrade').length },
+    { id: 'fuel', label: 'Топливо', icon: Fuel, count: fuelLogs.length },
+    { id: 'reminders', label: 'Регламент', icon: CalendarClock, count: reminders.length },
+    { id: 'tyres', label: 'Шины', icon: Disc, count: tyres.length },
+    { id: 'analytics', label: 'Аналитика', icon: BarChart3 },
+    { id: 'documents', label: 'Документы', icon: FileText, count: documents.length },
+  ];
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 animate-fadeIn">
+    <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6 animate-fadeIn">
       {/* Top Navigation & Vehicle Header */}
-      <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-6 shadow-md dark:shadow-xl space-y-6 transition-colors">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="flex items-center space-x-4">
+      <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-4 sm:p-6 shadow-md dark:shadow-xl space-y-4 sm:space-y-6 transition-colors">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-center space-x-3">
             <button
               onClick={onBack}
-              className="p-2 bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl transition-colors border border-slate-200 dark:border-dark-700"
+              className="p-2 bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl transition-colors border border-slate-200 dark:border-dark-700 flex-shrink-0"
               title="Назад в гараж"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight truncate">
                   {vehicle.name || `${vehicle.make} ${vehicle.model}`}
                 </h1>
                 {vehicle.year && (
@@ -288,7 +299,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                   </span>
                 )}
                 {vehicle.license_plate && (
-                  <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-md bg-amber-50 dark:bg-dark-900 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60">
+                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-amber-50 dark:bg-dark-900 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60">
                     {vehicle.license_plate}
                   </span>
                 )}
@@ -302,71 +313,71 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
           </div>
 
           {/* Quick Actions Buttons */}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="grid grid-cols-3 sm:flex sm:flex-wrap items-center gap-1.5 sm:gap-2">
             <button
               onClick={() => onOpenServiceModal('service')}
-              className="flex items-center space-x-1.5 bg-brand-500 hover:bg-brand-600 active:scale-95 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-brand-500/20"
+              className="flex items-center justify-center space-x-1 bg-brand-500 hover:bg-brand-600 active:scale-95 text-white px-2.5 sm:px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-brand-500/20"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4 flex-shrink-0" />
               <span>Запись ТО</span>
             </button>
 
             <button
               onClick={() => onOpenFuelModal()}
-              className="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-600/20"
+              className="flex items-center justify-center space-x-1 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-2.5 sm:px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-600/20"
             >
-              <Fuel className="w-4 h-4" />
+              <Fuel className="w-4 h-4 flex-shrink-0" />
               <span>Заправка</span>
             </button>
 
             <button
               onClick={() => onOpenReminderModal()}
-              className="flex items-center space-x-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-200 px-3.5 py-2 rounded-xl text-xs font-semibold border border-slate-200 dark:border-dark-700 transition-all"
+              className="flex items-center justify-center space-x-1 bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-200 px-2.5 sm:px-3.5 py-2 rounded-xl text-xs font-semibold border border-slate-200 dark:border-dark-700 transition-all"
             >
-              <CalendarClock className="w-4 h-4 text-amber-500" />
-              <span>+ Регламент</span>
+              <CalendarClock className="w-4 h-4 text-amber-500 flex-shrink-0" />
+              <span>Регламент</span>
             </button>
 
             <a
               href={`/api/v1/export/excel/${vehicle.id}`}
               download
-              className="flex items-center space-x-1.5 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 px-3.5 py-2 rounded-xl text-xs font-semibold border border-emerald-300 dark:border-emerald-700/60 transition-all"
-              title="Скачать полную выгрузку в Excel (.xlsx) с форматированием"
+              className="flex items-center justify-center space-x-1 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 px-2.5 sm:px-3.5 py-2 rounded-xl text-xs font-semibold border border-emerald-300 dark:border-emerald-700/60 transition-all"
+              title="Скачать в Excel (.xlsx)"
             >
-              <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <span className="hidden sm:inline">Excel (.xlsx)</span>
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+              <span>Excel</span>
             </a>
 
             <a
               href={`/api/v1/export/service-booklet/${vehicle.id}`}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center space-x-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-200 px-3.5 py-2 rounded-xl text-xs font-semibold border border-slate-200 dark:border-dark-750 transition-all"
+              className="flex items-center justify-center space-x-1 bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-200 px-2.5 sm:px-3.5 py-2 rounded-xl text-xs font-semibold border border-slate-200 dark:border-dark-750 transition-all col-span-2 sm:col-span-1"
             >
-              <Printer className="w-4 h-4 text-brand-500" />
-              <span className="hidden sm:inline">Книжка (PDF)</span>
+              <Printer className="w-4 h-4 text-brand-500 flex-shrink-0" />
+              <span>Книжка PDF</span>
             </a>
           </div>
         </div>
 
-        {/* Vehicle Stats Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-4 border-t border-slate-200 dark:border-dark-750">
+        {/* Vehicle Stats Bar (5 cards cleanly distributed) */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 pt-3 sm:pt-4 border-t border-slate-200 dark:border-dark-750">
           {/* Odometer Quick Editor */}
-          <div className="bg-slate-50 dark:bg-dark-900/80 p-3 rounded-xl border border-slate-200 dark:border-dark-750">
-            <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block mb-1">
+          <div className="bg-slate-50 dark:bg-dark-900/80 p-2.5 sm:p-3 rounded-xl border border-slate-200 dark:border-dark-750">
+            <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block mb-0.5">
               Пробег
             </span>
             {editingOdometer ? (
-              <div className="flex items-center space-x-1.5 mt-1">
+              <div className="flex items-center space-x-1 mt-1">
                 <input
                   type="number"
                   value={newOdometerVal}
                   onChange={(e) => setNewOdometerVal(parseFloat(e.target.value) || 0)}
-                  className="w-20 bg-white dark:bg-dark-800 border border-brand-500 rounded px-1.5 py-0.5 text-xs text-slate-900 dark:text-white font-mono"
+                  className="w-full bg-white dark:bg-dark-800 border border-brand-500 rounded px-1.5 py-0.5 text-xs text-slate-900 dark:text-white font-mono"
                 />
                 <button
                   onClick={handleUpdateOdometer}
-                  className="p-1 bg-brand-500 text-white rounded hover:bg-brand-600 text-xs"
+                  className="p-1 bg-brand-500 text-white rounded hover:bg-brand-600 text-xs flex-shrink-0"
                 >
                   <Check className="w-3.5 h-3.5" />
                 </button>
@@ -376,30 +387,30 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 onClick={() => setEditingOdometer(true)}
                 className="flex items-center space-x-1.5 cursor-pointer group"
               >
-                <span className="text-base font-extrabold text-slate-900 dark:text-white font-mono group-hover:text-brand-500 transition-colors">
+                <span className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white font-mono group-hover:text-brand-500 transition-colors">
                   {Math.round(vehicle.current_odometer).toLocaleString('ru-RU')} {vehicle.distance_unit}
                 </span>
-                <Edit2 className="w-3 h-3 text-slate-400 group-hover:text-brand-500" />
+                <Edit2 className="w-3 h-3 text-slate-400 group-hover:text-brand-500 flex-shrink-0" />
               </div>
             )}
           </div>
 
           {/* Engine Hours Quick Editor */}
-          <div className="bg-slate-50 dark:bg-dark-900/80 p-3 rounded-xl border border-slate-200 dark:border-dark-750">
-            <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block mb-1">
+          <div className="bg-slate-50 dark:bg-dark-900/80 p-2.5 sm:p-3 rounded-xl border border-slate-200 dark:border-dark-750">
+            <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block mb-0.5">
               Моточасы
             </span>
             {editingHours ? (
-              <div className="flex items-center space-x-1.5 mt-1">
+              <div className="flex items-center space-x-1 mt-1">
                 <input
                   type="number"
                   value={newHoursVal}
                   onChange={(e) => setNewHoursVal(parseFloat(e.target.value) || 0)}
-                  className="w-20 bg-white dark:bg-dark-800 border border-brand-500 rounded px-1.5 py-0.5 text-xs text-slate-900 dark:text-white font-mono"
+                  className="w-full bg-white dark:bg-dark-800 border border-brand-500 rounded px-1.5 py-0.5 text-xs text-slate-900 dark:text-white font-mono"
                 />
                 <button
                   onClick={handleUpdateHours}
-                  className="p-1 bg-brand-500 text-white rounded hover:bg-brand-600 text-xs"
+                  className="p-1 bg-brand-500 text-white rounded hover:bg-brand-600 text-xs flex-shrink-0"
                 >
                   <Check className="w-3.5 h-3.5" />
                 </button>
@@ -409,39 +420,39 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 onClick={() => setEditingHours(true)}
                 className="flex items-center space-x-1.5 cursor-pointer group"
               >
-                <span className="text-base font-extrabold text-cyan-600 dark:text-cyan-400 font-mono group-hover:text-cyan-500 transition-colors">
+                <span className="text-sm sm:text-base font-extrabold text-cyan-600 dark:text-cyan-400 font-mono group-hover:text-cyan-500 transition-colors">
                   {Math.round(vehicle.current_engine_hours || 0)} м/ч
                 </span>
-                <Edit2 className="w-3 h-3 text-slate-400 group-hover:text-cyan-500" />
+                <Edit2 className="w-3 h-3 text-slate-400 group-hover:text-cyan-500 flex-shrink-0" />
               </div>
             )}
           </div>
 
-          <div className="bg-slate-50 dark:bg-dark-900/80 p-3 rounded-xl border border-slate-200 dark:border-dark-750">
-            <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block mb-1">
+          <div className="bg-slate-50 dark:bg-dark-900/80 p-2.5 sm:p-3 rounded-xl border border-slate-200 dark:border-dark-750">
+            <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block mb-0.5">
               Средний расход
             </span>
-            <span className="text-base font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
+            <span className="text-sm sm:text-base font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
               {analytics?.avg_fuel_consumption
                 ? `${analytics.avg_fuel_consumption} л/100км`
                 : '—'}
             </span>
           </div>
 
-          <div className="bg-slate-50 dark:bg-dark-900/80 p-3 rounded-xl border border-slate-200 dark:border-dark-750">
-            <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block mb-1">
+          <div className="bg-slate-50 dark:bg-dark-900/80 p-2.5 sm:p-3 rounded-xl border border-slate-200 dark:border-dark-750">
+            <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block mb-0.5">
               Все расходы
             </span>
-            <span className="text-base font-extrabold text-brand-600 dark:text-brand-400 font-mono">
+            <span className="text-sm sm:text-base font-extrabold text-brand-600 dark:text-brand-400 font-mono">
               {Math.round(analytics?.total_spend || 0).toLocaleString('ru-RU')} {vehicle.currency}
             </span>
           </div>
 
-          <div className="bg-slate-50 dark:bg-dark-900/80 p-3 rounded-xl border border-slate-200 dark:border-dark-750">
-            <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block mb-1">
+          <div className="bg-slate-50 dark:bg-dark-900/80 p-2.5 sm:p-3 rounded-xl border border-slate-200 dark:border-dark-750 col-span-2 sm:col-span-1">
+            <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block mb-0.5">
               Стоимость 1 км
             </span>
-            <span className="text-base font-extrabold text-amber-600 dark:text-amber-400 font-mono">
+            <span className="text-sm sm:text-base font-extrabold text-amber-600 dark:text-amber-400 font-mono">
               {analytics?.cost_per_distance_unit
                 ? `${analytics.cost_per_distance_unit} ${vehicle.currency}/км`
                 : '—'}
@@ -450,23 +461,23 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
         </div>
 
         {/* Quick Status Widgets Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
           {/* Widget 1: Active Tyres & 1-Click Season Swap */}
-          <div className="bg-slate-50 dark:bg-dark-900/90 border border-slate-200 dark:border-dark-750 rounded-xl p-4 flex flex-col justify-between space-y-3">
+          <div className="bg-slate-50 dark:bg-dark-900/90 border border-slate-200 dark:border-dark-750 rounded-xl p-3.5 flex flex-col justify-between space-y-2.5">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center flex-shrink-0">
-                  <Disc className="w-5 h-5" />
+              <div className="flex items-center space-x-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center flex-shrink-0">
+                  <Disc className="w-4 h-4" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <div className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400">
                     Установленные шины
                   </div>
-                  <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                  <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
                     {activeTyre ? (
                       <span>
                         {activeTyre.season === 'summer' ? '☀️' : '❄️'} {activeTyre.name}{' '}
-                        {activeTyre.size && <span className="font-mono text-xs text-slate-400">({activeTyre.size})</span>}
+                        {activeTyre.size && <span className="font-mono text-xs text-slate-400 font-normal">({activeTyre.size})</span>}
                       </span>
                     ) : (
                       <span className="text-slate-400 italic">Комплект не выбран</span>
@@ -475,18 +486,18 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-center space-x-1.5">
+              <div className="flex items-center space-x-1 flex-shrink-0">
                 <button
                   onClick={() => handleSeasonSwap('summer')}
-                  className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 transition-all"
-                  title="Быстро поставить летний комплект"
+                  className="px-2 py-1 rounded-lg text-[11px] font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 transition-all"
+                  title="Поставить летний комплект"
                 >
                   ☀️ Лето
                 </button>
                 <button
                   onClick={() => handleSeasonSwap('winter')}
-                  className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30 transition-all"
-                  title="Быстро поставить зимний комплект"
+                  className="px-2 py-1 rounded-lg text-[11px] font-bold bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30 transition-all"
+                  title="Поставить зимний комплект"
                 >
                   ❄️ Зима
                 </button>
@@ -494,14 +505,14 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
             </div>
 
             {activeTyre && (
-              <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-200 dark:border-dark-750 font-mono">
-                <span className="text-slate-500 dark:text-slate-400">
+              <div className="flex items-center justify-between text-xs pt-1.5 border-t border-slate-200 dark:border-dark-750 font-mono">
+                <span className="text-slate-500 dark:text-slate-400 text-[11px]">
                   Накат:{' '}
                   <strong className="text-brand-600 dark:text-brand-400">
                     {Math.round(activeTyre.current_km).toLocaleString('ru-RU')} км
                   </strong>
                 </span>
-                <span className="text-slate-500 dark:text-slate-400">
+                <span className="text-slate-500 dark:text-slate-400 text-[11px]">
                   Остаток:{' '}
                   <strong className="text-emerald-600 dark:text-emerald-400">
                     {activeTyre.tread_depth_mm} мм
@@ -512,17 +523,17 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
           </div>
 
           {/* Widget 2: Active Insurances */}
-          <div className="bg-slate-50 dark:bg-dark-900/90 border border-slate-200 dark:border-dark-750 rounded-xl p-4 flex flex-col justify-between space-y-3">
+          <div className="bg-slate-50 dark:bg-dark-900/90 border border-slate-200 dark:border-dark-750 rounded-xl p-3.5 flex flex-col justify-between space-y-2.5">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center flex-shrink-0">
-                  <ShieldCheck className="w-5 h-5" />
+              <div className="flex items-center space-x-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center flex-shrink-0">
+                  <ShieldCheck className="w-4 h-4" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <div className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400">
                     Страховые полисы ({activeInsurances.length})
                   </div>
-                  <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                  <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
                     {activeInsurances.length > 0 ? (
                       activeInsurances.map((d) => d.title).join(' • ')
                     ) : (
@@ -534,16 +545,16 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
 
               <button
                 onClick={() => onOpenDocModal()}
-                className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-200 dark:bg-dark-800 hover:bg-brand-500 hover:text-white text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-dark-700 transition-all"
+                className="px-2 py-1 rounded-lg text-[11px] font-bold bg-slate-200 dark:bg-dark-800 hover:bg-brand-500 hover:text-white text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-dark-700 transition-all flex-shrink-0"
               >
                 + Полис
               </button>
             </div>
 
             {activeInsurances.length > 0 && (
-              <div className="flex flex-wrap items-center gap-3 text-xs pt-2 border-t border-slate-200 dark:border-dark-750">
+              <div className="flex flex-wrap items-center gap-2 text-xs pt-1.5 border-t border-slate-200 dark:border-dark-750">
                 {activeInsurances.map((ins) => (
-                  <span key={ins.id} className="text-slate-600 dark:text-slate-400 text-[11px]">
+                  <span key={ins.id} className="text-slate-600 dark:text-slate-400 text-[11px] truncate max-w-[200px]">
                     <strong>{ins.title}:</strong> до {ins.expiration_date ? new Date(ins.expiration_date).toLocaleDateString('ru-RU') : '—'}{' '}
                     {ins.days_until_expiration !== null && ins.days_until_expiration !== undefined && (
                       <span className="text-emerald-500 font-semibold font-mono">
@@ -558,36 +569,29 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="flex items-center space-x-2 overflow-x-auto pb-1 scrollbar-none border-b border-slate-200 dark:border-dark-800">
-        {[
-          { id: 'service', label: 'Плановое ТО', icon: Wrench, count: serviceRecords.filter(r => r.record_type === 'service').length },
-          { id: 'repairs', label: 'Ремонты', icon: AlertTriangle, count: serviceRecords.filter(r => r.record_type === 'repair').length },
-          { id: 'upgrades', label: 'Тюнинг & Допы', icon: Sparkles, count: serviceRecords.filter(r => r.record_type === 'upgrade').length },
-          { id: 'fuel', label: 'Заправки', icon: Fuel, count: fuelLogs.length },
-          { id: 'reminders', label: 'План и Регламенты', icon: CalendarClock, count: reminders.length },
-          { id: 'tyres', label: 'Шины и Колеса', icon: Disc, count: tyres.length },
-          { id: 'analytics', label: 'Аналитика всех расходов', icon: BarChart3 },
-          { id: 'documents', label: 'Документы & Страховки', icon: FileText, count: documents.length },
-        ].map((tab) => {
+      {/* Modern Compact Segmented Tabs (Fits on 1 line on desktop, clean 4x2 on mobile) */}
+      <div className="grid grid-cols-4 sm:grid-cols-8 gap-1 p-1 bg-slate-200/70 dark:bg-dark-800 border border-slate-200 dark:border-dark-750 rounded-2xl">
+        {navTabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+              className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 py-2 sm:py-2.5 px-1 rounded-xl text-[11px] sm:text-xs font-bold transition-all ${
                 isActive
-                  ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/25'
-                  : 'bg-white dark:bg-dark-850 hover:bg-slate-100 dark:hover:bg-dark-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-slate-200 dark:border-dark-750'
+                  ? 'bg-brand-500 text-white shadow-md shadow-brand-500/25 scale-[1.02]'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-dark-750/50'
               }`}
             >
-              <Icon className="w-4 h-4" />
-              <span>{tab.label}</span>
-              {tab.count !== undefined && (
+              <Icon className="w-4 h-4 flex-shrink-0" />
+              <span className="truncate">{tab.label}</span>
+              {tab.count !== undefined && tab.count > 0 && (
                 <span
-                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
-                    isActive ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-dark-800 text-slate-500 dark:text-slate-400'
+                  className={`text-[9px] px-1 py-0.1 rounded-full font-mono font-extrabold ${
+                    isActive
+                      ? 'bg-white/25 text-white'
+                      : 'bg-slate-300 dark:bg-dark-700 text-slate-700 dark:text-slate-300'
                   }`}
                 >
                   {tab.count}
@@ -617,7 +621,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
             </div>
 
             {displayedServiceRecords.length === 0 ? (
-              <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-10 text-center space-y-3">
+              <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-8 sm:p-10 text-center space-y-3">
                 <Wrench className="w-10 h-10 text-slate-400 dark:text-slate-600 mx-auto" />
                 <div className="text-sm font-bold text-slate-900 dark:text-white">Записей пока нет</div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
@@ -636,22 +640,22 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 {displayedServiceRecords.map((rec) => (
                   <div
                     key={rec.id}
-                    className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 hover:border-slate-300 dark:hover:border-dark-700 rounded-2xl p-5 shadow-sm transition-all space-y-3"
+                    className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 hover:border-slate-300 dark:hover:border-dark-700 rounded-2xl p-4 sm:p-5 shadow-sm transition-all space-y-3"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-dark-800 border border-slate-200 dark:border-dark-700 flex items-center justify-center text-brand-500 font-bold text-sm">
+                      <div className="flex items-start sm:items-center space-x-3">
+                        <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-dark-800 border border-slate-200 dark:border-dark-700 flex items-center justify-center text-brand-500 font-bold text-sm flex-shrink-0 mt-0.5 sm:mt-0">
                           {rec.to_tag ? (
                             <span className="font-mono text-xs font-extrabold">{rec.to_tag}</span>
                           ) : (
                             <Wrench className="w-5 h-5" />
                           )}
                         </div>
-                        <div>
-                          <div className="flex items-center space-x-2">
-                            <h4 className="text-sm font-bold text-slate-900 dark:text-white">{rec.title}</h4>
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">{rec.title}</h4>
                             {rec.store && (
-                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-dark-700">
+                              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-dark-700">
                                 🛒 {rec.store}
                               </span>
                             )}
@@ -667,7 +671,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                               </a>
                             )}
                           </div>
-                          <div className="flex items-center space-x-3 text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-mono">
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-mono">
                             <span>📅 {new Date(rec.date).toLocaleDateString('ru-RU')}</span>
                             <span>🛣️ {Math.round(rec.odometer).toLocaleString('ru-RU')} {vehicle.distance_unit}</span>
                             {rec.engine_hours && (
@@ -677,8 +681,8 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                         </div>
                       </div>
 
-                      <div className="flex items-center space-x-3 self-end sm:self-center">
-                        <div className="text-right">
+                      <div className="flex items-center justify-between sm:justify-end space-x-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-dark-750">
+                        <div className="text-left sm:text-right">
                           <div className="text-base font-extrabold text-brand-600 dark:text-brand-400 font-mono">
                             {rec.total_cost.toLocaleString('ru-RU')} {vehicle.currency}
                           </div>
@@ -699,7 +703,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                           </button>
                           <button
                             onClick={() => handleDeleteService(rec.id)}
-                            className="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg hover:bg-rose-500/10"
+                            className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -782,7 +786,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
             </div>
 
             {reminders.length === 0 ? (
-              <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-10 text-center space-y-3">
+              <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-8 sm:p-10 text-center space-y-3">
                 <CalendarClock className="w-10 h-10 text-slate-400 dark:text-slate-600 mx-auto" />
                 <div className="text-sm font-bold text-slate-900 dark:text-white">Регламенты не настроены</div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
@@ -797,7 +801,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                 {reminders.map((rem) => {
                   const isOverdue = rem.status === 'overdue';
                   const isDueSoon = rem.status === 'due_soon';
@@ -805,7 +809,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                   return (
                     <div
                       key={rem.id}
-                      className={`bg-white dark:bg-dark-850 border rounded-2xl p-5 shadow-sm space-y-4 transition-all ${
+                      className={`bg-white dark:bg-dark-850 border rounded-2xl p-4 sm:p-5 shadow-sm space-y-3.5 transition-all ${
                         isOverdue
                           ? 'border-rose-500/50 shadow-rose-500/5'
                           : isDueSoon
@@ -814,8 +818,8 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                       }`}
                     >
                       <div className="flex items-start justify-between">
-                        <div>
-                          <div className="flex items-center space-x-2">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-1.5">
                             <h4 className="text-sm font-bold text-slate-900 dark:text-white">{rem.title}</h4>
                             {isOverdue && (
                               <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
@@ -839,14 +843,14 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                           </div>
 
                           {(rem.brand || rem.article || rem.spec) && (
-                            <div className="text-[11px] text-slate-500 mt-1 font-mono">
+                            <div className="text-[11px] text-slate-500 mt-0.5 font-mono truncate">
                               {rem.brand && <span>{rem.brand} </span>}
                               {rem.article && <span className="text-slate-400">[арт: {rem.article}]</span>}
                             </div>
                           )}
                         </div>
 
-                        <div className="flex items-center space-x-1">
+                        <div className="flex items-center space-x-1 flex-shrink-0">
                           <button
                             onClick={() => onOpenReminderModal(rem)}
                             className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-dark-750"
@@ -904,15 +908,15 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                       </div>
 
                       {/* Last done baseline and Mark Done button */}
-                      <div className="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-dark-750/70 text-xs">
-                        <div className="text-[11px] text-slate-500">
+                      <div className="flex items-center justify-between pt-2.5 border-t border-slate-200 dark:border-dark-750/70 text-xs">
+                        <div className="text-[11px] text-slate-500 truncate mr-2">
                           Было: {Math.round(rem.last_service_odometer).toLocaleString('ru-RU')} {vehicle.distance_unit}
                           {rem.last_service_hours ? ` (${rem.last_service_hours} м/ч)` : ''}
                         </div>
 
                         <button
                           onClick={() => handleMarkReminderDone(rem.id)}
-                          className="flex items-center space-x-1.5 bg-slate-100 hover:bg-emerald-600 hover:text-white dark:bg-dark-800 text-slate-700 dark:text-slate-300 px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-200 dark:border-dark-700 transition-all"
+                          className="flex items-center space-x-1 bg-slate-100 hover:bg-emerald-600 hover:text-white dark:bg-dark-800 text-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-lg text-xs font-semibold border border-slate-200 dark:border-dark-700 transition-all flex-shrink-0"
                         >
                           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
                           <span>Выполнено</span>
@@ -943,31 +947,31 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
             </div>
 
             {/* Quick Season Swap Banner */}
-            <div className="bg-white dark:bg-dark-850 border border-blue-500/30 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="bg-white dark:bg-dark-850 border border-blue-500/30 rounded-2xl p-3.5 sm:p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
               <div className="flex items-center space-x-2">
-                <RefreshCw className="w-4 h-4 text-blue-500" />
+                <RefreshCw className="w-4 h-4 text-blue-500 flex-shrink-0" />
                 <span className="text-xs font-bold text-slate-900 dark:text-white">
                   Сезонная переобувка в 1 клик:
                 </span>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="grid grid-cols-2 sm:flex items-center gap-2">
                 <button
                   onClick={() => handleSeasonSwap('summer')}
-                  className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex items-center space-x-1.5 shadow-sm transition"
+                  className="px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex items-center justify-center space-x-1 shadow-sm transition"
                 >
-                  <span>☀️ Установить Летний комплект</span>
+                  <span>☀️ Летний комплект</span>
                 </button>
                 <button
                   onClick={() => handleSeasonSwap('winter')}
-                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center space-x-1.5 shadow-sm transition"
+                  className="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center space-x-1 shadow-sm transition"
                 >
-                  <span>❄️ Установить Зимний комплект</span>
+                  <span>❄️ Зимний комплект</span>
                 </button>
               </div>
             </div>
 
             {tyres.length === 0 ? (
-              <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-10 text-center space-y-3">
+              <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-8 sm:p-10 text-center space-y-3">
                 <Disc className="w-10 h-10 text-slate-400 dark:text-slate-600 mx-auto" />
                 <div className="text-sm font-bold text-slate-900 dark:text-white">Комплекты шин не добавлены</div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
@@ -982,17 +986,17 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                 {tyres.map((t) => (
                   <div
                     key={t.id}
-                    className={`bg-white dark:bg-dark-850 border rounded-2xl p-5 shadow-sm space-y-4 transition-all ${
+                    className={`bg-white dark:bg-dark-850 border rounded-2xl p-4 sm:p-5 shadow-sm space-y-3.5 transition-all ${
                       t.is_active ? 'border-brand-500/60 bg-brand-500/5 dark:bg-dark-850/90' : 'border-slate-200 dark:border-dark-750'
                     }`}
                   >
                     <div className="flex items-start justify-between">
-                      <div>
-                        <div className="flex items-center space-x-2">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-1.5">
                           <h4 className="text-sm font-bold text-slate-900 dark:text-white">{t.name}</h4>
                           <span
                             className={`text-[10px] font-bold px-2 py-0.5 rounded ${
@@ -1005,18 +1009,18 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                           </span>
                           {t.is_active && (
                             <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-                              На автомобиле
+                              На авто
                             </span>
                           )}
                         </div>
                         {t.brand_model && (
-                          <div className="text-xs text-slate-700 dark:text-slate-300 font-semibold mt-1">
+                          <div className="text-xs text-slate-700 dark:text-slate-300 font-semibold mt-1 truncate">
                             {t.brand_model} {t.size && <span className="font-mono text-slate-400">({t.size})</span>}
                           </div>
                         )}
                       </div>
 
-                      <div className="flex items-center space-x-1">
+                      <div className="flex items-center space-x-1 flex-shrink-0">
                         <button
                           onClick={() => onOpenTyreModal(t)}
                           className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-dark-750"
@@ -1032,10 +1036,10 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 bg-slate-50 dark:bg-dark-900/80 p-3 rounded-xl border border-slate-200 dark:border-dark-750 text-xs">
+                    <div className="grid grid-cols-2 gap-2 bg-slate-50 dark:bg-dark-900/80 p-2.5 sm:p-3 rounded-xl border border-slate-200 dark:border-dark-750 text-xs">
                       <div>
                         <span className="text-[10px] text-slate-500 uppercase font-bold block">
-                          Пробег на комплекте
+                          Пробег
                         </span>
                         <span className="font-mono font-bold text-slate-900 dark:text-white text-sm">
                           {Math.round(t.current_km).toLocaleString('ru-RU')} км
@@ -1043,7 +1047,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                       </div>
                       <div>
                         <span className="text-[10px] text-slate-500 uppercase font-bold block">
-                          Остаток протектора
+                          Протектор
                         </span>
                         <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm">
                           {t.tread_depth_mm} мм
@@ -1051,11 +1055,11 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-dark-750/70 text-xs">
-                      <div className="text-slate-500 dark:text-slate-400">
-                        {t.storage_location && <span>📍 Хранение: {t.storage_location}</span>}
+                    <div className="flex items-center justify-between pt-2.5 border-t border-slate-200 dark:border-dark-750/70 text-xs">
+                      <div className="text-slate-500 dark:text-slate-400 truncate mr-2">
+                        {t.storage_location && <span>📍 {t.storage_location}</span>}
                         {t.total_price > 0 && (
-                          <span className="block font-mono text-brand-600 dark:text-brand-400 font-bold">
+                          <span className="block font-mono text-brand-600 dark:text-brand-400 font-bold text-[11px]">
                             {t.total_price.toLocaleString('ru-RU')} {vehicle.currency}
                           </span>
                         )}
@@ -1064,13 +1068,13 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                       {!t.is_active ? (
                         <button
                           onClick={() => handleActivateTyre(t.id)}
-                          className="flex items-center space-x-1.5 bg-slate-100 dark:bg-dark-800 hover:bg-brand-500 hover:text-white text-slate-700 dark:text-slate-300 px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-200 dark:border-dark-700 transition-all"
+                          className="flex items-center space-x-1 bg-slate-100 dark:bg-dark-800 hover:bg-brand-500 hover:text-white text-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-lg text-xs font-semibold border border-slate-200 dark:border-dark-700 transition-all flex-shrink-0"
                         >
                           <Disc className="w-3.5 h-3.5" />
-                          <span>Поставить на авто</span>
+                          <span>На авто</span>
                         </button>
                       ) : (
-                        <span className="text-emerald-600 dark:text-emerald-400 font-bold text-[11px] flex items-center gap-1">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold text-[11px] flex items-center gap-1 flex-shrink-0">
                           <CheckCircle className="w-3.5 h-3.5" />
                           Активен
                         </span>
@@ -1100,7 +1104,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
             </div>
 
             {fuelLogs.length === 0 ? (
-              <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-10 text-center space-y-3">
+              <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-8 sm:p-10 text-center space-y-3">
                 <Fuel className="w-10 h-10 text-slate-400 dark:text-slate-600 mx-auto" />
                 <div className="text-sm font-bold text-slate-900 dark:text-white">Нет записей о заправках</div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
@@ -1116,48 +1120,48 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               </div>
             ) : (
               <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl overflow-hidden shadow-sm">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
+                <div className="overflow-x-auto w-full">
+                  <table className="w-full text-left text-xs min-w-[620px]">
                     <thead className="bg-slate-100 dark:bg-dark-900 border-b border-slate-200 dark:border-dark-750 text-slate-600 dark:text-slate-400 font-bold uppercase text-[10px]">
                       <tr>
-                        <th className="p-3.5">Дата</th>
-                        <th className="p-3.5">Пробег</th>
-                        <th className="p-3.5">Объем</th>
-                        <th className="p-3.5">Цена/л</th>
-                        <th className="p-3.5">Расход</th>
-                        <th className="p-3.5">Сумма</th>
-                        <th className="p-3.5">АЗС / Топливо</th>
-                        <th className="p-3.5 text-right">Действия</th>
+                        <th className="p-3">Дата</th>
+                        <th className="p-3">Пробег</th>
+                        <th className="p-3">Объем</th>
+                        <th className="p-3">Цена/л</th>
+                        <th className="p-3">Расход</th>
+                        <th className="p-3">Сумма</th>
+                        <th className="p-3">АЗС / Топливо</th>
+                        <th className="p-3 text-right">Действия</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200 dark:divide-dark-750 text-slate-700 dark:text-slate-300">
                       {fuelLogs.map((f) => (
                         <tr key={f.id} className="hover:bg-slate-50 dark:hover:bg-dark-800/60 transition-colors">
-                          <td className="p-3.5 font-medium text-slate-900 dark:text-white whitespace-nowrap">
+                          <td className="p-3 font-medium text-slate-900 dark:text-white whitespace-nowrap">
                             {new Date(f.date).toLocaleDateString('ru-RU')}
                           </td>
-                          <td className="p-3.5 font-mono">
+                          <td className="p-3 font-mono whitespace-nowrap">
                             {Math.round(f.odometer).toLocaleString('ru-RU')} {vehicle.distance_unit}
                           </td>
-                          <td className="p-3.5 font-mono">
+                          <td className="p-3 font-mono whitespace-nowrap">
                             {f.fuel_amount} {vehicle.fuel_unit}
                           </td>
-                          <td className="p-3.5 font-mono text-slate-500 dark:text-slate-400">
+                          <td className="p-3 font-mono text-slate-500 dark:text-slate-400 whitespace-nowrap">
                             {f.unit_price} {vehicle.currency}
                           </td>
-                          <td className="p-3.5 font-mono font-bold">
+                          <td className="p-3 font-mono font-bold whitespace-nowrap">
                             {f.consumption ? (
-                              <span className="text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                              <span className="text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
                                 {f.consumption} л/100км
                               </span>
                             ) : (
                               <span className="text-slate-400">—</span>
                             )}
                           </td>
-                          <td className="p-3.5 font-mono font-extrabold text-brand-600 dark:text-brand-400">
+                          <td className="p-3 font-mono font-extrabold text-brand-600 dark:text-brand-400 whitespace-nowrap">
                             {f.total_cost.toLocaleString('ru-RU')} {vehicle.currency}
                           </td>
-                          <td className="p-3.5 text-slate-500 dark:text-slate-400">
+                          <td className="p-3 text-slate-500 dark:text-slate-400 truncate max-w-[140px]">
                             {f.gas_station || f.fuel_grade ? (
                               <span>
                                 {f.gas_station} {f.fuel_grade && `(${f.fuel_grade})`}
@@ -1166,7 +1170,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                               '—'
                             )}
                           </td>
-                          <td className="p-3.5 text-right whitespace-nowrap">
+                          <td className="p-3 text-right whitespace-nowrap">
                             <button
                               onClick={() => onOpenFuelModal(f)}
                               className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white mr-1"
@@ -1192,53 +1196,53 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
 
         {/* Analytics Tab (All Costs Breakdown & History) */}
         {activeTab === 'analytics' && analytics && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
-              <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 p-4 rounded-2xl shadow-sm">
-                <span className="text-[11px] uppercase font-semibold text-slate-500 dark:text-slate-400 block">
+          <div className="space-y-4 sm:space-y-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3.5">
+              <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 p-3.5 sm:p-4 rounded-2xl shadow-sm">
+                <span className="text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400 block">
                   ТО и Ремонты
                 </span>
-                <div className="text-lg font-extrabold text-brand-600 dark:text-brand-400 mt-1 font-mono">
+                <div className="text-base sm:text-lg font-extrabold text-brand-600 dark:text-brand-400 mt-1 font-mono">
                   {(analytics.total_service_spend + analytics.total_repair_spend).toLocaleString('ru-RU')}{' '}
                   <span className="text-xs font-sans text-slate-400">{vehicle.currency}</span>
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 p-4 rounded-2xl shadow-sm">
-                <span className="text-[11px] uppercase font-semibold text-slate-500 dark:text-slate-400 block">
+              <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 p-3.5 sm:p-4 rounded-2xl shadow-sm">
+                <span className="text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400 block">
                   Топливо
                 </span>
-                <div className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400 mt-1 font-mono">
+                <div className="text-base sm:text-lg font-extrabold text-emerald-600 dark:text-emerald-400 mt-1 font-mono">
                   {analytics.total_fuel_spend.toLocaleString('ru-RU')}{' '}
                   <span className="text-xs font-sans text-slate-400">{vehicle.currency}</span>
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 p-4 rounded-2xl shadow-sm">
-                <span className="text-[11px] uppercase font-semibold text-slate-500 dark:text-slate-400 block">
+              <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 p-3.5 sm:p-4 rounded-2xl shadow-sm">
+                <span className="text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400 block">
                   Тюнинг & Допы
                 </span>
-                <div className="text-lg font-extrabold text-amber-600 dark:text-amber-400 mt-1 font-mono">
+                <div className="text-base sm:text-lg font-extrabold text-amber-600 dark:text-amber-400 mt-1 font-mono">
                   {analytics.total_upgrade_spend.toLocaleString('ru-RU')}{' '}
                   <span className="text-xs font-sans text-slate-400">{vehicle.currency}</span>
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 p-4 rounded-2xl shadow-sm">
-                <span className="text-[11px] uppercase font-semibold text-slate-500 dark:text-slate-400 block">
+              <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 p-3.5 sm:p-4 rounded-2xl shadow-sm">
+                <span className="text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400 block">
                   Шины и Колеса
                 </span>
-                <div className="text-lg font-extrabold text-cyan-600 dark:text-cyan-400 mt-1 font-mono">
+                <div className="text-base sm:text-lg font-extrabold text-cyan-600 dark:text-cyan-400 mt-1 font-mono">
                   {analytics.total_tyre_spend.toLocaleString('ru-RU')}{' '}
                   <span className="text-xs font-sans text-slate-400">{vehicle.currency}</span>
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 p-4 rounded-2xl shadow-sm">
-                <span className="text-[11px] uppercase font-semibold text-slate-500 dark:text-slate-400 block">
-                  Страховки и Документы
+              <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 p-3.5 sm:p-4 rounded-2xl shadow-sm col-span-2 sm:col-span-1">
+                <span className="text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400 block">
+                  Страховки
                 </span>
-                <div className="text-lg font-extrabold text-purple-600 dark:text-purple-400 mt-1 font-mono">
+                <div className="text-base sm:text-lg font-extrabold text-purple-600 dark:text-purple-400 mt-1 font-mono">
                   {analytics.total_document_spend.toLocaleString('ru-RU')}{' '}
                   <span className="text-xs font-sans text-slate-400">{vehicle.currency}</span>
                 </div>
@@ -1246,20 +1250,20 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
             </div>
 
             {/* Charts Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 p-5 rounded-2xl space-y-4 shadow-sm">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+              <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 p-4 sm:p-5 rounded-2xl space-y-4 shadow-sm">
                 <h4 className="text-sm font-bold text-slate-900 dark:text-white">Структура всех расходов</h4>
                 {analytics.categories.length > 0 ? (
-                  <div className="h-64">
+                  <div className="h-60 sm:h-64">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
                           data={analytics.categories}
                           cx="50%"
                           cy="50%"
-                          innerRadius={60}
-                          outerRadius={90}
-                          paddingAngle={4}
+                          innerRadius={55}
+                          outerRadius={85}
+                          paddingAngle={3}
                           dataKey="amount"
                           nameKey="category"
                         >
@@ -1273,20 +1277,20 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                     </ResponsiveContainer>
                   </div>
                 ) : (
-                  <div className="h-64 flex items-center justify-center text-xs text-slate-400">
+                  <div className="h-60 flex items-center justify-center text-xs text-slate-400">
                     Недостаточно данных для графика
                   </div>
                 )}
               </div>
 
-              <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 p-5 rounded-2xl space-y-4 shadow-sm">
+              <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 p-4 sm:p-5 rounded-2xl space-y-4 shadow-sm">
                 <h4 className="text-sm font-bold text-slate-900 dark:text-white">Расходы по месяцам</h4>
                 {analytics.monthly_costs.length > 0 ? (
-                  <div className="h-64">
+                  <div className="h-60 sm:h-64">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={analytics.monthly_costs}>
-                        <XAxis dataKey="month" stroke="#718096" fontSize={11} />
-                        <YAxis stroke="#718096" fontSize={11} />
+                        <XAxis dataKey="month" stroke="#718096" fontSize={10} />
+                        <YAxis stroke="#718096" fontSize={10} />
                         <Tooltip content={<CustomBarTooltip />} />
                         <Legend />
                         <Bar dataKey="service_cost" name="ТО" stackId="a" fill="#0284c7" />
@@ -1299,7 +1303,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                     </ResponsiveContainer>
                   </div>
                 ) : (
-                  <div className="h-64 flex items-center justify-center text-xs text-slate-400">
+                  <div className="h-60 flex items-center justify-center text-xs text-slate-400">
                     Недостаточно данных для графика
                   </div>
                 )}
@@ -1325,7 +1329,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
             </div>
 
             {documents.length === 0 ? (
-              <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-10 text-center space-y-3">
+              <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-8 sm:p-10 text-center space-y-3">
                 <FileText className="w-10 h-10 text-slate-400 dark:text-slate-600 mx-auto" />
                 <div className="text-sm font-bold text-slate-900 dark:text-white">Документы не добавлены</div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
@@ -1340,11 +1344,11 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                 {documents.map((doc) => (
                   <div
                     key={doc.id}
-                    className={`bg-white dark:bg-dark-850 border rounded-2xl p-5 shadow-sm space-y-3 ${
+                    className={`bg-white dark:bg-dark-850 border rounded-2xl p-4 sm:p-5 shadow-sm space-y-3 ${
                       doc.is_expired
                         ? 'border-rose-500/50'
                         : doc.days_until_expiration && doc.days_until_expiration <= 30
@@ -1353,11 +1357,11 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                     }`}
                   >
                     <div className="flex items-start justify-between">
-                      <div>
-                        <div className="flex items-center space-x-2">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-1.5">
                           <h4 className="text-sm font-bold text-slate-900 dark:text-white">{doc.title}</h4>
                           {doc.company && (
-                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-dark-800 text-brand-600 dark:text-brand-400 border border-slate-200 dark:border-brand-500/20">
+                            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-dark-800 text-brand-600 dark:text-brand-400 border border-slate-200 dark:border-brand-500/20">
                               {doc.company}
                             </span>
                           )}
@@ -1369,7 +1373,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                         )}
                       </div>
 
-                      <div className="flex items-center space-x-1">
+                      <div className="flex items-center space-x-1 flex-shrink-0">
                         <button
                           onClick={() => onOpenDocModal(doc)}
                           className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-dark-750"
@@ -1386,7 +1390,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                     </div>
 
                     {doc.expiration_date && (
-                      <div className="flex items-center justify-between bg-slate-50 dark:bg-dark-900/80 p-3 rounded-xl border border-slate-200 dark:border-dark-750">
+                      <div className="flex items-center justify-between bg-slate-50 dark:bg-dark-900/80 p-2.5 sm:p-3 rounded-xl border border-slate-200 dark:border-dark-750">
                         <span className="text-xs text-slate-600 dark:text-slate-400">
                           Действует до: {new Date(doc.expiration_date).toLocaleDateString('ru-RU')}
                         </span>
@@ -1415,7 +1419,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                         </span>
                       )}
                       {doc.notes && (
-                        <span className="text-slate-500 dark:text-slate-400 italic text-[11px] truncate max-w-[200px]">
+                        <span className="text-slate-500 dark:text-slate-400 italic text-[11px] truncate max-w-[180px]">
                           {doc.notes}
                         </span>
                       )}
