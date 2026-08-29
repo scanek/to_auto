@@ -27,7 +27,14 @@ async def export_service_booklet(vehicle_id: int, db: AsyncSession = Depends(get
     )
     service_records = srv_res.scalars().all()
 
-    html_content = generate_service_booklet_html(vehicle, service_records)
+    ty_res = await db.execute(
+        select(TyreSet)
+        .where(TyreSet.vehicle_id == vehicle_id)
+        .order_by(TyreSet.season.asc(), TyreSet.name.asc())
+    )
+    tyres = ty_res.scalars().all()
+
+    html_content = generate_service_booklet_html(vehicle, service_records, tyres=tyres)
     
     return Response(
         content=html_content,

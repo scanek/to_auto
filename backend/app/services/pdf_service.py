@@ -1,14 +1,22 @@
 import datetime
 from app.models.vehicle import Vehicle
 from app.models.service import ServiceRecord
-from app.models.fuel import FuelLog
+from app.models.tyre import TyreSet
 
-def generate_service_booklet_html(vehicle: Vehicle, records: list[ServiceRecord]) -> str:
+def generate_service_booklet_html(
+    vehicle: Vehicle,
+    records: list[ServiceRecord],
+    tyres: list[TyreSet] = None
+) -> str:
     """
     Generates a print-ready, professional HTML Service Booklet (Сервисная книжка).
+    Includes vehicle specifications, seasonal tyre sets, and chronological maintenance history.
     """
     date_str = datetime.datetime.utcnow().strftime("%d.%m.%Y")
     
+    # -------------------------------------------------------------
+    # 1. Service Records Table
+    # -------------------------------------------------------------
     table_rows = ""
     total_cost_all = 0.0
 
@@ -23,21 +31,33 @@ def generate_service_booklet_html(vehicle: Vehicle, records: list[ServiceRecord]
             "upgrade": '<span class="badge badge-upgrade">Тюнинг</span>'
         }.get(r.record_type, '<span class="badge">ТО</span>')
 
+        tag_badge = f'<span class="badge badge-tag">{r.to_tag}</span> ' if r.to_tag else ''
+
         items_html = ""
         if r.items:
-            items_list = [f"• {it.name} ({it.quantity} шт. × {it.unit_price} {vehicle.currency})" for it in r.items]
+            items_list = []
+            for it in r.items:
+                store_info = f" • {it.store}" if it.store else ""
+                art_info = f" [арт: {it.part_number}]" if it.part_number else ""
+                brand_info = f" ({it.brand})" if it.brand else ""
+                items_list.append(
+                    f"• <strong>{it.name}</strong>{brand_info}{art_info}{store_info} — {it.quantity} шт. × {it.unit_price:,.0f} {vehicle.currency}".replace(",", " ")
+                )
             items_html = f'<div class="items-list">{"<br>".join(items_list)}</div>'
 
-        notes_html = f'<div class="record-notes">{r.notes}</div>' if r.notes else ''
+        notes_html = f'<div class="record-notes">{r.notes or r.description}</div>' if (r.notes or r.description) else ''
 
         table_rows += f"""
         <tr>
             <td class="text-center">{idx}</td>
             <td class="text-center">{r_date}</td>
-            <td class="text-center"><strong>{int(r.odometer):,} {vehicle.distance_unit}</strong></td>
+            <td class="text-center">
+                <strong>{int(r.odometer):,} {vehicle.distance_unit}</strong>
+                {f'<div style="font-size:10px; color:#718096;">{int(r.engine_hours)} м/ч</div>' if r.engine_hours else ''}
+            </td>
             <td>{type_badge}</td>
             <td>
-                <div class="record-title">{r.title}</div>
+                <div class="record-title">{tag_badge}{r.title}</div>
                 {items_html}
                 {notes_html}
             </td>
@@ -46,6 +66,49 @@ def generate_service_booklet_html(vehicle: Vehicle, records: list[ServiceRecord]
         """
 
     formatted_total_cost = f"{total_cost_all:,.2f} {vehicle.currency}".replace(",", " ")
+
+    # -------------------------------------------------------------
+    # 2. Tyres & Wheels Section
+    # -------------------------------------------------------------
+    tyres_html = ""
+    if tyres and len(tyres) > 0:
+        tyre_cards = ""
+        for t in tyres:
+            season_badge = (
+                '<span class="badge badge-summer">☀️ Летний</span>'
+                if t.season == 'summer'
+                else '<span class="badge badge-winter">❄️ Зимний</span>'
+            )
+            active_badge = (
+                '<span class="badge badge-active">Установлен на авто</span>'
+                if t.is_active
+                else '<span class="badge" style="background:#edf2f7; color:#718096;">На хранении</span>'
+            )
+            active_class = " active" if t.is_active else ""
+
+            tyre_cards += f"""
+            <div class="tyre-card{active_class}">
+                <div class="tyre-header">
+                    <div class="tyre-name">{t.name}</div>
+                    <div>{season_badge} {active_badge}</div>
+                </div>
+                <div style="font-size: 12px; font-weight: 600; color: #2d3748; margin-top: 2px;">
+                    {t.brand_model or ''} {f'({t.size})' if t.size else ''}
+                </div>
+                <div class="tyre-details">
+                    <div>Пробег на комплекте: <strong>{int(t.current_km):,} км</strong></div>
+                    <div>Остаток протектора: <strong>{t.tread_depth_mm} мм</strong></div>
+                    {f'<div style="grid-column: span 2;">Место хранения: <em>{t.storage_location}</em></div>' if t.storage_location else ''}
+                </div>
+            </div>
+            """
+
+        tyres_html = f"""
+        <div class="section-title">Комплекты шин и колес</div>
+        <div class="tyres-grid">
+            {tyre_cards}
+        </div>
+        """
 
     html = f"""<!DOCTYPE html>
 <html lang="ru">
@@ -56,7 +119,7 @@ def generate_service_booklet_html(vehicle: Vehicle, records: list[ServiceRecord]
     <style>
         @page {{
             size: A4;
-            margin: 15mm;
+            margin: 12mm;
         }}
         body {{
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -64,71 +127,118 @@ def generate_service_booklet_html(vehicle: Vehicle, records: list[ServiceRecord]
             line-height: 1.5;
             background: #fff;
             margin: 0;
-            padding: 20px;
+            padding: 15px;
         }}
         .header {{
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 2px solid #2b6cb0;
-            padding-bottom: 12px;
-            margin-bottom: 20px;
+            border-bottom: 2px solid #0284c7;
+            padding-bottom: 10px;
+            margin-bottom: 16px;
         }}
         .logo-title {{
-            font-size: 24px;
+            font-size: 22px;
             font-weight: 800;
-            color: #2b6cb0;
+            color: #0284c7;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }}
         .header-meta {{
-            font-size: 13px;
+            font-size: 12px;
             color: #718096;
             text-align: right;
         }}
         .vehicle-card {{
-            background: #f7fafc;
+            background: #f8fafc;
             border: 1px solid #e2e8f0;
             border-radius: 8px;
-            padding: 16px;
-            margin-bottom: 24px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 12px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
         }}
         .vehicle-card .item {{
             display: flex;
             flex-direction: column;
         }}
         .vehicle-card .label {{
-            font-size: 11px;
+            font-size: 10px;
             text-transform: uppercase;
             color: #718096;
-            font-weight: 600;
+            font-weight: 700;
             margin-bottom: 2px;
         }}
         .vehicle-card .value {{
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 700;
-            color: #2d3748;
+            color: #1e293b;
+        }}
+        .section-title {{
+            font-size: 13px;
+            font-weight: 800;
+            color: #0369a1;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 16px;
+            margin-bottom: 8px;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 4px;
+        }}
+        .tyres-grid {{
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 16px;
+        }}
+        .tyre-card {{
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 11px;
+        }}
+        .tyre-card.active {{
+            border-color: #0284c7;
+            background: #f0f9ff;
+        }}
+        .tyre-header {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }}
+        .tyre-name {{
+            font-weight: 700;
+            color: #0f172a;
+            font-size: 12px;
+        }}
+        .tyre-details {{
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 4px;
+            margin-top: 6px;
+            font-size: 11px;
+            color: #475569;
         }}
         table {{
             width: 100%;
             border-collapse: collapse;
-            font-size: 12px;
-            margin-bottom: 24px;
+            font-size: 11px;
+            margin-bottom: 20px;
         }}
         th {{
-            background: #2b6cb0;
+            background: #0284c7;
             color: white;
-            padding: 8px 10px;
+            padding: 7px 9px;
             text-align: left;
-            font-weight: 600;
+            font-weight: 700;
             text-transform: uppercase;
-            font-size: 11px;
+            font-size: 10px;
         }}
         td {{
-            padding: 8px 10px;
+            padding: 7px 9px;
             border-bottom: 1px solid #e2e8f0;
             vertical-align: top;
         }}
@@ -140,40 +250,47 @@ def generate_service_booklet_html(vehicle: Vehicle, records: list[ServiceRecord]
         .font-bold {{ font-weight: 700; }}
         .badge {{
             display: inline-block;
-            padding: 2px 6px;
+            padding: 1.5px 5px;
             border-radius: 4px;
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 700;
             text-transform: uppercase;
         }}
-        .badge-service {{ background: #ebf8ff; color: #2b6cb0; border: 1px solid #bee3f8; }}
-        .badge-repair {{ background: #fff5f5; color: #c53030; border: 1px solid #fed7d7; }}
-        .badge-upgrade {{ background: #f0fff4; color: #276749; border: 1px solid #c6f6d5; }}
-        .record-title {{ font-weight: 700; font-size: 13px; color: #1a202c; }}
-        .items-list {{ margin-top: 4px; font-size: 11px; color: #4a5568; }}
-        .record-notes {{ margin-top: 4px; font-size: 11px; color: #718096; font-style: italic; }}
+        .badge-service {{ background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }}
+        .badge-repair {{ background: #ffe4e6; color: #be123c; border: 1px solid #fecdd3; }}
+        .badge-upgrade {{ background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }}
+        .badge-tag {{ background: #0f172a; color: #fff; }}
+        .badge-active {{ background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }}
+        .badge-summer {{ background: #fef9c3; color: #854d0e; border: 1px solid #fef08a; }}
+        .badge-winter {{ background: #e0f2fe; color: #075985; border: 1px solid #bae6fd; }}
+        .record-title {{ font-weight: 700; font-size: 12px; color: #0f172a; }}
+        .items-list {{ margin-top: 3px; font-size: 10.5px; color: #334155; line-height: 1.4; }}
+        .record-notes {{ margin-top: 3px; font-size: 10.5px; color: #64748b; font-style: italic; }}
         .total-summary {{
-            background: #edf2f7;
-            padding: 12px 16px;
+            background: #f1f5f9;
+            padding: 10px 14px;
             border-radius: 6px;
             display: flex;
             justify-content: space-between;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 700;
+            color: #0f172a;
         }}
         .no-print {{
-            margin-bottom: 15px;
+            margin-bottom: 12px;
             display: flex;
             gap: 10px;
         }}
         .btn-print {{
-            background: #2b6cb0;
+            background: #0284c7;
             color: white;
-            padding: 8px 16px;
+            padding: 7px 14px;
             border: none;
-            border-radius: 4px;
-            font-weight: 600;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 12px;
             cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }}
         @media print {{
             .no-print {{ display: none; }}
@@ -189,7 +306,7 @@ def generate_service_booklet_html(vehicle: Vehicle, records: list[ServiceRecord]
     <div class="header">
         <div>
             <div class="logo-title">Электронная сервисная книжка</div>
-            <div style="font-size: 13px; color: #4a5568;">Журнал технического обслуживания и ремонтов</div>
+            <div style="font-size: 12px; color: #64748b;">Журнал технического обслуживания, ремонтов и оснащения</div>
         </div>
         <div class="header-meta">
             Сформировано: {date_str}<br>
@@ -200,7 +317,7 @@ def generate_service_booklet_html(vehicle: Vehicle, records: list[ServiceRecord]
     <div class="vehicle-card">
         <div class="item">
             <span class="label">Автомобиль</span>
-            <span class="value">{vehicle.make} {vehicle.model} ({vehicle.year or '-'})</span>
+            <span class="value">{vehicle.make} {vehicle.model} {f'({vehicle.year} г.)' if vehicle.year else ''}</span>
         </div>
         <div class="item">
             <span class="label">Госномер</span>
@@ -214,17 +331,28 @@ def generate_service_booklet_html(vehicle: Vehicle, records: list[ServiceRecord]
             <span class="label">Текущий пробег</span>
             <span class="value">{int(vehicle.current_odometer):,} {vehicle.distance_unit}</span>
         </div>
+        <div class="item">
+            <span class="label">Двигатель / Моточасы</span>
+            <span class="value">{vehicle.engine or '—'}{f' • {int(vehicle.current_engine_hours)} м/ч' if vehicle.current_engine_hours else ''}</span>
+        </div>
+        <div class="item">
+            <span class="label">Спецификация масла</span>
+            <span class="value">{vehicle.oil_spec or '—'}</span>
+        </div>
     </div>
 
+    {tyres_html}
+
+    <div class="section-title">Хронологический журнал обслуживания и ремонтов</div>
     <table>
         <thead>
             <tr>
-                <th style="width: 40px;" class="text-center">№</th>
-                <th style="width: 90px;" class="text-center">Дата</th>
-                <th style="width: 110px;" class="text-center">Пробег</th>
-                <th style="width: 80px;">Тип</th>
-                <th>Выполненные работы и запчасти</th>
-                <th style="width: 110px;" class="text-right">Стоимость</th>
+                <th style="width: 35px;" class="text-center">№</th>
+                <th style="width: 80px;" class="text-center">Дата</th>
+                <th style="width: 100px;" class="text-center">Пробег</th>
+                <th style="width: 65px;">Тип</th>
+                <th>Выполненные работы, детали и артикулы</th>
+                <th style="width: 105px;" class="text-right">Стоимость</th>
             </tr>
         </thead>
         <tbody>
@@ -233,8 +361,8 @@ def generate_service_booklet_html(vehicle: Vehicle, records: list[ServiceRecord]
     </table>
 
     <div class="total-summary">
-        <span>Всего записей: {len(records)}</span>
-        <span>Итого затраты на ТО и ремонт: {formatted_total_cost}</span>
+        <span>Всего записей ТО: {len(records)}</span>
+        <span>Итого затраты на обслуживание: {formatted_total_cost}</span>
     </div>
 </body>
 </html>
