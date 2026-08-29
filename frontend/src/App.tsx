@@ -52,23 +52,24 @@ export function App() {
   };
 
   const checkAuthStatus = useCallback(async () => {
-    try {
-      const user = await api.getMe();
-      setCurrentUser(user);
-      setIsAuthenticated(true);
-      await loadVehicles();
-    } catch {
-      setCurrentUser(null);
-      setIsAuthenticated(false);
-      setLoading(false);
-      // If no users exist in database, pop setup modal
+    const token = localStorage.getItem('autotracker_admin_token');
+    if (token) {
       try {
-        const setup = await api.getSetupStatus();
-        if (!setup.has_users) {
-          setIsAuthModalOpen(true);
-        }
-      } catch {}
+        const user = await api.getMe();
+        setCurrentUser(user);
+        setIsAuthenticated(true);
+        await loadVehicles();
+        return;
+      } catch (err) {
+        console.warn('Invalid or expired token', err);
+        removeAuthToken();
+      }
     }
+
+    setCurrentUser(null);
+    setIsAuthenticated(false);
+    setLoading(false);
+    setIsAuthModalOpen(true);
   }, []);
 
   useEffect(() => {

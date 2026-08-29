@@ -64,22 +64,37 @@ async function request<T>(
       clearTimeout(timeoutId);
 
       if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
+        let errorMsg = `HTTP ${res.status}`;
+        try {
+          const errJson = await res.json();
+          if (errJson?.detail) {
+            errorMsg = typeof errJson.detail === 'string' ? errJson.detail : JSON.stringify(errJson.detail);
+          }
+        } catch {}
+        throw new Error(errorMsg);
       }
 
       offlineStorage.setOnline(true);
       const data: T = await res.json();
       await offlineStorage.setCache(cacheKey, data);
       return data;
-    } catch (err) {
-      console.warn(`[Offline Mode] Network request failed for ${url}, reading from offline cache...`, err);
-      offlineStorage.setOnline(false);
-      const cached = await offlineStorage.getCache<T>(cacheKey);
-      if (cached !== null && cached !== undefined) {
-        return cached;
-      }
-      if (offlineConfig?.fallbackMock) {
-        return offlineConfig.fallbackMock();
+    } catch (err: any) {
+      const isNetworkError =
+        !navigator.onLine ||
+        err.name === 'AbortError' ||
+        err.message?.includes('Failed to fetch') ||
+        err.message?.includes('NetworkError');
+
+      if (isNetworkError) {
+        console.warn(`[Offline Mode] Network request failed for ${url}, reading from offline cache...`, err);
+        offlineStorage.setOnline(false);
+        const cached = await offlineStorage.getCache<T>(cacheKey);
+        if (cached !== null && cached !== undefined) {
+          return cached;
+        }
+        if (offlineConfig?.fallbackMock) {
+          return offlineConfig.fallbackMock();
+        }
       }
       throw err;
     }
@@ -98,8 +113,17 @@ async function request<T>(
     clearTimeout(timeoutId);
 
     if (!res.ok) {
-      const errorBody = await res.text();
-      throw new Error(errorBody || `HTTP error ${res.status}`);
+      let errorMsg = `HTTP ${res.status}`;
+      try {
+        const errJson = await res.json();
+        if (errJson?.detail) {
+          errorMsg = typeof errJson.detail === 'string' ? errJson.detail : JSON.stringify(errJson.detail);
+        }
+      } catch {
+        const errorBody = await res.text();
+        if (errorBody) errorMsg = errorBody;
+      }
+      throw new Error(errorMsg);
     }
 
     offlineStorage.setOnline(true);
