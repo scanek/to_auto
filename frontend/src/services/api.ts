@@ -152,6 +152,18 @@ export const api = {
       body: JSON.stringify(backupJson),
     }),
 
+  // Photo / File Upload
+  uploadPhoto: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${API_BASE}/uploads`, {
+      method: 'POST',
+      body: formData,
+    });
+    if (!res.ok) throw new Error('Ошибка загрузки фотографии');
+    return res.json() as Promise<{ url: string; filename: string; size: number }>;
+  },
+
   // File Upload
   uploadFile: async (file: File, vehicleId: number, serviceRecordId?: number, fuelLogId?: number, documentId?: number) => {
     const formData = new FormData();

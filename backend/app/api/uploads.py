@@ -3,17 +3,16 @@ from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 import aiofiles
-from app.core.config import settings, UPLOAD_DIR
+from app.core.config import UPLOAD_DIR
 from app.db.session import get_db
 from app.models.attachment import Attachment
-from app.schemas.attachment import AttachmentResponse
 
 router = APIRouter(prefix="/uploads", tags=["Uploads"])
 
-@router.post("", response_model=AttachmentResponse)
+@router.post("")
 async def upload_file(
     file: UploadFile = File(...),
-    vehicle_id: int = Query(...),
+    vehicle_id: int = Query(None),
     service_record_id: int = Query(None),
     fuel_log_id: int = Query(None),
     document_id: int = Query(None),
@@ -22,7 +21,7 @@ async def upload_file(
     if not file.filename:
         raise HTTPException(status_code=400, detail="Имя файла не указано")
 
-    ext = Path(file.filename).suffix
+    ext = Path(file.filename).suffix or ".jpg"
     unique_filename = f"{uuid.uuid4().hex}{ext}"
     destination = UPLOAD_DIR / unique_filename
 
@@ -35,20 +34,22 @@ async def upload_file(
 
     url = f"/uploads/{unique_filename}"
 
-    attachment = Attachment(
-        vehicle_id=vehicle_id,
-        service_record_id=service_record_id,
-        fuel_log_id=fuel_log_id,
-        document_id=document_id,
-        file_name=file.filename,
-        file_path=str(destination),
-        file_size=file_size,
-        content_type=file.content_type,
-    )
-    db.add(attachment)
-    await db.commit()
-    await db.refresh(attachment)
+    if vehicle_id:
+        attachment = Attachment(
+            vehicle_id=vehicle_id,
+            service_record_id=service_record_id,
+            fuel_log_id=fuel_log_id,
+            document_id=document_id,
+            file_name=file.filename,
+            file_path=str(destination),
+            file_size=file_size,
+            content_type=file.content_type,
+        )
+        db.add(attachment)
+        await db.commit()
 
-    resp = AttachmentResponse.model_validate(attachment)
-    resp.url = url
-    return resp
+    return {
+        "url": url,
+        "filename": file.filename,
+        "size": file_size,
+    }

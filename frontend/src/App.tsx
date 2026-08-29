@@ -17,6 +17,27 @@ export function App() {
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Theme state ('dark' | 'light')
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    const saved = localStorage.getItem('theme');
+    return (saved === 'light' || saved === 'dark') ? saved : 'dark';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('theme', theme);
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
+    }
+  }, [theme]);
+
+  const handleToggleTheme = () => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  };
+
   // Modals state
   const [isVehicleModalOpen, setIsVehicleModalOpen] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
@@ -180,10 +201,12 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen bg-dark-900 text-slate-100 flex flex-col">
+    <div className="min-h-screen bg-slate-100 dark:bg-dark-900 text-slate-900 dark:text-slate-100 flex flex-col transition-colors">
       <Navbar
         vehicles={vehicles}
         selectedVehicle={selectedVehicle}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
         onSelectVehicle={setSelectedVehicle}
         onAddVehicle={handleOpenAddVehicle}
         onOpenImportModal={() => setIsImportModalOpen(true)}

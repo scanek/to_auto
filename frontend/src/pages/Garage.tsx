@@ -39,29 +39,29 @@ export const Garage: React.FC<GarageProps> = ({
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fadeIn">
       {/* Top Banner Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-dark-850 border border-dark-750 p-5 rounded-2xl flex items-center justify-between">
+        <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 p-5 rounded-2xl flex items-center justify-between shadow-sm">
           <div>
-            <span className="text-xs font-semibold uppercase text-slate-400">Автомобилей в гараже</span>
-            <div className="text-2xl font-extrabold text-white mt-1">{vehicles.length}</div>
+            <span className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Автомобилей в гараже</span>
+            <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">{vehicles.length}</div>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-brand-400">
+          <div className="w-12 h-12 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-brand-500">
             <Car className="w-6 h-6" />
           </div>
         </div>
 
-        <div className="bg-dark-850 border border-dark-750 p-5 rounded-2xl flex items-center justify-between">
+        <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 p-5 rounded-2xl flex items-center justify-between shadow-sm">
           <div>
-            <span className="text-xs font-semibold uppercase text-slate-400">Напоминаний к ТО</span>
+            <span className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Напоминаний к ТО</span>
             <div className="flex items-center space-x-2 mt-1">
               <span
                 className={`text-2xl font-extrabold ${
-                  totalOverdueReminders > 0 ? 'text-rose-400' : 'text-emerald-400'
+                  totalOverdueReminders > 0 ? 'text-rose-500' : 'text-emerald-500'
                 }`}
               >
                 {totalOverdueReminders}
               </span>
               {totalOverdueReminders > 0 && (
-                <span className="text-xs px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20 font-medium">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 font-medium">
                   Требует внимания
                 </span>
               )}
@@ -70,22 +70,22 @@ export const Garage: React.FC<GarageProps> = ({
           <div
             className={`w-12 h-12 rounded-xl flex items-center justify-center ${
               totalOverdueReminders > 0
-                ? 'bg-rose-500/10 border border-rose-500/20 text-rose-400'
-                : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
+                ? 'bg-rose-500/10 border border-rose-500/20 text-rose-500'
+                : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-500'
             }`}
           >
             <CalendarClock className="w-6 h-6" />
           </div>
         </div>
 
-        <div className="bg-dark-850 border border-dark-750 p-5 rounded-2xl flex items-center justify-between">
+        <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 p-5 rounded-2xl flex items-center justify-between shadow-sm">
           <div>
-            <span className="text-xs font-semibold uppercase text-slate-400">Всего расходов</span>
-            <div className="text-2xl font-extrabold text-white mt-1">
+            <span className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Всего расходов</span>
+            <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">
               {totalSpendAll.toLocaleString('ru-RU')} ₽
             </div>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+          <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500">
             <TrendingUp className="w-6 h-6" />
           </div>
         </div>
@@ -95,15 +95,15 @@ export const Garage: React.FC<GarageProps> = ({
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h2 className="text-xl font-bold text-white tracking-tight">Ваш гараж</h2>
-            <p className="text-xs text-slate-400">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">Ваш гараж</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               Выберите автомобиль для просмотра журнала обслуживания, заправок и аналитики
             </p>
           </div>
           <div className="flex items-center space-x-2.5">
             <button
               onClick={onOpenImportModal}
-              className="flex items-center space-x-1.5 bg-emerald-600/15 hover:bg-emerald-600/25 text-emerald-400 border border-emerald-500/30 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-sm"
+              className="flex items-center space-x-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-sm"
             >
               <UploadCloud className="w-4 h-4" />
               <span>Импорт бэкапа JSON</span>
@@ -119,13 +119,13 @@ export const Garage: React.FC<GarageProps> = ({
         </div>
 
         {vehicles.length === 0 ? (
-          <div className="bg-dark-850 border border-dark-750 rounded-2xl p-10 text-center space-y-5 shadow-2xl">
-            <div className="w-16 h-16 rounded-2xl bg-dark-800 border border-dark-700 flex items-center justify-center mx-auto text-slate-500">
+          <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-10 text-center space-y-5 shadow-sm">
+            <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-dark-800 border border-slate-200 dark:border-dark-700 flex items-center justify-center mx-auto text-slate-400">
               <Car className="w-8 h-8" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white">Гараж пока пуст</h3>
-              <p className="text-xs text-slate-400 max-w-md mx-auto mt-1">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Гараж пока пуст</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto mt-1">
                 Вы можете восстановить все данные и историю обслуживания из файла бэкапа или добавить автомобиль вручную.
               </p>
             </div>
@@ -139,7 +139,7 @@ export const Garage: React.FC<GarageProps> = ({
               </button>
               <button
                 onClick={onAddVehicle}
-                className="inline-flex items-center space-x-2 bg-dark-800 hover:bg-dark-750 text-slate-200 border border-dark-700 px-5 py-2.5 rounded-xl text-xs font-bold transition-all"
+                className="inline-flex items-center space-x-2 bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-dark-700 px-5 py-2.5 rounded-xl text-xs font-bold transition-all"
               >
                 <Plus className="w-4 h-4" />
                 <span>Добавить автомобиль вручную</span>
@@ -151,12 +151,12 @@ export const Garage: React.FC<GarageProps> = ({
             {vehicles.map((v) => (
               <div
                 key={v.id}
-                className="bg-dark-850 border border-dark-750 hover:border-dark-700 rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 flex flex-col group"
+                className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 hover:border-slate-300 dark:hover:border-dark-700 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col group"
               >
-                {/* Vehicle Image / Placeholder */}
+                {/* Vehicle Image */}
                 <div
                   onClick={() => onSelectVehicle(v)}
-                  className="h-44 relative bg-dark-800 overflow-hidden cursor-pointer group-hover:brightness-105 transition-all"
+                  className="h-44 relative bg-slate-100 dark:bg-dark-800 overflow-hidden cursor-pointer group-hover:brightness-105 transition-all"
                 >
                   {v.photo_url ? (
                     <img
@@ -165,14 +165,14 @@ export const Garage: React.FC<GarageProps> = ({
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                   ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-dark-800 to-dark-900 text-slate-600">
+                    <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 dark:bg-gradient-to-br dark:from-dark-800 dark:to-dark-900 text-slate-400 dark:text-slate-600">
                       <Car className="w-16 h-16 stroke-[1.2]" />
                     </div>
                   )}
 
                   {/* Overdue Badge */}
                   {(v.overdue_reminders_count || 0) > 0 && (
-                    <div className="absolute top-3 left-3 bg-rose-500/90 backdrop-blur-md text-white text-[11px] font-bold px-2.5 py-1 rounded-lg flex items-center space-x-1 shadow-lg shadow-rose-500/30">
+                    <div className="absolute top-3 left-3 bg-rose-500/95 backdrop-blur-md text-white text-[11px] font-bold px-2.5 py-1 rounded-lg flex items-center space-x-1 shadow-lg shadow-rose-500/30">
                       <AlertTriangle className="w-3.5 h-3.5" />
                       <span>{v.overdue_reminders_count} ТО скоро/просрочено</span>
                     </div>
@@ -181,12 +181,12 @@ export const Garage: React.FC<GarageProps> = ({
                   {/* Plate / Year Badges */}
                   <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
                     {v.license_plate && (
-                      <span className="bg-dark-950/80 backdrop-blur-md border border-dark-700 text-slate-100 text-xs font-mono font-bold px-2.5 py-1 rounded-md shadow-md">
+                      <span className="bg-slate-900/85 dark:bg-dark-950/85 backdrop-blur-md border border-slate-700 text-white text-xs font-mono font-bold px-2.5 py-1 rounded-md shadow-md">
                         {v.license_plate}
                       </span>
                     )}
                     {v.year && (
-                      <span className="bg-dark-950/80 backdrop-blur-md border border-dark-700 text-slate-300 text-xs font-semibold px-2 py-0.5 rounded-md ml-auto">
+                      <span className="bg-slate-900/85 dark:bg-dark-950/85 backdrop-blur-md border border-slate-700 text-slate-200 text-xs font-semibold px-2 py-0.5 rounded-md ml-auto">
                         {v.year} г.
                       </span>
                     )}
@@ -199,17 +199,17 @@ export const Garage: React.FC<GarageProps> = ({
                     <div className="flex items-start justify-between">
                       <div
                         onClick={() => onSelectVehicle(v)}
-                        className="cursor-pointer group-hover:text-brand-400 transition-colors"
+                        className="cursor-pointer group-hover:text-brand-500 transition-colors"
                       >
-                        <h3 className="text-lg font-bold text-white tracking-tight">
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">
                           {v.name || `${v.make} ${v.model}`}
                         </h3>
-                        {v.engine && <p className="text-xs text-slate-400 font-mono">{v.engine}</p>}
+                        {v.engine && <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">{v.engine}</p>}
                       </div>
                       <div className="flex items-center space-x-1">
                         <button
                           onClick={() => onEditVehicle(v)}
-                          className="p-1.5 text-slate-400 hover:text-white hover:bg-dark-750 rounded-lg transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-dark-750 rounded-lg transition-colors"
                           title="Редактировать"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
@@ -220,7 +220,7 @@ export const Garage: React.FC<GarageProps> = ({
                               onDeleteVehicle(v.id);
                             }
                           }}
-                          className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors"
                           title="Удалить"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -229,29 +229,29 @@ export const Garage: React.FC<GarageProps> = ({
                     </div>
 
                     {/* Metrics Grid */}
-                    <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-dark-750">
-                      <div className="bg-dark-900/70 p-2.5 rounded-xl border border-dark-750/70">
-                        <span className="text-[10px] uppercase font-semibold text-slate-400 block">
+                    <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-100 dark:border-dark-750">
+                      <div className="bg-slate-50 dark:bg-dark-900/70 p-2.5 rounded-xl border border-slate-200 dark:border-dark-750/70">
+                        <span className="text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400 block">
                           Пробег / Моточасы
                         </span>
-                        <span className="text-sm font-bold text-white font-mono block">
+                        <span className="text-sm font-bold text-slate-900 dark:text-white font-mono block">
                           {Math.round(v.current_odometer).toLocaleString('ru-RU')}{' '}
-                          <span className="text-xs text-slate-400 font-sans">{v.distance_unit}</span>
+                          <span className="text-xs text-slate-500 font-sans">{v.distance_unit}</span>
                         </span>
                         {v.current_engine_hours > 0 && (
-                          <span className="text-xs text-cyan-400 font-mono">
+                          <span className="text-xs text-cyan-600 dark:text-cyan-400 font-mono">
                             {Math.round(v.current_engine_hours)} м/ч
                           </span>
                         )}
                       </div>
 
-                      <div className="bg-dark-900/70 p-2.5 rounded-xl border border-dark-750/70">
-                        <span className="text-[10px] uppercase font-semibold text-slate-400 block">
+                      <div className="bg-slate-50 dark:bg-dark-900/70 p-2.5 rounded-xl border border-slate-200 dark:border-dark-750/70">
+                        <span className="text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400 block">
                           Затраты
                         </span>
-                        <span className="text-sm font-bold text-brand-400 font-mono">
+                        <span className="text-sm font-bold text-brand-600 dark:text-brand-400 font-mono">
                           {Math.round(v.total_cost || 0).toLocaleString('ru-RU')}{' '}
-                          <span className="text-xs text-slate-400 font-sans">{v.currency}</span>
+                          <span className="text-xs text-slate-500 font-sans">{v.currency}</span>
                         </span>
                       </div>
                     </div>
@@ -260,7 +260,7 @@ export const Garage: React.FC<GarageProps> = ({
                   {/* Open Button */}
                   <button
                     onClick={() => onSelectVehicle(v)}
-                    className="w-full flex items-center justify-center space-x-1.5 bg-dark-800 hover:bg-brand-500 text-slate-200 hover:text-white py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 border border-dark-700 hover:border-brand-500 shadow-sm"
+                    className="w-full flex items-center justify-center space-x-1.5 bg-slate-100 dark:bg-dark-800 hover:bg-brand-500 text-slate-700 dark:text-slate-200 hover:text-white py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 border border-slate-200 dark:border-dark-700 hover:border-brand-500 shadow-sm"
                   >
                     <span>Открыть журнал и ТО</span>
                     <ChevronRight className="w-4 h-4" />
