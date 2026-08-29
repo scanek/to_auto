@@ -8,6 +8,7 @@ import {
   AlertTriangle,
   Edit2,
   Trash2,
+  UploadCloud,
 } from 'lucide-react';
 import { Vehicle } from '../types';
 
@@ -17,6 +18,7 @@ interface GarageProps {
   onAddVehicle: () => void;
   onEditVehicle: (v: Vehicle) => void;
   onDeleteVehicle: (id: number) => void;
+  onOpenImportModal: () => void;
 }
 
 export const Garage: React.FC<GarageProps> = ({
@@ -25,6 +27,7 @@ export const Garage: React.FC<GarageProps> = ({
   onAddVehicle,
   onEditVehicle,
   onDeleteVehicle,
+  onOpenImportModal,
 }) => {
   const totalSpendAll = vehicles.reduce((sum, v) => sum + (v.total_cost || 0), 0);
   const totalOverdueReminders = vehicles.reduce(
@@ -90,40 +93,58 @@ export const Garage: React.FC<GarageProps> = ({
 
       {/* Vehicles Section */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h2 className="text-xl font-bold text-white tracking-tight">Ваш гараж</h2>
             <p className="text-xs text-slate-400">
               Выберите автомобиль для просмотра журнала обслуживания, заправок и аналитики
             </p>
           </div>
-          <button
-            onClick={onAddVehicle}
-            className="flex items-center space-x-2 bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-brand-500/20"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Добавить авто</span>
-          </button>
+          <div className="flex items-center space-x-2.5">
+            <button
+              onClick={onOpenImportModal}
+              className="flex items-center space-x-1.5 bg-emerald-600/15 hover:bg-emerald-600/25 text-emerald-400 border border-emerald-500/30 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-sm"
+            >
+              <UploadCloud className="w-4 h-4" />
+              <span>Импорт бэкапа JSON</span>
+            </button>
+            <button
+              onClick={onAddVehicle}
+              className="flex items-center space-x-1.5 bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-brand-500/20"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Добавить авто</span>
+            </button>
+          </div>
         </div>
 
         {vehicles.length === 0 ? (
-          <div className="bg-dark-850 border border-dark-750 rounded-2xl p-12 text-center space-y-4">
+          <div className="bg-dark-850 border border-dark-750 rounded-2xl p-10 text-center space-y-5 shadow-2xl">
             <div className="w-16 h-16 rounded-2xl bg-dark-800 border border-dark-700 flex items-center justify-center mx-auto text-slate-500">
               <Car className="w-8 h-8" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white">Гараж пока пуст</h3>
-              <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1">
-                Добавьте свой первый автомобиль, чтобы начать вести электронную сервисную книжку и следить за расходами.
+              <h3 className="text-lg font-bold text-white">Гараж пока пуст</h3>
+              <p className="text-xs text-slate-400 max-w-md mx-auto mt-1">
+                Вы можете восстановить все данные и историю обслуживания из файла бэкапа или добавить автомобиль вручную.
               </p>
             </div>
-            <button
-              onClick={onAddVehicle}
-              className="inline-flex items-center space-x-2 bg-brand-500 hover:bg-brand-600 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-lg shadow-brand-500/25"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Добавить автомобиль</span>
-            </button>
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+              <button
+                onClick={onOpenImportModal}
+                className="inline-flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-lg shadow-emerald-600/25 active:scale-95"
+              >
+                <UploadCloud className="w-4 h-4" />
+                <span>📥 Восстановить из бэкапа JSON</span>
+              </button>
+              <button
+                onClick={onAddVehicle}
+                className="inline-flex items-center space-x-2 bg-dark-800 hover:bg-dark-750 text-slate-200 border border-dark-700 px-5 py-2.5 rounded-xl text-xs font-bold transition-all"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Добавить автомобиль вручную</span>
+              </button>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -181,9 +202,9 @@ export const Garage: React.FC<GarageProps> = ({
                         className="cursor-pointer group-hover:text-brand-400 transition-colors"
                       >
                         <h3 className="text-lg font-bold text-white tracking-tight">
-                          {v.make} {v.model}
+                          {v.name || `${v.make} ${v.model}`}
                         </h3>
-                        {v.name && <p className="text-xs text-slate-400">{v.name}</p>}
+                        {v.engine && <p className="text-xs text-slate-400 font-mono">{v.engine}</p>}
                       </div>
                       <div className="flex items-center space-x-1">
                         <button
@@ -211,12 +232,17 @@ export const Garage: React.FC<GarageProps> = ({
                     <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-dark-750">
                       <div className="bg-dark-900/70 p-2.5 rounded-xl border border-dark-750/70">
                         <span className="text-[10px] uppercase font-semibold text-slate-400 block">
-                          Одометр
+                          Пробег / Моточасы
                         </span>
-                        <span className="text-sm font-bold text-white font-mono">
+                        <span className="text-sm font-bold text-white font-mono block">
                           {Math.round(v.current_odometer).toLocaleString('ru-RU')}{' '}
                           <span className="text-xs text-slate-400 font-sans">{v.distance_unit}</span>
                         </span>
+                        {v.current_engine_hours > 0 && (
+                          <span className="text-xs text-cyan-400 font-mono">
+                            {Math.round(v.current_engine_hours)} м/ч
+                          </span>
+                        )}
                       </div>
 
                       <div className="bg-dark-900/70 p-2.5 rounded-xl border border-dark-750/70">

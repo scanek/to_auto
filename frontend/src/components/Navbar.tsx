@@ -18,8 +18,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenImportModal,
 }) => {
   return (
-    <header className="sticky top-0 z-40 bg-dark-900/90 backdrop-blur-md border-b border-dark-800">
+    <header className="sticky top-0 z-40 bg-dark-900/95 backdrop-blur-md border-b border-dark-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        {/* Logo */}
         <div className="flex items-center space-x-3 cursor-pointer" onClick={() => onSelectVehicle(null)}>
           <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-brand-400 flex items-center justify-center shadow-lg shadow-brand-500/20 text-white font-bold text-xl">
             <Wrench className="w-5 h-5" />
@@ -37,12 +38,13 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center space-x-2.5">
+        {/* Actions */}
+        <div className="flex items-center space-x-2 sm:space-x-3">
           {vehicles.length > 0 && (
             <div className="flex items-center bg-dark-850 border border-dark-750 rounded-lg p-1">
               <button
                 onClick={() => onSelectVehicle(null)}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                className={`px-2.5 sm:px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
                   !selectedVehicle
                     ? 'bg-brand-500 text-white shadow-sm'
                     : 'text-slate-400 hover:text-white'
@@ -54,26 +56,28 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
               </button>
               {selectedVehicle && (
-                <div className="flex items-center text-xs text-slate-300 px-2 py-1 bg-dark-800 rounded font-medium border border-dark-700 ml-1">
+                <div className="hidden sm:flex items-center text-xs text-slate-300 px-2 py-1 bg-dark-800 rounded font-medium border border-dark-700 ml-1">
                   <span className="text-brand-400 mr-1.5">●</span>
-                  {selectedVehicle.make} {selectedVehicle.model}
+                  {selectedVehicle.name || `${selectedVehicle.make} ${selectedVehicle.model}`}
                 </div>
               )}
             </div>
           )}
 
+          {/* Import Backup Button */}
           <button
             onClick={onOpenImportModal}
-            className="flex items-center space-x-1.5 bg-dark-800 hover:bg-dark-750 text-slate-200 border border-dark-700 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
-            title="Импорт бэкапа из car-maintenance-app или AutoTracker"
+            className="flex items-center space-x-1.5 bg-emerald-600/15 hover:bg-emerald-600/25 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm"
+            title="Восстановить историю из бэкапа JSON"
           >
-            <UploadCloud className="w-4 h-4 text-brand-400" />
-            <span className="hidden md:inline">Импорт бэкапа</span>
+            <UploadCloud className="w-4 h-4 text-emerald-400" />
+            <span>Импорт бэкапа</span>
           </button>
 
+          {/* Add Vehicle Button */}
           <button
             onClick={onAddVehicle}
-            className="flex items-center space-x-1.5 bg-brand-500 hover:bg-brand-600 active:scale-95 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold shadow-md shadow-brand-500/20 transition-all"
+            className="flex items-center space-x-1.5 bg-brand-500 hover:bg-brand-600 active:scale-95 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-md shadow-brand-500/20 transition-all"
           >
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">Добавить авто</span>

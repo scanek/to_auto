@@ -212,6 +212,7 @@ export function App() {
             onAddVehicle={handleOpenAddVehicle}
             onEditVehicle={handleOpenEditVehicle}
             onDeleteVehicle={handleDeleteVehicle}
+            onOpenImportModal={() => setIsImportModalOpen(true)}
           />
         )}
       </main>
