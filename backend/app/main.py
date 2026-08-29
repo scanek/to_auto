@@ -67,12 +67,48 @@ async def health_check():
 
 # Serve Frontend static build if exists
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
-if STATIC_DIR.exists():
-    app.mount("/assets", StaticFiles(directory=str(STATIC_DIR / "assets")), name="assets")
+NO_CACHE_HEADERS = {
+    "Cache-Control": "no-cache, no-store, must-revalidate",
+    "Pragma": "no-cache",
+    "Expires": "0",
+}
 
+if STATIC_DIR.exists():
     @app.get("/{full_path:path}")
     async def serve_frontend(full_path: str):
+        # 1. Root or index.html
+        if not full_path or full_path == "index.html":
+            index_path = STATIC_DIR / "index.html"
+            if index_path.exists():
+                return FileResponse(index_path, headers=NO_CACHE_HEADERS)
+
+        # 2. Service Worker or manifest
+        if full_path in ("sw.js", "manifest.json"):
+            target_path = STATIC_DIR / full_path
+            if target_path.exists():
+                return FileResponse(target_path, headers=NO_CACHE_HEADERS)
+
+        # 3. Direct static file match
         file_path = STATIC_DIR / full_path
         if file_path.exists() and file_path.is_file():
+            # For assets (hashed CSS/JS/images), allow browser caching
             return FileResponse(file_path)
-        return FileResponse(STATIC_DIR / "index.html")
+
+        # 4. Fallback for outdated hashed assets: if client requested old JS/CSS, serve the latest matching asset
+        if full_path.startswith("assets/"):
+            assets_dir = STATIC_DIR / "assets"
+            if assets_dir.exists():
+                if full_path.endswith(".js"):
+                    js_files = list(assets_dir.glob("index-*.js"))
+                    if js_files:
+                        return FileResponse(js_files[0], headers=NO_CACHE_HEADERS)
+                elif full_path.endswith(".css"):
+                    css_files = list(assets_dir.glob("index-*.css"))
+                    if css_files:
+                        return FileResponse(css_files[0], headers=NO_CACHE_HEADERS)
+
+        # 5. Default SPA fallback
+        index_path = STATIC_DIR / "index.html"
+        if index_path.exists():
+            return FileResponse(index_path, headers=NO_CACHE_HEADERS)
+        return FileResponse(file_path)
