@@ -23,9 +23,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenImportModal,
   onOpenInstallModal,
 }) => {
-  // Determine car to display in header (selected car, or single car from garage)
-  const currentCar = selectedVehicle || (vehicles.length === 1 ? vehicles[0] : null);
-  const carTitle = currentCar ? `${currentCar.make} ${currentCar.model}` : '';
+  // Determine car to display in header (only when selected)
+  const carTitle = selectedVehicle ? `${selectedVehicle.make} ${selectedVehicle.model}` : '';
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 dark:bg-dark-900/95 backdrop-blur-md border-b border-slate-200 dark:border-dark-800 transition-colors shadow-sm dark:shadow-none">
