@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Vehicle, ServiceRecord, FuelLog, MaintenancePlan, DocumentNote, TyreSet } from './types';
 import { api } from './services/api';
 import { offlineStorage } from './services/offlineStorage';
+import { notificationService } from './services/notificationService';
 import { Navbar } from './components/Navbar';
 import { Garage } from './pages/Garage';
 import { VehicleDetails } from './pages/VehicleDetails';
@@ -14,6 +15,7 @@ import { TyreModal } from './components/TyreModal';
 import { ImportBackupModal } from './components/ImportBackupModal';
 import { InstallAppModal } from './components/InstallAppModal';
 import { PinModal } from './components/PinModal';
+import { NotificationSettingsModal } from './components/NotificationSettingsModal';
 import { Github, ZapOff, RefreshCw, CheckCircle2 } from 'lucide-react';
 
 export function App() {
@@ -24,6 +26,7 @@ export function App() {
   // Authentication state (Owner / Guest mode)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
+  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
 
   // Offline & Synchronization state
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
@@ -340,6 +343,9 @@ export function App() {
     if (target) setSelectedVehicle(target);
   };
 
+  const isNotificationsActive =
+    notificationService.getSettings().enabled && notificationService.getPermission() === 'granted';
+
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-dark-900 text-slate-900 dark:text-slate-100 flex flex-col transition-colors">
       <Navbar
@@ -349,12 +355,14 @@ export function App() {
         isAuthenticated={isAuthenticated}
         isOnline={isOnline}
         pendingSyncCount={pendingSyncCount}
+        isNotificationsEnabled={isNotificationsActive}
         onToggleTheme={handleToggleTheme}
         onSelectVehicle={setSelectedVehicle}
         onAddVehicle={handleOpenAddVehicle}
         onOpenImportModal={() => setIsImportModalOpen(true)}
         onOpenInstallModal={handleOpenInstall}
         onOpenPinModal={() => setIsPinModalOpen(true)}
+        onOpenNotificationModal={() => setIsNotificationModalOpen(true)}
         onSyncNow={handleSyncOfflineQueue}
       />
 
@@ -447,6 +455,11 @@ export function App() {
           setIsAuthenticated(false);
           checkAuthStatus();
         }}
+      />
+
+      <NotificationSettingsModal
+        isOpen={isNotificationModalOpen}
+        onClose={() => setIsNotificationModalOpen(false)}
       />
 
       <InstallAppModal

@@ -43,6 +43,7 @@ import {
   TyreSet,
 } from '../types';
 import { api } from '../services/api';
+import { notificationService } from '../services/notificationService';
 import { ProgressBar } from '../components/ProgressBar';
 
 interface VehicleDetailsProps {
@@ -101,6 +102,9 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
       setDocuments(docs);
       setAnalytics(an);
       setTyres(ty);
+
+      // Check upcoming maintenance and insurance triggers for push alerts
+      notificationService.checkAndNotifyVehicle(vehicle, rem, docs).catch(() => {});
     } catch (err) {
       console.error('Error loading vehicle data', err);
     }

@@ -12,6 +12,7 @@ import {
   Github,
   ZapOff,
   RefreshCw,
+  Bell,
 } from 'lucide-react';
 import { Vehicle } from '../types';
 
@@ -22,12 +23,14 @@ interface NavbarProps {
   isAuthenticated: boolean;
   isOnline?: boolean;
   pendingSyncCount?: number;
+  isNotificationsEnabled?: boolean;
   onToggleTheme: () => void;
   onSelectVehicle: (v: Vehicle | null) => void;
   onAddVehicle: () => void;
   onOpenImportModal: () => void;
   onOpenInstallModal: () => void;
   onOpenPinModal: () => void;
+  onOpenNotificationModal?: () => void;
   onSyncNow?: () => void;
 }
 
@@ -38,12 +41,14 @@ export const Navbar: React.FC<NavbarProps> = ({
   isAuthenticated,
   isOnline = true,
   pendingSyncCount = 0,
+  isNotificationsEnabled = false,
   onToggleTheme,
   onSelectVehicle,
   onAddVehicle,
   onOpenImportModal,
   onOpenInstallModal,
   onOpenPinModal,
+  onOpenNotificationModal,
   onSyncNow,
 }) => {
   const currentCar = selectedVehicle;
@@ -135,6 +140,24 @@ export const Navbar: React.FC<NavbarProps> = ({
             <Smartphone className="w-3.5 h-3.5 text-brand-500 flex-shrink-0" />
             <span className="hidden sm:inline">Приложение</span>
           </button>
+
+          {/* Notification Settings Button */}
+          {onOpenNotificationModal && (
+            <button
+              onClick={onOpenNotificationModal}
+              className={`p-1 sm:p-1.5 rounded-lg sm:rounded-xl border transition-all relative ${
+                isNotificationsEnabled
+                  ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                  : 'bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-dark-700'
+              }`}
+              title="Настройки Push-уведомлений о регламентах ТО"
+            >
+              <Bell className="w-4 h-4" />
+              {isNotificationsEnabled && (
+                <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-amber-500 rounded-full"></span>
+              )}
+            </button>
+          )}
 
           {/* Theme Toggle (Sun / Moon) */}
           <button
