@@ -544,6 +544,8 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  exportVehicleBackupUrl: (vehicleId: number) => `${API_BASE}/backup/export/${vehicleId}`,
+  exportAllBackupUrl: () => `${API_BASE}/backup/export-all`,
 
   // -------------------------------------------------------------
   // Synchronize Offline Queue

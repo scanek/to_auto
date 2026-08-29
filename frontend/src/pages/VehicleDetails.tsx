@@ -20,6 +20,7 @@ import {
   ShieldCheck,
   CheckCircle,
   RefreshCw,
+  FileJson,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -362,10 +363,21 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               href={`/api/v1/export/service-booklet/${vehicle.id}`}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center justify-center space-x-1 bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-200 px-2.5 sm:px-3.5 py-2 rounded-xl text-xs font-semibold border border-slate-200 dark:border-dark-750 transition-all col-span-2 sm:col-span-1"
+              className="flex items-center justify-center space-x-1 bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-200 px-2.5 sm:px-3.5 py-2 rounded-xl text-xs font-semibold border border-slate-200 dark:border-dark-750 transition-all"
+              title="Открыть и распечатать сервисную книжку"
             >
               <Printer className="w-4 h-4 text-brand-500 flex-shrink-0" />
               <span>Книжка PDF</span>
+            </a>
+
+            <a
+              href={`/api/v1/backup/export/${vehicle.id}`}
+              download
+              className="flex items-center justify-center space-x-1 bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-200 px-2.5 sm:px-3.5 py-2 rounded-xl text-xs font-semibold border border-slate-200 dark:border-dark-750 transition-all"
+              title="Скачать полную резервную копию автомобиля в JSON"
+            >
+              <FileJson className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+              <span>Бэкап JSON</span>
             </a>
           </div>
         </div>

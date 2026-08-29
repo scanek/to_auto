@@ -481,6 +481,8 @@ export function App() {
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
         onSuccess={handleImportSuccess}
+        vehicles={vehicles}
+        selectedVehicle={selectedVehicle}
       />
 
       {selectedVehicle && (

@@ -202,15 +202,15 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           )}
 
-          {/* Import Backup Button (Visible only to authenticated owner) */}
+          {/* Backup & Restore Button (Visible only to authenticated owner) */}
           {isAuthenticated && (
             <button
               onClick={onOpenImportModal}
               className="flex items-center space-x-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold transition-all shadow-sm"
-              title="Восстановить историю из бэкапа JSON"
+              title="Резервное копирование: Экспорт и Импорт базы в JSON"
             >
               <UploadCloud className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
-              <span className="hidden md:inline">Импорт</span>
+              <span className="hidden md:inline">Бэкап</span>
             </button>
           )}
 
