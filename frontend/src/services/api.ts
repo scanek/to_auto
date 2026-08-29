@@ -7,6 +7,7 @@ import {
   VehicleAnalytics,
   TyreSet,
 } from '../types';
+import { offlineStorage, QueuedAction } from './offlineStorage';
 
 const API_BASE = '/api/v1';
 
@@ -22,7 +23,20 @@ export function removeAuthToken() {
   localStorage.removeItem('autotracker_admin_token');
 }
 
-async function request<T>(url: string, options?: RequestInit): Promise<T> {
+/**
+ * Enhanced request with timeout and offline-first fallback.
+ */
+async function request<T>(
+  url: string,
+  options?: RequestInit,
+  offlineConfig?: {
+    cacheKey?: string;
+    description?: string;
+    entityType?: QueuedAction['entityType'];
+    fallbackMock?: () => T;
+  }
+): Promise<T> {
+  const method = (options?.method || 'GET').toUpperCase();
   const token = getAuthToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -33,27 +47,114 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const res = await fetch(url, {
-    ...options,
-    headers,
-  });
+  const isGet = method === 'GET';
+  const cacheKey = offlineConfig?.cacheKey || url;
 
-  if (!res.ok) {
-    const errorBody = await res.text();
-    throw new Error(errorBody || `HTTP error ${res.status}`);
+  // 1. If GET request: Try network first, fallback to offline cache
+  if (isGet) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4500);
+
+      const res = await fetch(url, {
+        ...options,
+        headers,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
+      offlineStorage.setOnline(true);
+      const data: T = await res.json();
+      await offlineStorage.setCache(cacheKey, data);
+      return data;
+    } catch (err) {
+      console.warn(`[Offline Mode] Network request failed for ${url}, reading from offline cache...`, err);
+      offlineStorage.setOnline(false);
+      const cached = await offlineStorage.getCache<T>(cacheKey);
+      if (cached !== null && cached !== undefined) {
+        return cached;
+      }
+      if (offlineConfig?.fallbackMock) {
+        return offlineConfig.fallbackMock();
+      }
+      throw err;
+    }
   }
 
-  if (res.status === 204) {
-    return {} as T;
-  }
+  // 2. If mutating request (POST, PUT, DELETE): Try network, enqueue on offline
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
 
-  return res.json();
+    const res = await fetch(url, {
+      ...options,
+      headers,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (!res.ok) {
+      const errorBody = await res.text();
+      throw new Error(errorBody || `HTTP error ${res.status}`);
+    }
+
+    offlineStorage.setOnline(true);
+
+    if (res.status === 204) {
+      return {} as T;
+    }
+
+    return await res.json();
+  } catch (err: any) {
+    // If it's a network/connection error, enqueue for background sync
+    const isNetworkError =
+      !navigator.onLine ||
+      err.name === 'AbortError' ||
+      err.message?.includes('Failed to fetch') ||
+      err.message?.includes('NetworkError') ||
+      err.message?.includes('Network request failed');
+
+    if (isNetworkError) {
+      console.warn(`[Offline Mode] Connection lost. Enqueueing ${method} ${url} for background sync.`);
+      offlineStorage.setOnline(false);
+
+      const bodyData = options?.body ? JSON.parse(options.body as string) : undefined;
+      await offlineStorage.enqueueAction({
+        method: method as any,
+        url,
+        body: bodyData,
+        description: offlineConfig?.description || `${method} ${url}`,
+        entityType: offlineConfig?.entityType,
+      });
+
+      // Optimistic simulated mock return
+      if (offlineConfig?.fallbackMock) {
+        return offlineConfig.fallbackMock();
+      }
+      return (bodyData || { id: Date.now(), ...bodyData }) as T;
+    }
+
+    throw err;
+  }
 }
 
 export const api = {
+  // -------------------------------------------------------------
   // Auth & Permissions
+  // -------------------------------------------------------------
   getAuthStatus: () =>
-    request<{ has_pin: boolean; is_authenticated: boolean }>(`${API_BASE}/auth/status`),
+    request<{ has_pin: boolean; is_authenticated: boolean }>(
+      `${API_BASE}/auth/status`,
+      undefined,
+      {
+        cacheKey: 'auth_status',
+        fallbackMock: () => ({ has_pin: true, is_authenticated: !!getAuthToken() }),
+      }
+    ),
   loginPin: (pin: string) =>
     request<{ token: string; message: string }>(`${API_BASE}/auth/login`, {
       method: 'POST',
@@ -65,134 +166,341 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  // -------------------------------------------------------------
   // Vehicles
-  getVehicles: () => request<Vehicle[]>(`${API_BASE}/vehicles`),
-  getVehicle: (id: number) => request<Vehicle>(`${API_BASE}/vehicles/${id}`),
+  // -------------------------------------------------------------
+  getVehicles: () =>
+    request<Vehicle[]>(`${API_BASE}/vehicles`, undefined, {
+      cacheKey: 'vehicles_list',
+      fallbackMock: () => [],
+    }),
+  getVehicle: (id: number) =>
+    request<Vehicle>(`${API_BASE}/vehicles/${id}`, undefined, {
+      cacheKey: `vehicle_${id}`,
+    }),
   createVehicle: (data: Partial<Vehicle>) =>
-    request<Vehicle>(`${API_BASE}/vehicles`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
+    request<Vehicle>(
+      `${API_BASE}/vehicles`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      },
+      {
+        description: `Добавление автомобиля ${data.make || ''} ${data.model || ''}`,
+        entityType: 'vehicle',
+        fallbackMock: () => ({ id: Date.now(), ...data } as Vehicle),
+      }
+    ),
   updateVehicle: (id: number, data: Partial<Vehicle>) =>
-    request<Vehicle>(`${API_BASE}/vehicles/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }),
+    request<Vehicle>(
+      `${API_BASE}/vehicles/${id}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      },
+      {
+        description: `Обновление автомобиля #${id}`,
+        entityType: 'vehicle',
+        fallbackMock: () => ({ id, ...data } as Vehicle),
+      }
+    ),
   deleteVehicle: (id: number) =>
-    request<void>(`${API_BASE}/vehicles/${id}`, { method: 'DELETE' }),
+    request<void>(
+      `${API_BASE}/vehicles/${id}`,
+      { method: 'DELETE' },
+      {
+        description: `Удаление автомобиля #${id}`,
+        entityType: 'vehicle',
+      }
+    ),
 
+  // -------------------------------------------------------------
   // Service Records
+  // -------------------------------------------------------------
   getServiceRecords: (vehicleId: number, recordType?: string) => {
     const url = new URL(`${window.location.origin}${API_BASE}/service-records`);
     url.searchParams.set('vehicle_id', String(vehicleId));
     if (recordType) url.searchParams.set('record_type', recordType);
-    return request<ServiceRecord[]>(url.pathname + url.search);
+    const key = `service_records_${vehicleId}_${recordType || 'all'}`;
+    return request<ServiceRecord[]>(url.pathname + url.search, undefined, {
+      cacheKey: key,
+      fallbackMock: () => [],
+    });
   },
   createServiceRecord: (vehicleId: number, data: Partial<ServiceRecord>) =>
-    request<ServiceRecord>(`${API_BASE}/service-records?vehicle_id=${vehicleId}`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
+    request<ServiceRecord>(
+      `${API_BASE}/service-records?vehicle_id=${vehicleId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      },
+      {
+        description: `Запись ТО: ${data.title || 'Обслуживание'}`,
+        entityType: 'service',
+        fallbackMock: () => ({ id: Date.now(), vehicle_id: vehicleId, ...data } as ServiceRecord),
+      }
+    ),
   updateServiceRecord: (id: number, data: Partial<ServiceRecord>) =>
-    request<ServiceRecord>(`${API_BASE}/service-records/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }),
+    request<ServiceRecord>(
+      `${API_BASE}/service-records/${id}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      },
+      {
+        description: `Обновление записи ТО #${id}`,
+        entityType: 'service',
+        fallbackMock: () => ({ id, ...data } as ServiceRecord),
+      }
+    ),
   deleteServiceRecord: (id: number) =>
-    request<void>(`${API_BASE}/service-records/${id}`, { method: 'DELETE' }),
+    request<void>(
+      `${API_BASE}/service-records/${id}`,
+      { method: 'DELETE' },
+      {
+        description: `Удаление записи ТО #${id}`,
+        entityType: 'service',
+      }
+    ),
 
+  // -------------------------------------------------------------
   // Fuel Logs
+  // -------------------------------------------------------------
   getFuelLogs: (vehicleId: number) => {
     const url = new URL(`${window.location.origin}${API_BASE}/fuel-logs`);
     url.searchParams.set('vehicle_id', String(vehicleId));
-    return request<FuelLog[]>(url.pathname + url.search);
+    return request<FuelLog[]>(url.pathname + url.search, undefined, {
+      cacheKey: `fuel_logs_${vehicleId}`,
+      fallbackMock: () => [],
+    });
   },
   createFuelLog: (vehicleId: number, data: Partial<FuelLog>) =>
-    request<FuelLog>(`${API_BASE}/fuel-logs?vehicle_id=${vehicleId}`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
+    request<FuelLog>(
+      `${API_BASE}/fuel-logs?vehicle_id=${vehicleId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      },
+      {
+        description: `Заправка ${data.fuel_amount || 0} л (${data.total_cost || 0} ₽)`,
+        entityType: 'fuel',
+        fallbackMock: () => ({ id: Date.now(), vehicle_id: vehicleId, ...data } as FuelLog),
+      }
+    ),
   updateFuelLog: (id: number, data: Partial<FuelLog>) =>
-    request<FuelLog>(`${API_BASE}/fuel-logs/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }),
+    request<FuelLog>(
+      `${API_BASE}/fuel-logs/${id}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      },
+      {
+        description: `Обновление заправки #${id}`,
+        entityType: 'fuel',
+        fallbackMock: () => ({ id, ...data } as FuelLog),
+      }
+    ),
   deleteFuelLog: (id: number) =>
-    request<void>(`${API_BASE}/fuel-logs/${id}`, { method: 'DELETE' }),
+    request<void>(
+      `${API_BASE}/fuel-logs/${id}`,
+      { method: 'DELETE' },
+      {
+        description: `Удаление заправки #${id}`,
+        entityType: 'fuel',
+      }
+    ),
 
-  // Reminders
+  // -------------------------------------------------------------
+  // Reminders / Maintenance Planner
+  // -------------------------------------------------------------
   getReminders: (vehicleId: number) => {
     const url = new URL(`${window.location.origin}${API_BASE}/reminders`);
     url.searchParams.set('vehicle_id', String(vehicleId));
-    return request<MaintenancePlan[]>(url.pathname + url.search);
+    return request<MaintenancePlan[]>(url.pathname + url.search, undefined, {
+      cacheKey: `reminders_${vehicleId}`,
+      fallbackMock: () => [],
+    });
   },
   createReminder: (vehicleId: number, data: Partial<MaintenancePlan>) =>
-    request<MaintenancePlan>(`${API_BASE}/reminders?vehicle_id=${vehicleId}`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
+    request<MaintenancePlan>(
+      `${API_BASE}/reminders?vehicle_id=${vehicleId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      },
+      {
+        description: `Регламент: ${data.title || ''}`,
+        entityType: 'reminder',
+        fallbackMock: () => ({ id: Date.now(), vehicle_id: vehicleId, ...data } as MaintenancePlan),
+      }
+    ),
   updateReminder: (id: number, data: Partial<MaintenancePlan>) =>
-    request<MaintenancePlan>(`${API_BASE}/reminders/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }),
+    request<MaintenancePlan>(
+      `${API_BASE}/reminders/${id}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      },
+      {
+        description: `Обновление регламента #${id}`,
+        entityType: 'reminder',
+        fallbackMock: () => ({ id, ...data } as MaintenancePlan),
+      }
+    ),
   deleteReminder: (id: number) =>
-    request<void>(`${API_BASE}/reminders/${id}`, { method: 'DELETE' }),
+    request<void>(
+      `${API_BASE}/reminders/${id}`,
+      { method: 'DELETE' },
+      {
+        description: `Удаление регламента #${id}`,
+        entityType: 'reminder',
+      }
+    ),
   markReminderDone: (id: number, odo?: number, hours?: number) => {
     const url = new URL(`${window.location.origin}${API_BASE}/reminders/${id}/mark-done`);
     if (odo !== undefined) url.searchParams.set('odometer', String(odo));
     if (hours !== undefined) url.searchParams.set('hours', String(hours));
-    return request<MaintenancePlan>(url.pathname + url.search, { method: 'POST' });
+    return request<MaintenancePlan>(
+      url.pathname + url.search,
+      { method: 'POST' },
+      {
+        description: `Выполнение регламента #${id}`,
+        entityType: 'reminder',
+      }
+    );
   },
 
-  // Documents
+  // -------------------------------------------------------------
+  // Documents & Insurance
+  // -------------------------------------------------------------
   getDocuments: (vehicleId: number) => {
     const url = new URL(`${window.location.origin}${API_BASE}/documents`);
     url.searchParams.set('vehicle_id', String(vehicleId));
-    return request<DocumentNote[]>(url.pathname + url.search);
+    return request<DocumentNote[]>(url.pathname + url.search, undefined, {
+      cacheKey: `documents_${vehicleId}`,
+      fallbackMock: () => [],
+    });
   },
   createDocument: (vehicleId: number, data: Partial<DocumentNote>) =>
-    request<DocumentNote>(`${API_BASE}/documents?vehicle_id=${vehicleId}`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
+    request<DocumentNote>(
+      `${API_BASE}/documents?vehicle_id=${vehicleId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      },
+      {
+        description: `Документ: ${data.title || ''}`,
+        entityType: 'document',
+        fallbackMock: () => ({ id: Date.now(), vehicle_id: vehicleId, ...data } as DocumentNote),
+      }
+    ),
   updateDocument: (id: number, data: Partial<DocumentNote>) =>
-    request<DocumentNote>(`${API_BASE}/documents/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }),
+    request<DocumentNote>(
+      `${API_BASE}/documents/${id}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      },
+      {
+        description: `Обновление документа #${id}`,
+        entityType: 'document',
+        fallbackMock: () => ({ id, ...data } as DocumentNote),
+      }
+    ),
   deleteDocument: (id: number) =>
-    request<void>(`${API_BASE}/documents/${id}`, { method: 'DELETE' }),
+    request<void>(
+      `${API_BASE}/documents/${id}`,
+      { method: 'DELETE' },
+      {
+        description: `Удаление документа #${id}`,
+        entityType: 'document',
+      }
+    ),
 
-  // Tyres
+  // -------------------------------------------------------------
+  // Tyres & Wheels
+  // -------------------------------------------------------------
   getTyreSets: (vehicleId: number) => {
     const url = new URL(`${window.location.origin}${API_BASE}/tyres`);
     url.searchParams.set('vehicle_id', String(vehicleId));
-    return request<TyreSet[]>(url.pathname + url.search);
+    return request<TyreSet[]>(url.pathname + url.search, undefined, {
+      cacheKey: `tyres_${vehicleId}`,
+      fallbackMock: () => [],
+    });
   },
   createTyreSet: (vehicleId: number, data: Partial<TyreSet>) =>
-    request<TyreSet>(`${API_BASE}/tyres?vehicle_id=${vehicleId}`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
+    request<TyreSet>(
+      `${API_BASE}/tyres?vehicle_id=${vehicleId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      },
+      {
+        description: `Комплект шин: ${data.name || ''}`,
+        entityType: 'tyre',
+        fallbackMock: () => ({ id: Date.now(), vehicle_id: vehicleId, ...data } as TyreSet),
+      }
+    ),
   updateTyreSet: (id: number, data: Partial<TyreSet>) =>
-    request<TyreSet>(`${API_BASE}/tyres/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }),
+    request<TyreSet>(
+      `${API_BASE}/tyres/${id}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      },
+      {
+        description: `Обновление комплекта шин #${id}`,
+        entityType: 'tyre',
+        fallbackMock: () => ({ id, ...data } as TyreSet),
+      }
+    ),
   deleteTyreSet: (id: number) =>
-    request<void>(`${API_BASE}/tyres/${id}`, { method: 'DELETE' }),
+    request<void>(
+      `${API_BASE}/tyres/${id}`,
+      { method: 'DELETE' },
+      {
+        description: `Удаление комплекта шин #${id}`,
+        entityType: 'tyre',
+      }
+    ),
   activateTyreSet: (id: number, mileage?: number) => {
     const url = new URL(`${window.location.origin}${API_BASE}/tyres/${id}/activate`);
     if (mileage !== undefined) url.searchParams.set('mileage', String(mileage));
-    return request<TyreSet>(url.pathname + url.search, { method: 'POST' });
+    return request<TyreSet>(
+      url.pathname + url.search,
+      { method: 'POST' },
+      {
+        description: `Смена комплекта шин #${id}`,
+        entityType: 'tyre',
+      }
+    );
   },
 
+  // -------------------------------------------------------------
   // Analytics
+  // -------------------------------------------------------------
   getAnalytics: (vehicleId: number) =>
-    request<VehicleAnalytics>(`${API_BASE}/analytics/${vehicleId}`),
+    request<VehicleAnalytics>(`${API_BASE}/analytics/${vehicleId}`, undefined, {
+      cacheKey: `analytics_${vehicleId}`,
+      fallbackMock: () => ({
+        total_spend: 0,
+        total_service_spend: 0,
+        total_repair_spend: 0,
+        total_upgrade_spend: 0,
+        total_fuel_spend: 0,
+        total_tyre_spend: 0,
+        total_document_spend: 0,
+        tracked_distance: 0,
+        cost_per_distance_unit: 0,
+        avg_fuel_consumption: 0,
+        monthly_costs: [],
+        categories: [],
+      }),
+    }),
 
+  // -------------------------------------------------------------
   // File Upload
+  // -------------------------------------------------------------
   uploadFile: async (
     file: File,
     params?: {
@@ -228,10 +536,39 @@ export const api = {
     return res.json();
   },
 
+  // -------------------------------------------------------------
   // Backup & Export
+  // -------------------------------------------------------------
   importBackup: (data: any) =>
     request<{ message: string; vehicle_id: number }>(`${API_BASE}/backup/import`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+
+  // -------------------------------------------------------------
+  // Synchronize Offline Queue
+  // -------------------------------------------------------------
+  syncOfflineQueue: async (): Promise<{ processed: number; failed: number }> => {
+    const token = getAuthToken();
+
+    return await offlineStorage.processSyncQueue(async (action) => {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const res = await fetch(action.url, {
+        method: action.method,
+        headers,
+        body: action.body ? JSON.stringify(action.body) : undefined,
+      });
+
+      if (!res.ok && res.status !== 404) {
+        return false;
+      }
+      return true;
+    });
+  },
 };

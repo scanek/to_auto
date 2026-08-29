@@ -1,5 +1,18 @@
 import React from 'react';
-import { BookOpen, Plus, Car, UploadCloud, Sun, Moon, Smartphone, Lock, Unlock, Github } from 'lucide-react';
+import {
+  BookOpen,
+  Plus,
+  Car,
+  UploadCloud,
+  Sun,
+  Moon,
+  Smartphone,
+  Lock,
+  Unlock,
+  Github,
+  ZapOff,
+  RefreshCw,
+} from 'lucide-react';
 import { Vehicle } from '../types';
 
 interface NavbarProps {
@@ -7,12 +20,15 @@ interface NavbarProps {
   selectedVehicle: Vehicle | null;
   theme: 'dark' | 'light';
   isAuthenticated: boolean;
+  isOnline?: boolean;
+  pendingSyncCount?: number;
   onToggleTheme: () => void;
   onSelectVehicle: (v: Vehicle | null) => void;
   onAddVehicle: () => void;
   onOpenImportModal: () => void;
   onOpenInstallModal: () => void;
   onOpenPinModal: () => void;
+  onSyncNow?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -20,12 +36,15 @@ export const Navbar: React.FC<NavbarProps> = ({
   selectedVehicle,
   theme,
   isAuthenticated,
+  isOnline = true,
+  pendingSyncCount = 0,
   onToggleTheme,
   onSelectVehicle,
   onAddVehicle,
   onOpenImportModal,
   onOpenInstallModal,
   onOpenPinModal,
+  onSyncNow,
 }) => {
   const currentCar = selectedVehicle;
   const carTitle = currentCar ? `${currentCar.make} ${currentCar.model}` : '';
@@ -43,25 +62,47 @@ export const Navbar: React.FC<NavbarProps> = ({
             <BookOpen className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
           <div className="min-w-0">
-            <div className="flex items-baseline space-x-1 sm:space-x-1.5 flex-nowrap overflow-hidden">
-              <span className="font-extrabold text-xs sm:text-base md:text-lg tracking-tight bg-gradient-to-r from-slate-900 via-slate-700 to-slate-500 dark:from-white dark:via-slate-100 dark:to-slate-400 bg-clip-text text-transparent truncate flex-shrink-0">
+            <div className="flex items-center space-x-1.5">
+              <span className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white tracking-tight truncate">
                 Бортовой Журнал
-                <span className="hidden sm:inline"> Автомобиля</span>
               </span>
-              {carTitle && (
-                <span className="font-extrabold text-xs sm:text-base md:text-lg tracking-tight text-brand-600 dark:text-brand-400 truncate">
-                  {carTitle}
-                </span>
-              )}
             </div>
-            <p className="hidden md:block text-[11px] text-slate-500 dark:text-slate-400 -mt-0.5">
-              Учет ТО, регламентов и расходов
-            </p>
+            {carTitle ? (
+              <span className="text-[11px] sm:text-xs text-brand-600 dark:text-brand-400 font-semibold truncate block">
+                {carTitle}
+              </span>
+            ) : (
+              <span className="text-[11px] sm:text-xs text-slate-400 dark:text-slate-500 font-normal truncate block">
+                Автомобиля
+              </span>
+            )}
           </div>
         </div>
 
         {/* Actions */}
         <div className="flex items-center space-x-1 sm:space-x-1.5 flex-shrink-0">
+          {/* Offline / Pending Sync Badges */}
+          {!isOnline && (
+            <div
+              className="flex items-center space-x-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-2 py-1 rounded-lg text-[10px] font-bold"
+              title="Приложение работает в автономном режиме без подключения к интернету"
+            >
+              <ZapOff className="w-3 h-3 text-amber-500" />
+              <span className="hidden sm:inline">Офлайн</span>
+            </div>
+          )}
+
+          {pendingSyncCount > 0 && (
+            <button
+              onClick={onSyncNow}
+              className="flex items-center space-x-1 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/30 px-2 py-1 rounded-lg text-[10px] font-bold transition-all shadow-sm active:scale-95"
+              title={`${pendingSyncCount} записей ждут отправки на сервер. Нажмите для синхронизации`}
+            >
+              <RefreshCw className="w-3 h-3 text-blue-500 animate-spin" />
+              <span>{pendingSyncCount}</span>
+            </button>
+          )}
+
           {/* Owner / Guest Mode Lock Button */}
           <button
             onClick={onOpenPinModal}

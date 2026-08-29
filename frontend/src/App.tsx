@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Vehicle, ServiceRecord, FuelLog, MaintenancePlan, DocumentNote, TyreSet } from './types';
 import { api } from './services/api';
+import { offlineStorage } from './services/offlineStorage';
 import { Navbar } from './components/Navbar';
 import { Garage } from './pages/Garage';
 import { VehicleDetails } from './pages/VehicleDetails';
@@ -13,7 +14,7 @@ import { TyreModal } from './components/TyreModal';
 import { ImportBackupModal } from './components/ImportBackupModal';
 import { InstallAppModal } from './components/InstallAppModal';
 import { PinModal } from './components/PinModal';
-import { Github } from 'lucide-react';
+import { Github, ZapOff, RefreshCw, CheckCircle2 } from 'lucide-react';
 
 export function App() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -23,6 +24,11 @@ export function App() {
   // Authentication state (Owner / Guest mode)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
+
+  // Offline & Synchronization state
+  const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
+  const [pendingSyncCount, setPendingSyncCount] = useState<number>(0);
+  const [syncToast, setSyncToast] = useState<{ message: string; type: 'success' | 'info' | 'warning' } | null>(null);
 
   const checkAuthStatus = useCallback(async () => {
     try {
@@ -36,6 +42,15 @@ export function App() {
   useEffect(() => {
     checkAuthStatus();
   }, [checkAuthStatus]);
+
+  // Subscribe to Offline Storage Engine events
+  useEffect(() => {
+    const unsubscribe = offlineStorage.subscribe((online, count) => {
+      setIsOnline(online);
+      setPendingSyncCount(count);
+    });
+    return unsubscribe;
+  }, []);
 
   // Theme state ('dark' | 'light') - Default is 'light'
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
@@ -151,6 +166,58 @@ export function App() {
   useEffect(() => {
     loadVehicles();
   }, []);
+
+  // Manual & Automatic Sync Handler
+  const handleSyncOfflineQueue = useCallback(async () => {
+    if (!navigator.onLine) {
+      setSyncToast({
+        message: '⚠️ Нет подключения к интернету для синхронизации',
+        type: 'warning',
+      });
+      setTimeout(() => setSyncToast(null), 3000);
+      return;
+    }
+
+    try {
+      const res = await api.syncOfflineQueue();
+      if (res.processed > 0) {
+        setSyncToast({
+          message: `✅ Успешно синхронизировано записей: ${res.processed}`,
+          type: 'success',
+        });
+        setTimeout(() => setSyncToast(null), 3500);
+        await loadVehicles();
+      } else if (res.failed > 0) {
+        setSyncToast({
+          message: `⚠️ Не удалось отправить ${res.failed} записей. Попробуем снова позже.`,
+          type: 'warning',
+        });
+        setTimeout(() => setSyncToast(null), 3500);
+      }
+    } catch (e) {
+      console.error('Sync queue error', e);
+    }
+  }, []);
+
+  // Automatically trigger sync when network is restored
+  useEffect(() => {
+    const handleOnlineEvent = () => {
+      offlineStorage.setOnline(true);
+      handleSyncOfflineQueue();
+    };
+
+    const handleOfflineEvent = () => {
+      offlineStorage.setOnline(false);
+    };
+
+    window.addEventListener('online', handleOnlineEvent);
+    window.addEventListener('offline', handleOfflineEvent);
+
+    return () => {
+      window.removeEventListener('online', handleOnlineEvent);
+      window.removeEventListener('offline', handleOfflineEvent);
+    };
+  }, [handleSyncOfflineQueue]);
 
   // Handlers for Vehicle Modal
   const handleOpenAddVehicle = () => {
@@ -280,13 +347,43 @@ export function App() {
         selectedVehicle={selectedVehicle}
         theme={theme}
         isAuthenticated={isAuthenticated}
+        isOnline={isOnline}
+        pendingSyncCount={pendingSyncCount}
         onToggleTheme={handleToggleTheme}
         onSelectVehicle={setSelectedVehicle}
         onAddVehicle={handleOpenAddVehicle}
         onOpenImportModal={() => setIsImportModalOpen(true)}
         onOpenInstallModal={handleOpenInstall}
         onOpenPinModal={() => setIsPinModalOpen(true)}
+        onSyncNow={handleSyncOfflineQueue}
       />
+
+      {/* Offline Status Banner */}
+      {!isOnline && (
+        <div className="bg-amber-500/15 border-b border-amber-500/25 px-3 py-2 text-center text-xs font-semibold text-amber-700 dark:text-amber-300 flex items-center justify-center space-x-2">
+          <ZapOff className="w-3.5 h-3.5 flex-shrink-0 text-amber-500" />
+          <span>
+            Офлайн-режим: данные загружены из памяти устройства. Все новые записи сохранятся и отправятся на сервер при появлении сети.
+          </span>
+          {pendingSyncCount > 0 && (
+            <span className="bg-amber-500/25 px-1.5 py-0.5 rounded text-[11px] font-bold font-mono">
+              В очереди: {pendingSyncCount}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Sync Toast Notification */}
+      {syncToast && (
+        <div className="fixed bottom-6 right-4 sm:right-6 z-50 bg-slate-900 dark:bg-dark-800 text-white border border-slate-700 dark:border-dark-700 px-4 py-3 rounded-2xl shadow-2xl flex items-center space-x-2.5 text-xs font-bold animate-bounce">
+          {syncToast.type === 'success' ? (
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+          ) : (
+            <RefreshCw className="w-4 h-4 text-amber-400 flex-shrink-0" />
+          )}
+          <span>{syncToast.message}</span>
+        </div>
+      )}
 
       <main className="flex-1">
         {loading ? (
