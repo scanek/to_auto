@@ -6,7 +6,7 @@ from app.db.session import get_db
 from app.models.vehicle import Vehicle
 from app.models.reminder import MaintenancePlan
 from app.schemas.reminder import MaintenancePlanCreate, MaintenancePlanUpdate, MaintenancePlanResponse
-from app.services.reminder_service import compute_reminder_status
+from app.services.reminder_service import compute_reminder_status, sync_reminder_baselines
 
 router = APIRouter(prefix="/reminders", tags=["Maintenance Planner & Reminders"])
 
@@ -19,6 +19,9 @@ async def get_reminders(
     vehicle = veh_res.scalar_one_or_none()
     if not vehicle:
         raise HTTPException(status_code=404, detail="Автомобиль не найден")
+
+    # Automatically sync reminders with latest service records
+    await sync_reminder_baselines(db, vehicle_id)
 
     query = select(MaintenancePlan).where(MaintenancePlan.vehicle_id == vehicle_id).order_by(MaintenancePlan.created_at.desc())
     result = await db.execute(query)
@@ -45,7 +48,6 @@ async def create_reminder(payload: MaintenancePlanCreate, vehicle_id: int = Quer
         raise HTTPException(status_code=404, detail="Автомобиль не найден")
 
     data = payload.model_dump()
-    # If last_service_odometer was not set, initialize to vehicle's current odometer
     if data.get("last_service_odometer") == 0.0 and vehicle.current_odometer:
         data["last_service_odometer"] = vehicle.current_odometer
 
@@ -87,6 +89,7 @@ async def update_reminder(plan_id: int, payload: MaintenancePlanUpdate, db: Asyn
 async def mark_reminder_done(
     plan_id: int,
     odometer: float = Query(None, description="Пробег при выполнении"),
+    hours: float = Query(None, description="Моточасы при выполнении"),
     db: AsyncSession = Depends(get_db),
 ):
     """Resets reminder to current odometer and date when completed."""
@@ -100,11 +103,16 @@ async def mark_reminder_done(
     vehicle = veh_res.scalar_one()
 
     done_odo = odometer if odometer is not None else vehicle.current_odometer
+    done_hours = hours if hours is not None else vehicle.current_engine_hours
+
     plan.last_service_odometer = done_odo
+    plan.last_service_hours = done_hours or 0.0
     plan.last_service_date = datetime.datetime.utcnow()
 
     if done_odo > (vehicle.current_odometer or 0.0):
         vehicle.current_odometer = done_odo
+    if done_hours and done_hours > (vehicle.current_engine_hours or 0.0):
+        vehicle.current_engine_hours = done_hours
 
     await db.commit()
     await db.refresh(plan)

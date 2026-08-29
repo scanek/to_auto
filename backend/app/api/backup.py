@@ -13,6 +13,7 @@ from app.models import (
     DocumentNote,
     TyreSet,
 )
+from app.services.reminder_service import is_item_match_for_plan
 
 router = APIRouter(prefix="/backup", tags=["Backup & Restore"])
 
@@ -59,7 +60,7 @@ async def import_backup(data: Dict[str, Any] = Body(...), db: AsyncSession = Dep
 
         # 2. Extract Trackers / Maintenance Plans
         trackers = data.get("trackers") or veh_data.get("trackers") or []
-        plan_map = {}
+        created_plans = []
         for t in trackers:
             plan = MaintenancePlan(
                 vehicle_id=vehicle.id,
@@ -82,8 +83,7 @@ async def import_backup(data: Dict[str, Any] = Body(...), db: AsyncSession = Dep
             )
             db.add(plan)
             await db.flush()
-            if t.get("id"):
-                plan_map[t.get("id")] = plan
+            created_plans.append(plan)
 
         # 3. Extract Maintenance Records (ТО, Ремонты, Доработки)
         m_records = data.get("maintenance_records") or []
@@ -157,12 +157,10 @@ async def import_backup(data: Dict[str, Any] = Body(...), db: AsyncSession = Dep
                 )
                 db.add(item_entity)
 
-                # Update last baseline for reminders
-                it_name_lower = (it.get("item_name") or "").lower()
-                for p_id, plan in plan_map.items():
-                    match_val = (p_id.replace("_", " ")).lower()
-                    if match_val in it_name_lower or plan.title.lower() in it_name_lower:
-                        if mileage >= plan.last_service_odometer:
+                # Match against plans
+                for plan in created_plans:
+                    if is_item_match_for_plan(plan, item_entity):
+                        if mileage >= (plan.last_service_odometer or 0.0):
                             plan.last_service_odometer = mileage
                             plan.last_service_hours = hours
                             plan.last_service_date = r_date

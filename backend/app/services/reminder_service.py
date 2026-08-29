@@ -1,7 +1,85 @@
 import datetime
-from typing import Dict, Any
+from typing import Dict, Any, List
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from app.models.reminder import MaintenancePlan
 from app.models.vehicle import Vehicle
+from app.models.service import ServiceRecord, ServiceItem
+
+MATCH_RULES = {
+    "engine_oil": ["масло", "oil", "моторн", "zic", "genesis", "lukoil", "лукойл"],
+    "oil_filter": ["маслян", "1012010mk01", "c-933", "c933", "масляный"],
+    "air_filter": ["воздуш", "af162", "1109190-mk01", "воздушный"],
+    "cabin_filter": ["салон", "cn1305k", "8104020-mk01", "салонный", "угольн"],
+    "drain_washer": ["кольц", "2151323001", "21513-23001", "пробк", "шайб"],
+    "spark_plugs": ["свеч", "3707010-ne01", "hu10a80p", "зажигани"],
+    "antifreeze": ["антифриз", "ож", "58888973218", "felix", "dragon", "охлажд"],
+    "brake_fluid": ["тормозн", "тормоз", "dot-4"],
+    "dct_fluid": ["коробк", "трансмисс", "ркпп", "dct", "7dct", "dctf"],
+}
+
+def is_item_match_for_plan(plan: MaintenancePlan, item: ServiceItem) -> bool:
+    it_name = (item.name or "").lower()
+    it_art = (item.part_number or "").lower()
+    it_brand = (item.brand or "").lower()
+
+    if plan.article and len(plan.article) >= 4 and (plan.article.lower() in it_art or plan.article.lower() in it_name):
+        return True
+
+    tracker_id = plan.tracker_id or ""
+    keywords = MATCH_RULES.get(tracker_id, [])
+    for kw in keywords:
+        if kw in it_name or kw in it_art or kw in it_brand:
+            return True
+
+    # Fallback to title keywords
+    title_words = [w for w in plan.title.lower().split() if len(w) > 3 and not w.startswith("(")]
+    for tw in title_words:
+        if tw in it_name:
+            return True
+
+    return False
+
+async def sync_reminder_baselines(db: AsyncSession, vehicle_id: int):
+    """
+    Synchronizes reminders with the most recent service records in the database.
+    """
+    # Fetch all records with items
+    srv_res = await db.execute(
+        select(ServiceRecord)
+        .options(selectinload(ServiceRecord.items))
+        .where(ServiceRecord.vehicle_id == vehicle_id)
+        .order_by(ServiceRecord.odometer.desc(), ServiceRecord.date.desc())
+    )
+    records = srv_res.scalars().all()
+
+    # Fetch all plans
+    plan_res = await db.execute(
+        select(MaintenancePlan).where(MaintenancePlan.vehicle_id == vehicle_id)
+    )
+    plans = plan_res.scalars().all()
+
+    for plan in plans:
+        # If plan already has last_service_odometer > 0, we still check if there is a later service
+        best_record = None
+        for r in records:
+            matched = False
+            for it in r.items:
+                if is_item_match_for_plan(plan, it):
+                    matched = True
+                    break
+            if matched:
+                best_record = r
+                break
+
+        if best_record:
+            if best_record.odometer > (plan.last_service_odometer or 0.0):
+                plan.last_service_odometer = best_record.odometer
+                plan.last_service_hours = best_record.engine_hours or plan.last_service_hours or 0.0
+                plan.last_service_date = best_record.date
+
+    await db.commit()
 
 def compute_reminder_status(plan: MaintenancePlan, vehicle: Vehicle) -> Dict[str, Any]:
     now = datetime.datetime.utcnow()
@@ -14,9 +92,9 @@ def compute_reminder_status(plan: MaintenancePlan, vehicle: Vehicle) -> Dict[str
     distance_progress = 0.0
 
     if plan.interval_distance and plan.interval_distance > 0:
-        due_odometer = plan.last_service_odometer + plan.interval_distance
+        due_odometer = (plan.last_service_odometer or 0.0) + plan.interval_distance
         remaining_distance = due_odometer - current_odometer
-        passed_dist = current_odometer - plan.last_service_odometer
+        passed_dist = current_odometer - (plan.last_service_odometer or 0.0)
         distance_progress = (passed_dist / plan.interval_distance) * 100.0
 
     # Engine Hours calculation
@@ -37,10 +115,11 @@ def compute_reminder_status(plan: MaintenancePlan, vehicle: Vehicle) -> Dict[str
 
     if plan.interval_months and plan.interval_months > 0:
         days_interval = int(plan.interval_months * 30.44)
-        due_date = plan.last_service_date + datetime.timedelta(days=days_interval)
+        base_date = plan.last_service_date or now
+        due_date = base_date + datetime.timedelta(days=days_interval)
         delta = due_date - now
         remaining_days = delta.days
-        passed_days = (now - plan.last_service_date).days
+        passed_days = (now - base_date).days
         time_progress = (passed_days / max(days_interval, 1)) * 100.0
 
     # Hybrid status determination

@@ -205,7 +205,64 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   const activeTyre = tyres.find((t) => t.is_active);
   const activeInsurances = documents.filter((d) => d.is_active && (d.doc_type === 'insurance' || d.doc_type === 'osago' || d.doc_type === 'kasko'));
 
-  const COLORS = ['#0ea5e9', '#f43f5e', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4'];
+  const COLORS = ['#0284c7', '#e11d48', '#059669', '#d97706', '#7c3aed', '#0891b2'];
+
+  // Clean Custom Tooltip for Pie Chart
+  const CustomPieTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0];
+      return (
+        <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-700 p-3 rounded-xl shadow-xl text-xs space-y-1">
+          <div className="flex items-center space-x-2">
+            <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: data.payload.fill || data.color }} />
+            <span className="font-bold text-slate-900 dark:text-white">{data.name}</span>
+          </div>
+          <div className="font-mono text-sm font-extrabold text-brand-600 dark:text-brand-400">
+            {Number(data.value).toLocaleString('ru-RU')} {vehicle.currency}
+          </div>
+          <div className="text-[11px] text-slate-500 dark:text-slate-400">
+            Доля: <strong className="text-slate-800 dark:text-slate-200">{data.payload.percentage}%</strong>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  // Clean Custom Tooltip for Bar Chart
+  const CustomBarTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      const totalMonth = payload.reduce((sum: number, p: any) => sum + (Number(p.value) || 0), 0);
+      return (
+        <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-700 p-3 rounded-xl shadow-xl text-xs space-y-1.5 min-w-[190px]">
+          <div className="font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-dark-750 pb-1">
+            {label}
+          </div>
+          {payload.map((entry: any, index: number) => {
+            if (!entry.value || entry.value === 0) return null;
+            return (
+              <div key={`item-${index}`} className="flex items-center justify-between space-x-2">
+                <span className="flex items-center space-x-1.5 text-slate-600 dark:text-slate-300 text-[11px]">
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                  <span>{entry.name}:</span>
+                </span>
+                <span className="font-mono font-bold text-slate-900 dark:text-white">
+                  {Number(entry.value).toLocaleString('ru-RU')} {vehicle.currency}
+                </span>
+              </div>
+            );
+          })}
+          <div className="pt-1.5 border-t border-slate-100 dark:border-dark-750 flex items-center justify-between font-bold text-xs">
+            <span className="text-slate-700 dark:text-slate-300">Итого за месяц:</span>
+            <span className="text-brand-600 dark:text-brand-400 font-mono">
+              {totalMonth.toLocaleString('ru-RU')} {vehicle.currency}
+            </span>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 animate-fadeIn">
@@ -642,7 +699,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                           </button>
                           <button
                             onClick={() => handleDeleteService(rec.id)}
-                            className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg"
+                            className="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg hover:bg-rose-500/10"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -1210,10 +1267,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           ))}
                         </Pie>
-                        <Tooltip
-                          formatter={(value: any) => [`${Number(value).toLocaleString('ru-RU')} ${vehicle.currency}`, 'Сумма']}
-                          contentStyle={{ backgroundColor: '#1b2230', borderColor: '#2d3748', borderRadius: 8, color: '#fff' }}
-                        />
+                        <Tooltip content={<CustomPieTooltip />} />
                         <Legend />
                       </PieChart>
                     </ResponsiveContainer>
@@ -1233,17 +1287,14 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                       <BarChart data={analytics.monthly_costs}>
                         <XAxis dataKey="month" stroke="#718096" fontSize={11} />
                         <YAxis stroke="#718096" fontSize={11} />
-                        <Tooltip
-                          formatter={(value: any) => [`${Number(value).toLocaleString('ru-RU')} ${vehicle.currency}`, '']}
-                          contentStyle={{ backgroundColor: '#1b2230', borderColor: '#2d3748', borderRadius: 8, color: '#fff' }}
-                        />
+                        <Tooltip content={<CustomBarTooltip />} />
                         <Legend />
-                        <Bar dataKey="service_cost" name="ТО" stackId="a" fill="#0ea5e9" />
-                        <Bar dataKey="repair_cost" name="Ремонт" stackId="a" fill="#f43f5e" />
-                        <Bar dataKey="upgrade_cost" name="Тюнинг" stackId="a" fill="#10b981" />
-                        <Bar dataKey="fuel_cost" name="Топливо" stackId="a" fill="#f59e0b" />
-                        <Bar dataKey="tyre_cost" name="Шины" stackId="a" fill="#06b6d4" />
-                        <Bar dataKey="document_cost" name="Страховки" stackId="a" fill="#8b5cf6" />
+                        <Bar dataKey="service_cost" name="ТО" stackId="a" fill="#0284c7" />
+                        <Bar dataKey="repair_cost" name="Ремонт" stackId="a" fill="#e11d48" />
+                        <Bar dataKey="upgrade_cost" name="Тюнинг" stackId="a" fill="#059669" />
+                        <Bar dataKey="fuel_cost" name="Топливо" stackId="a" fill="#d97706" />
+                        <Bar dataKey="tyre_cost" name="Шины" stackId="a" fill="#0891b2" />
+                        <Bar dataKey="document_cost" name="Страховки" stackId="a" fill="#7c3aed" />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
