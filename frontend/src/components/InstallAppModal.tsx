@@ -29,7 +29,7 @@ export const InstallAppModal: React.FC<InstallAppModalProps> = ({
             </div>
             <div>
               <h3 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white">
-                Установка AutoTracker
+                Установка: Бортовой Журнал
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 Запуск в 1 касание с экрана без браузера
@@ -141,7 +141,7 @@ export const InstallAppModal: React.FC<InstallAppModalProps> = ({
 
         <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-600 dark:text-emerald-400 text-[11px] flex items-center gap-2">
           <Check className="w-3.5 h-3.5 flex-shrink-0" />
-          <span>Приложение откроется на весь экран с иконки на рабочем столе!</span>
+          <span>Бортовой Журнал откроется на весь экран с иконки на рабочем столе!</span>
         </div>
 
         <div className="flex justify-end pt-1">

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Wrench, Plus, Car, UploadCloud, Sun, Moon, Smartphone } from 'lucide-react';
+import { BookOpen, Plus, Car, UploadCloud, Sun, Moon, Smartphone } from 'lucide-react';
 import { Vehicle } from '../types';
 
 interface NavbarProps {
@@ -26,21 +26,18 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <header className="sticky top-0 z-40 bg-white/95 dark:bg-dark-900/95 backdrop-blur-md border-b border-slate-200 dark:border-dark-800 transition-colors shadow-sm dark:shadow-none">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-2">
-        {/* Logo */}
+        {/* Logo & Name */}
         <div
           className="flex items-center space-x-2 sm:space-x-3 cursor-pointer flex-shrink-0"
           onClick={() => onSelectVehicle(null)}
         >
           <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-brand-400 flex items-center justify-center shadow-md shadow-brand-500/20 text-white font-bold text-lg sm:text-xl flex-shrink-0">
-            <Wrench className="w-4 h-4 sm:w-5 sm:h-5" />
+            <BookOpen className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
           <div>
             <div className="flex items-center space-x-1.5">
               <span className="font-extrabold text-base sm:text-lg tracking-tight bg-gradient-to-r from-slate-900 via-slate-700 to-slate-500 dark:from-white dark:via-slate-100 dark:to-slate-400 bg-clip-text text-transparent">
-                AutoTracker
-              </span>
-              <span className="text-[9px] sm:text-[10px] font-semibold uppercase px-1.5 py-0.2 rounded bg-brand-500/10 text-brand-500 border border-brand-500/20">
-                PRO
+                Бортовой Журнал
               </span>
             </div>
             <p className="hidden md:block text-[11px] text-slate-500 dark:text-slate-400 -mt-0.5">
