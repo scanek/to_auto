@@ -1,5 +1,5 @@
 import datetime
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -8,7 +8,7 @@ from app.models.user import User
 from app.models.vehicle import Vehicle
 from app.models.document import DocumentNote
 from app.schemas.document import DocumentNoteCreate, DocumentNoteUpdate, DocumentNoteResponse
-from app.core.security import get_current_user
+from app.core.security import get_current_user, get_optional_current_user
 from app.services.auth_helper import verify_vehicle_access
 
 router = APIRouter(prefix="/documents", tags=["Documents & Notes"])
@@ -16,10 +16,10 @@ router = APIRouter(prefix="/documents", tags=["Documents & Notes"])
 @router.get("", response_model=List[DocumentNoteResponse])
 async def get_documents(
     vehicle_id: int = Query(..., description="ID автомобиля"),
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    await verify_vehicle_access(db, vehicle_id, current_user)
+    await verify_vehicle_access(db, vehicle_id, current_user, require_owner=False)
     query = select(DocumentNote).where(DocumentNote.vehicle_id == vehicle_id).order_by(DocumentNote.created_at.desc())
     result = await db.execute(query)
     docs = result.scalars().all()
@@ -42,7 +42,7 @@ async def create_document(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    await verify_vehicle_access(db, vehicle_id, current_user)
+    await verify_vehicle_access(db, vehicle_id, current_user, require_owner=True)
 
     doc = DocumentNote(**payload.model_dump(), vehicle_id=vehicle_id)
     db.add(doc)
@@ -68,7 +68,7 @@ async def update_document(
     if not doc:
         raise HTTPException(status_code=404, detail="Документ не найден")
 
-    await verify_vehicle_access(db, doc.vehicle_id, current_user)
+    await verify_vehicle_access(db, doc.vehicle_id, current_user, require_owner=True)
 
     update_data = payload.model_dump(exclude_unset=True)
     for key, value in update_data.items():
@@ -95,7 +95,7 @@ async def delete_document(
     if not doc:
         raise HTTPException(status_code=404, detail="Документ не найден")
 
-    await verify_vehicle_access(db, doc.vehicle_id, current_user)
+    await verify_vehicle_access(db, doc.vehicle_id, current_user, require_owner=True)
     await db.delete(doc)
     await db.commit()
     return None

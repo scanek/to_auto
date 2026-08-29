@@ -34,6 +34,7 @@ async def auto_migrate_sqlite(conn):
     column_migrations = {
         "vehicles": [
             ("user_id", "INTEGER REFERENCES users(id)"),
+            ("is_public", "BOOLEAN DEFAULT 0"),
             ("engine", "VARCHAR(100)"),
             ("current_engine_hours", "FLOAT DEFAULT 0.0"),
             ("oil_spec", "VARCHAR(200)"),

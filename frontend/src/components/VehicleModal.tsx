@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Car, Upload, Image as ImageIcon } from 'lucide-react';
+import { X, Car, Upload, Image as ImageIcon, Globe, Lock } from 'lucide-react';
 import { Vehicle } from '../types';
 import { api } from '../services/api';
 
@@ -25,6 +25,7 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
     oil_spec: '',
     license_plate: '',
     vin: '',
+    is_public: false,
     starting_odometer: 0,
     current_odometer: 0,
     current_engine_hours: 0,
@@ -49,6 +50,7 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
         oil_spec: vehicle.oil_spec || '',
         license_plate: vehicle.license_plate || '',
         vin: vehicle.vin || '',
+        is_public: vehicle.is_public ?? false,
         starting_odometer: vehicle.starting_odometer || 0,
         current_odometer: vehicle.current_odometer || 0,
         current_engine_hours: vehicle.current_engine_hours || 0,
@@ -68,6 +70,7 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
         oil_spec: '',
         license_plate: '',
         vin: '',
+        is_public: false,
         starting_odometer: 0,
         current_odometer: 0,
         current_engine_hours: 0,
@@ -364,6 +367,41 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-300 dark:border-dark-750 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
             />
+          </div>
+
+          {/* Privacy Switch (Public / Private) */}
+          <div className="p-3.5 bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-2xl flex items-center justify-between gap-3">
+            <div className="flex items-start space-x-3">
+              <div
+                className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                  formData.is_public
+                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                    : 'bg-slate-200 dark:bg-dark-800 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-dark-700'
+                }`}
+              >
+                {formData.is_public ? <Globe className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+              </div>
+              <div>
+                <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center space-x-1.5">
+                  <span>{formData.is_public ? '🌐 Публичный автомобиль' : '🔒 Личный автомобиль'}</span>
+                </div>
+                <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
+                  {formData.is_public
+                    ? 'Виден всем пользователям в гараже в режиме «только чтение»'
+                    : 'Виден исключительно в вашем личном профиле'}
+                </div>
+              </div>
+            </div>
+
+            <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
+              <input
+                type="checkbox"
+                checked={formData.is_public}
+                onChange={(e) => setFormData({ ...formData, is_public: e.target.checked })}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-dark-750 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-500"></div>
+            </label>
           </div>
 
           <div className="pt-3 border-t border-slate-200 dark:border-dark-750 flex items-center justify-end space-x-3">

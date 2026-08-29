@@ -24,6 +24,9 @@ export interface Vehicle {
   active_reminders_count?: number;
   overdue_reminders_count?: number;
   avg_fuel_consumption?: number | null;
+  is_public?: boolean;
+  is_owner?: boolean;
+  owner_name?: string;
 }
 
 export interface User {

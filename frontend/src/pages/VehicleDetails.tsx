@@ -21,6 +21,10 @@ import {
   CheckCircle,
   RefreshCw,
   FileJson,
+  Eye,
+  Globe,
+  Lock,
+  User as UserIcon,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -75,6 +79,8 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   const [activeTab, setActiveTab] = useState<
     'service' | 'repairs' | 'upgrades' | 'fuel' | 'reminders' | 'tyres' | 'analytics' | 'documents'
   >('service');
+
+  const isOwner = isAuthenticated && vehicle.is_owner !== false;
 
   const [serviceRecords, setServiceRecords] = useState<ServiceRecord[]>([]);
   const [fuelLogs, setFuelLogs] = useState<FuelLog[]>([]);
@@ -331,7 +337,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
 
           {/* Quick Actions Buttons */}
           <div className="grid grid-cols-3 sm:flex sm:flex-wrap items-center gap-1.5 sm:gap-2">
-            {isAuthenticated && (
+            {isOwner && (
               <>
                 <button
                   onClick={() => onOpenServiceModal('service')}
@@ -392,6 +398,28 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
           </div>
         </div>
 
+        {/* Read-only Banner for foreign public cars */}
+        {!isOwner && (
+          <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/60 rounded-xl p-3 sm:p-3.5 flex items-center justify-between gap-3 text-xs">
+            <div className="flex items-center space-x-2.5 min-w-0">
+              <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center flex-shrink-0">
+                <Eye className="w-4 h-4" />
+              </div>
+              <div className="min-w-0 text-slate-700 dark:text-slate-300">
+                <span className="font-bold text-slate-900 dark:text-white">Режим просмотра:</span>{' '}
+                Автомобиль пользователя{' '}
+                <span className="font-semibold text-blue-600 dark:text-blue-400">
+                  {vehicle.owner_name || 'Владелец'}
+                </span>
+                . Вы можете просматривать всю историю ТО, заправок и аналитики.
+              </div>
+            </div>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 whitespace-nowrap">
+              Только чтение
+            </span>
+          </div>
+        )}
+
         {/* Vehicle Stats Bar (5 cards cleanly distributed) */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 pt-3 sm:pt-4 border-t border-slate-200 dark:border-dark-750">
           {/* Odometer Quick Editor */}
@@ -399,7 +427,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
             <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block mb-0.5">
               Пробег
             </span>
-            {editingOdometer && isAuthenticated ? (
+            {editingOdometer && isOwner ? (
               <div className="flex items-center space-x-1 mt-1">
                 <input
                   type="number"
@@ -416,13 +444,13 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               </div>
             ) : (
               <div
-                onClick={() => isAuthenticated && setEditingOdometer(true)}
-                className={`flex items-center space-x-1.5 ${isAuthenticated ? 'cursor-pointer group' : ''}`}
+                onClick={() => isOwner && setEditingOdometer(true)}
+                className={`flex items-center space-x-1.5 ${isOwner ? 'cursor-pointer group' : ''}`}
               >
-                <span className={`text-sm sm:text-base font-extrabold text-slate-900 dark:text-white font-mono ${isAuthenticated ? 'group-hover:text-brand-500 transition-colors' : ''}`}>
+                <span className={`text-sm sm:text-base font-extrabold text-slate-900 dark:text-white font-mono ${isOwner ? 'group-hover:text-brand-500 transition-colors' : ''}`}>
                   {Math.round(vehicle.current_odometer).toLocaleString('ru-RU')} {vehicle.distance_unit}
                 </span>
-                {isAuthenticated && (
+                {isOwner && (
                   <Edit2 className="w-3 h-3 text-slate-400 group-hover:text-brand-500 flex-shrink-0" />
                 )}
               </div>
@@ -434,7 +462,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
             <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block mb-0.5">
               Моточасы
             </span>
-            {editingHours && isAuthenticated ? (
+            {editingHours && isOwner ? (
               <div className="flex items-center space-x-1 mt-1">
                 <input
                   type="number"
@@ -451,14 +479,14 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               </div>
             ) : (
               <div
-                onClick={() => isAuthenticated && setEditingHours(true)}
-                className={`flex items-center space-x-1.5 ${isAuthenticated ? 'cursor-pointer group' : ''}`}
+                onClick={() => isOwner && setEditingHours(true)}
+                className={`flex items-center space-x-1.5 ${isOwner ? 'cursor-pointer group' : ''}`}
               >
-                <span className={`text-sm sm:text-base font-extrabold text-cyan-600 dark:text-cyan-400 font-mono ${isAuthenticated ? 'group-hover:text-cyan-500 transition-colors' : ''}`}>
-                  {Math.round(vehicle.current_engine_hours || 0)} м/ч
+                <span className={`text-sm sm:text-base font-extrabold text-slate-900 dark:text-white font-mono ${isOwner ? 'group-hover:text-brand-500 transition-colors' : ''}`}>
+                  {vehicle.current_engine_hours ? `${Math.round(vehicle.current_engine_hours)} м/ч` : '0 м/ч'}
                 </span>
-                {isAuthenticated && (
-                  <Edit2 className="w-3 h-3 text-slate-400 group-hover:text-cyan-500 flex-shrink-0" />
+                {isOwner && (
+                  <Edit2 className="w-3 h-3 text-slate-400 group-hover:text-brand-500 flex-shrink-0" />
                 )}
               </div>
             )}
@@ -528,7 +556,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 </div>
               </div>
 
-              {isAuthenticated && (
+              {isOwner && (
                 <div className="flex items-center space-x-1 flex-shrink-0">
                   <button
                     onClick={() => handleSeasonSwap('summer')}
@@ -587,7 +615,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 </div>
               </div>
 
-              {isAuthenticated && (
+              {isOwner && (
                 <button
                   onClick={() => onOpenDocModal()}
                   className="px-2 py-1 rounded-lg text-[11px] font-bold bg-slate-200 dark:bg-dark-800 hover:bg-brand-500 hover:text-white text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-dark-700 transition-all flex-shrink-0"
@@ -657,7 +685,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 История записей ({displayedServiceRecords.length})
               </span>
-              {isAuthenticated && (
+              {isOwner && (
                 <button
                   onClick={() => onOpenServiceModal(activeTab as any)}
                   className="flex items-center space-x-1.5 text-xs font-bold text-brand-500 hover:text-brand-600 bg-brand-500/10 border border-brand-500/20 px-3 py-1.5 rounded-lg transition-colors"
@@ -675,7 +703,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
                   Зафиксируйте выполненные работы, замену расходников или ремонт с ценами и запчастями.
                 </p>
-                {isAuthenticated && (
+                {isOwner && (
                   <button
                     onClick={() => onOpenServiceModal(activeTab as any)}
                     className="inline-flex items-center space-x-1.5 bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-xl text-xs font-bold"
@@ -744,7 +772,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                           )}
                         </div>
 
-                        {isAuthenticated && (
+                        {isOwner && (
                           <div className="flex items-center space-x-1 pl-2 border-l border-slate-200 dark:border-dark-750">
                             <button
                               onClick={() => onOpenServiceModal(rec.record_type, rec)}
@@ -828,7 +856,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 План регламентов ТО и износа ({reminders.length})
               </span>
-              {isAuthenticated && (
+              {isOwner && (
                 <button
                   onClick={() => onOpenReminderModal()}
                   className="flex items-center space-x-1.5 text-xs font-bold text-amber-600 dark:text-amber-400 hover:text-amber-500 bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-lg transition-colors"
@@ -846,7 +874,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
                   Добавьте регламент замены масла, фильтров, свечей или колодок, и система заранее предупредит о необходимости ТО.
                 </p>
-                {isAuthenticated && (
+                {isOwner && (
                   <button
                     onClick={() => onOpenReminderModal()}
                     className="inline-flex items-center space-x-1.5 bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-xl text-xs font-bold"
@@ -906,7 +934,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                           )}
                         </div>
 
-                        {isAuthenticated && (
+                        {isOwner && (
                           <div className="flex items-center space-x-1 flex-shrink-0">
                             <button
                               onClick={() => onOpenReminderModal(rem)}
@@ -972,7 +1000,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                           {rem.last_service_hours ? ` (${rem.last_service_hours} м/ч)` : ''}
                         </div>
 
-                        {isAuthenticated && (
+                        {isOwner && (
                           <button
                             onClick={() => handleMarkReminderDone(rem.id)}
                             className="flex items-center space-x-1 bg-slate-100 hover:bg-emerald-600 hover:text-white dark:bg-dark-800 text-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-lg text-xs font-semibold border border-slate-200 dark:border-dark-700 transition-all flex-shrink-0"
@@ -997,7 +1025,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Комплекты шин и дисков ({tyres.length})
               </span>
-              {isAuthenticated && (
+              {isOwner && (
                 <button
                   onClick={() => onOpenTyreModal()}
                   className="flex items-center space-x-1.5 text-xs font-bold text-brand-500 hover:text-brand-600 bg-brand-500/10 border border-brand-500/20 px-3 py-1.5 rounded-lg transition-colors"
@@ -1009,7 +1037,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
             </div>
 
             {/* Quick Season Swap Banner */}
-            {isAuthenticated && (
+            {isOwner && (
               <div className="bg-white dark:bg-dark-850 border border-blue-500/30 rounded-2xl p-3.5 sm:p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                 <div className="flex items-center space-x-2">
                   <RefreshCw className="w-4 h-4 text-blue-500 flex-shrink-0" />
@@ -1041,7 +1069,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
                   Ведите учет летнего и зимнего комплектов резины, глубины остатка протектора в мм и пробега.
                 </p>
-                {isAuthenticated && (
+                {isOwner && (
                   <button
                     onClick={() => onOpenTyreModal()}
                     className="inline-flex items-center space-x-1.5 bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-xl text-xs font-bold"
@@ -1086,7 +1114,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                         )}
                       </div>
 
-                      {isAuthenticated && (
+                      {isOwner && (
                         <div className="flex items-center space-x-1 flex-shrink-0">
                           <button
                             onClick={() => onOpenTyreModal(t)}
@@ -1134,7 +1162,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                       </div>
 
                       {!t.is_active ? (
-                        isAuthenticated ? (
+                        isOwner ? (
                           <button
                             onClick={() => handleActivateTyre(t.id)}
                             className="flex items-center space-x-1 bg-slate-100 dark:bg-dark-800 hover:bg-brand-500 hover:text-white text-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-lg text-xs font-semibold border border-slate-200 dark:border-dark-700 transition-all flex-shrink-0"
@@ -1164,7 +1192,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Журнал заправок ({fuelLogs.length})
               </span>
-              {isAuthenticated && (
+              {isOwner && (
                 <button
                   onClick={() => onOpenFuelModal()}
                   className="flex items-center space-x-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-lg transition-colors"
@@ -1182,7 +1210,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
                   Вносите данные о заправках полного бака для точного расчета расхода топлива и стоимости 1 км.
                 </p>
-                {isAuthenticated && (
+                {isOwner && (
                   <button
                     onClick={() => onOpenFuelModal()}
                     className="inline-flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold"
@@ -1218,7 +1246,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                         <th className="p-3">Расход</th>
                         <th className="p-3">Сумма</th>
                         <th className="p-3">АЗС / Топливо</th>
-                        {isAuthenticated && <th className="p-3 text-right">Действия</th>}
+                        {isOwner && <th className="p-3 text-right">Действия</th>}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200 dark:divide-dark-750 text-slate-700 dark:text-slate-300">
@@ -1257,7 +1285,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                               '—'
                             )}
                           </td>
-                          {isAuthenticated && (
+                          {isOwner && (
                             <td className="p-3 text-right whitespace-nowrap">
                               <button
                                 onClick={() => onOpenFuelModal(f)}
@@ -1409,7 +1437,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Документы, страховки и сроки ({documents.length})
               </span>
-              {isAuthenticated && (
+              {isOwner && (
                 <button
                   onClick={() => onOpenDocModal()}
                   className="flex items-center space-x-1.5 text-xs font-bold text-brand-500 hover:text-brand-600 bg-brand-500/10 border border-brand-500/20 px-3 py-1.5 rounded-lg transition-colors"
@@ -1427,7 +1455,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
                   Сохраняйте полисы ОСАГО/КАСКО, диагностические карты техосмотра и важные заметки с напоминанием о сроках окончания.
                 </p>
-                {isAuthenticated && (
+                {isOwner && (
                   <button
                     onClick={() => onOpenDocModal()}
                     className="inline-flex items-center space-x-1.5 bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-xl text-xs font-bold"
@@ -1467,7 +1495,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                         )}
                       </div>
 
-                      {isAuthenticated && (
+                      {isOwner && (
                         <div className="flex items-center space-x-1 flex-shrink-0">
                           <button
                             onClick={() => onOpenDocModal(doc)}

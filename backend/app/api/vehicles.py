@@ -1,18 +1,22 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_
+
 from app.db.session import get_db
-from app.models.user import User, UserRole
 from app.models.vehicle import Vehicle
 from app.models.service import ServiceRecord
 from app.models.fuel import FuelLog
 from app.models.reminder import MaintenancePlan
 from app.models.tyre import TyreSet
 from app.models.document import DocumentNote
+from app.models.user import User, UserRole
 from app.schemas.vehicle import VehicleCreate, VehicleUpdate, VehicleResponse
 from app.services.reminder_service import compute_reminder_status
+from app.services.auth_helper import verify_vehicle_access
 from app.core.security import get_current_user, get_optional_current_user
+
+from sqlalchemy.orm import selectinload
 
 router = APIRouter(prefix="/vehicles", tags=["Vehicles"])
 
@@ -62,30 +66,24 @@ async def calculate_vehicle_totals(db: AsyncSession, v: Vehicle, resp: VehicleRe
     avg_c = fuel_logs_res.scalar()
     resp.avg_fuel_consumption = round(avg_c, 2) if avg_c else None
 
-async def get_user_vehicle_or_404(vehicle_id: int, user: User, db: AsyncSession) -> Vehicle:
-    query = select(Vehicle).where(Vehicle.id == vehicle_id)
-    if user.role != UserRole.ADMIN:
-        query = query.where(or_(Vehicle.user_id == user.id, Vehicle.user_id.is_(None)))
-    res = await db.execute(query)
-    vehicle = res.scalar_one_or_none()
-    if not vehicle:
-        raise HTTPException(status_code=404, detail="Автомобиль не найден или нет доступа")
-    return vehicle
-
 @router.get("", response_model=List[VehicleResponse])
 async def get_vehicles(
     current_user: Optional[User] = Depends(get_optional_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get vehicles. If not logged in, returns empty list without error."""
+    """Get vehicles. Returns current user's vehicles + public vehicles from other users."""
     if not current_user:
         return []
 
     if current_user.role == UserRole.ADMIN:
-        query = select(Vehicle).order_by(Vehicle.created_at.desc())
+        query = select(Vehicle).options(selectinload(Vehicle.user)).order_by(Vehicle.created_at.desc())
     else:
-        query = select(Vehicle).where(
-            or_(Vehicle.user_id == current_user.id, Vehicle.user_id.is_(None))
+        query = select(Vehicle).options(selectinload(Vehicle.user)).where(
+            or_(
+                Vehicle.user_id == current_user.id,
+                Vehicle.user_id.is_(None),
+                Vehicle.is_public == True,
+            )
         ).order_by(Vehicle.created_at.desc())
         
     result = await db.execute(query)
@@ -94,6 +92,10 @@ async def get_vehicles(
     responses = []
     for v in vehicles:
         resp = VehicleResponse.model_validate(v)
+        is_owner = (current_user.role == UserRole.ADMIN) or (v.user_id == current_user.id) or (v.user_id is None)
+        resp.is_owner = is_owner
+        if v.user:
+            resp.owner_name = v.user.full_name or v.user.username
         await calculate_vehicle_totals(db, v, resp)
         responses.append(resp)
 
@@ -114,17 +116,24 @@ async def create_vehicle(
     db.add(vehicle)
     await db.commit()
     await db.refresh(vehicle)
-    return VehicleResponse.model_validate(vehicle)
+    resp = VehicleResponse.model_validate(vehicle)
+    resp.is_owner = True
+    resp.owner_name = current_user.full_name or current_user.username
+    return resp
 
 @router.get("/{vehicle_id}", response_model=VehicleResponse)
 async def get_vehicle(
     vehicle_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get details of a vehicle owned by the current user."""
-    vehicle = await get_user_vehicle_or_404(vehicle_id, current_user, db)
+    """Get details of a vehicle. Allowed for owner, admin, or public vehicles."""
+    vehicle = await verify_vehicle_access(db, vehicle_id, current_user, require_owner=False)
     resp = VehicleResponse.model_validate(vehicle)
+    is_owner = bool(current_user and (current_user.role == UserRole.ADMIN or vehicle.user_id == current_user.id)) or (vehicle.user_id is None)
+    resp.is_owner = is_owner
+    if vehicle.user:
+        resp.owner_name = vehicle.user.full_name or vehicle.user.username
     await calculate_vehicle_totals(db, vehicle, resp)
     return resp
 
@@ -135,16 +144,20 @@ async def update_vehicle(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Update vehicle owned by the current user."""
-    vehicle = await get_user_vehicle_or_404(vehicle_id, current_user, db)
+    """Update vehicle. Only owner or admin can update."""
+    vehicle = await verify_vehicle_access(db, vehicle_id, current_user, require_owner=True)
     
     update_data = payload.model_dump(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(vehicle, key, value)
-    
+    for k, v in update_data.items():
+        setattr(vehicle, k, v)
+        
     await db.commit()
     await db.refresh(vehicle)
-    return VehicleResponse.model_validate(vehicle)
+    resp = VehicleResponse.model_validate(vehicle)
+    resp.is_owner = True
+    resp.owner_name = current_user.full_name or current_user.username
+    await calculate_vehicle_totals(db, vehicle, resp)
+    return resp
 
 @router.delete("/{vehicle_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_vehicle(
@@ -152,8 +165,8 @@ async def delete_vehicle(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Delete vehicle owned by the current user."""
-    vehicle = await get_user_vehicle_or_404(vehicle_id, current_user, db)
+    """Delete vehicle. Only owner or admin can delete."""
+    vehicle = await verify_vehicle_access(db, vehicle_id, current_user, require_owner=True)
     await db.delete(vehicle)
     await db.commit()
     return None

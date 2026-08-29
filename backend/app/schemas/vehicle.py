@@ -10,6 +10,7 @@ class VehicleBase(BaseModel):
     engine: Optional[str] = None
     license_plate: Optional[str] = None
     vin: Optional[str] = None
+    is_public: bool = False # True = visible to other users (read-only)
     starting_odometer: float = 0.0
     current_odometer: float = 0.0
     current_engine_hours: float = 0.0
@@ -31,6 +32,7 @@ class VehicleUpdate(BaseModel):
     engine: Optional[str] = None
     license_plate: Optional[str] = None
     vin: Optional[str] = None
+    is_public: Optional[bool] = None
     starting_odometer: Optional[float] = None
     current_odometer: Optional[float] = None
     current_engine_hours: Optional[float] = None
@@ -43,6 +45,9 @@ class VehicleUpdate(BaseModel):
 
 class VehicleResponse(VehicleBase):
     id: int
+    user_id: Optional[int] = None
+    is_owner: bool = True
+    owner_name: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

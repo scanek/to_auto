@@ -42,6 +42,7 @@ def serialize_vehicle_dict(vehicle: Vehicle, service_records, fuel_logs, reminde
             "current_odometer": vehicle.current_odometer,
             "current_engine_hours": vehicle.current_engine_hours,
             "oil_spec": vehicle.oil_spec,
+            "is_public": getattr(vehicle, "is_public", False),
             "distance_unit": vehicle.distance_unit,
             "fuel_unit": vehicle.fuel_unit,
             "currency": vehicle.currency,

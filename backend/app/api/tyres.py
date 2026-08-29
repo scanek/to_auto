@@ -1,5 +1,5 @@
 import datetime
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -8,7 +8,7 @@ from app.models.user import User
 from app.models.vehicle import Vehicle
 from app.models.tyre import TyreSet
 from app.schemas.tyre import TyreSetCreate, TyreSetUpdate, TyreSetResponse
-from app.core.security import get_current_user
+from app.core.security import get_current_user, get_optional_current_user
 from app.services.auth_helper import verify_vehicle_access
 
 router = APIRouter(prefix="/tyres", tags=["Tyres & Wheels"])
@@ -16,10 +16,10 @@ router = APIRouter(prefix="/tyres", tags=["Tyres & Wheels"])
 @router.get("", response_model=List[TyreSetResponse])
 async def get_tyre_sets(
     vehicle_id: int = Query(..., description="ID автомобиля"),
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    await verify_vehicle_access(db, vehicle_id, current_user)
+    await verify_vehicle_access(db, vehicle_id, current_user, require_owner=False)
     query = select(TyreSet).where(TyreSet.vehicle_id == vehicle_id).order_by(TyreSet.created_at.desc())
     result = await db.execute(query)
     tyres = result.scalars().all()
@@ -32,7 +32,7 @@ async def create_tyre_set(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    await verify_vehicle_access(db, vehicle_id, current_user)
+    await verify_vehicle_access(db, vehicle_id, current_user, require_owner=True)
 
     data = payload.model_dump()
     if data["is_active"]:
@@ -59,7 +59,7 @@ async def update_tyre_set(
     if not tyre:
         raise HTTPException(status_code=404, detail="Комплект шин не найден")
 
-    await verify_vehicle_access(db, tyre.vehicle_id, current_user)
+    await verify_vehicle_access(db, tyre.vehicle_id, current_user, require_owner=True)
 
     update_data = payload.model_dump(exclude_unset=True)
     if update_data.get("is_active"):
@@ -89,7 +89,7 @@ async def activate_tyre_set(
     if not tyre:
         raise HTTPException(status_code=404, detail="Комплект шин не найден")
 
-    await verify_vehicle_access(db, tyre.vehicle_id, current_user)
+    await verify_vehicle_access(db, tyre.vehicle_id, current_user, require_owner=True)
 
     others_res = await db.execute(
         select(TyreSet).where(TyreSet.vehicle_id == tyre.vehicle_id)
@@ -116,7 +116,7 @@ async def delete_tyre_set(
     if not tyre:
         raise HTTPException(status_code=404, detail="Комплект шин не найден")
 
-    await verify_vehicle_access(db, tyre.vehicle_id, current_user)
+    await verify_vehicle_access(db, tyre.vehicle_id, current_user, require_owner=True)
     await db.delete(tyre)
     await db.commit()
     return None

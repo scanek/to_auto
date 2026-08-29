@@ -9,7 +9,7 @@ from app.models.vehicle import Vehicle
 from app.models.service import ServiceRecord, ServiceItem, RecordType
 from app.models.reminder import MaintenancePlan
 from app.schemas.service import ServiceRecordCreate, ServiceRecordUpdate, ServiceRecordResponse
-from app.core.security import get_current_user
+from app.core.security import get_current_user, get_optional_current_user
 from app.services.auth_helper import verify_vehicle_access
 
 router = APIRouter(prefix="/service-records", tags=["Service Records"])
@@ -18,10 +18,10 @@ router = APIRouter(prefix="/service-records", tags=["Service Records"])
 async def get_service_records(
     vehicle_id: int = Query(..., description="ID автомобиля"),
     record_type: Optional[str] = Query(None, description="Фильтр по типу: service, repair, upgrade"),
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    await verify_vehicle_access(db, vehicle_id, current_user)
+    await verify_vehicle_access(db, vehicle_id, current_user, require_owner=False)
 
     query = (
         select(ServiceRecord)
@@ -49,7 +49,7 @@ async def create_service_record(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    vehicle = await verify_vehicle_access(db, vehicle_id, current_user)
+    vehicle = await verify_vehicle_access(db, vehicle_id, current_user, require_owner=True)
     
     data = payload.model_dump(exclude={"items"})
     items_data = payload.items or []
@@ -142,7 +142,7 @@ async def update_service_record(
     if not record:
         raise HTTPException(status_code=404, detail="Запись не найдена")
     
-    await verify_vehicle_access(db, record.vehicle_id, current_user)
+    await verify_vehicle_access(db, record.vehicle_id, current_user, require_owner=True)
     
     update_data = payload.model_dump(exclude_unset=True, exclude={"items"})
     for key, value in update_data.items():
@@ -187,7 +187,7 @@ async def delete_service_record(
     if not record:
         raise HTTPException(status_code=404, detail="Запись не найдена")
     
-    await verify_vehicle_access(db, record.vehicle_id, current_user)
+    await verify_vehicle_access(db, record.vehicle_id, current_user, require_owner=True)
     await db.delete(record)
     await db.commit()
     return None

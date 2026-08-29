@@ -1,5 +1,5 @@
 import datetime
-from sqlalchemy import Column, Integer, String, Float, DateTime, Text, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, DateTime, Text, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from app.db.session import Base
 
@@ -8,6 +8,7 @@ class Vehicle(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
+    is_public = Column(Boolean, default=False, nullable=False) # True = visible to all users
     name = Column(String(100), nullable=True) # Custom nickname e.g. "Changan CS55 Plus"
     make = Column(String(100), nullable=False) # e.g. Changan
     model = Column(String(100), nullable=False) # e.g. CS55 Plus
