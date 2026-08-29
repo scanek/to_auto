@@ -59,6 +59,16 @@ export function App() {
     return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
   }, []);
 
+  // Update page title dynamically
+  useEffect(() => {
+    const currentCar = selectedVehicle || (vehicles.length === 1 ? vehicles[0] : null);
+    if (currentCar) {
+      document.title = `Бортовой Журнал Автомобиля ${currentCar.make} ${currentCar.model}`;
+    } else {
+      document.title = 'Бортовой Журнал Автомобиля';
+    }
+  }, [selectedVehicle, vehicles]);
+
   const handleOpenInstall = () => {
     if (deferredPrompt) {
       deferredPrompt.prompt();

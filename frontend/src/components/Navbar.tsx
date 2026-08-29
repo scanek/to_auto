@@ -23,25 +23,36 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenImportModal,
   onOpenInstallModal,
 }) => {
+  // Determine car to display in header (selected car, or single car from garage)
+  const currentCar = selectedVehicle || (vehicles.length === 1 ? vehicles[0] : null);
+  const carTitle = currentCar ? `${currentCar.make} ${currentCar.model}` : '';
+
   return (
     <header className="sticky top-0 z-40 bg-white/95 dark:bg-dark-900/95 backdrop-blur-md border-b border-slate-200 dark:border-dark-800 transition-colors shadow-sm dark:shadow-none">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-2">
-        {/* Logo & Name */}
+        {/* Logo & Dynamic Brand Name */}
         <div
-          className="flex items-center space-x-2 sm:space-x-3 cursor-pointer flex-shrink-0"
+          className="flex items-center space-x-2 sm:space-x-3 cursor-pointer min-w-0 flex-1 sm:flex-initial"
           onClick={() => onSelectVehicle(null)}
+          title="На главную в гараж"
         >
-          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-brand-400 flex items-center justify-center shadow-md shadow-brand-500/20 text-white font-bold text-lg sm:text-xl flex-shrink-0">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-brand-400 flex items-center justify-center shadow-md shadow-brand-500/20 text-white font-bold text-base sm:text-xl flex-shrink-0">
             <BookOpen className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
-          <div>
-            <div className="flex items-center space-x-1.5">
-              <span className="font-extrabold text-base sm:text-lg tracking-tight bg-gradient-to-r from-slate-900 via-slate-700 to-slate-500 dark:from-white dark:via-slate-100 dark:to-slate-400 bg-clip-text text-transparent">
+          <div className="min-w-0">
+            <div className="flex items-baseline space-x-1 sm:space-x-1.5 flex-nowrap overflow-hidden">
+              <span className="font-extrabold text-xs sm:text-base md:text-lg tracking-tight bg-gradient-to-r from-slate-900 via-slate-700 to-slate-500 dark:from-white dark:via-slate-100 dark:to-slate-400 bg-clip-text text-transparent truncate flex-shrink-0">
                 Бортовой Журнал
+                <span className="hidden sm:inline"> Автомобиля</span>
               </span>
+              {carTitle && (
+                <span className="font-extrabold text-xs sm:text-base md:text-lg tracking-tight text-brand-600 dark:text-brand-400 truncate">
+                  {carTitle}
+                </span>
+              )}
             </div>
             <p className="hidden md:block text-[11px] text-slate-500 dark:text-slate-400 -mt-0.5">
-              Учет ТО и расходов автомобиля
+              Учет ТО, регламентов и расходов
             </p>
           </div>
         </div>
