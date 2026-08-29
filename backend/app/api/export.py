@@ -23,7 +23,7 @@ async def export_service_booklet(vehicle_id: int, db: AsyncSession = Depends(get
         select(ServiceRecord)
         .options(selectinload(ServiceRecord.items))
         .where(ServiceRecord.vehicle_id == vehicle_id)
-        .order_by(ServiceRecord.date.desc())
+        .order_by(ServiceRecord.date.asc(), ServiceRecord.odometer.asc(), ServiceRecord.id.asc())
     )
     service_records = srv_res.scalars().all()
 
@@ -46,14 +46,14 @@ async def export_excel(vehicle_id: int, db: AsyncSession = Depends(get_db)):
         select(ServiceRecord)
         .options(selectinload(ServiceRecord.items))
         .where(ServiceRecord.vehicle_id == vehicle_id)
-        .order_by(ServiceRecord.date.desc())
+        .order_by(ServiceRecord.date.asc(), ServiceRecord.odometer.asc(), ServiceRecord.id.asc())
     )
     service_records = srv_res.scalars().all()
 
     fuel_res = await db.execute(
         select(FuelLog)
         .where(FuelLog.vehicle_id == vehicle_id)
-        .order_by(FuelLog.date.desc())
+        .order_by(FuelLog.date.asc(), FuelLog.odometer.asc(), FuelLog.id.asc())
     )
     fuel_logs = fuel_res.scalars().all()
 

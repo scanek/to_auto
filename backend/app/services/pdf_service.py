@@ -193,7 +193,7 @@ def generate_service_booklet_html(vehicle: Vehicle, records: list[ServiceRecord]
         </div>
         <div class="header-meta">
             Сформировано: {date_str}<br>
-            Система: AutoTracker
+            Система: Бортовой Журнал
         </div>
     </div>
 
