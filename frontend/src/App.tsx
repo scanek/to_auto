@@ -13,7 +13,7 @@ import { TyreModal } from './components/TyreModal';
 import { ImportBackupModal } from './components/ImportBackupModal';
 import { InstallAppModal } from './components/InstallAppModal';
 import { PinModal } from './components/PinModal';
-import { Github, Heart } from 'lucide-react';
+import { Github } from 'lucide-react';
 
 export function App() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -324,10 +324,7 @@ export function App() {
           <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 font-medium">
             <span className="font-bold text-slate-900 dark:text-white">Бортовой Журнал</span>
             <span>•</span>
-            <span className="flex items-center gap-1">
-              Автор: <strong className="text-slate-800 dark:text-slate-200">Александр Щеголев</strong>
-              <Heart className="w-3 h-3 text-rose-500 fill-rose-500 inline" />
-            </span>
+            <span>Автор: <strong className="text-slate-800 dark:text-slate-200">Александр Щеголев</strong></span>
           </div>
           <a
             href="https://github.com/scanek/to_auto"
