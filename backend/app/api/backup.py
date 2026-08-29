@@ -2,13 +2,15 @@ import datetime
 import json
 import urllib.parse
 import traceback
-from typing import Any, Dict
-from fastapi import APIRouter, Depends, HTTPException, Body, Response
+from typing import Any, Dict, Optional
+from fastapi import APIRouter, Depends, HTTPException, Body, Response, Header, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from sqlalchemy.orm import selectinload
 from app.db.session import get_db
 from app.models import (
+    User,
+    UserRole,
     Vehicle,
     ServiceRecord,
     ServiceItem,
@@ -19,7 +21,8 @@ from app.models import (
     FuelLog,
 )
 from app.services.reminder_service import is_item_match_for_plan
-from app.core.security import require_admin
+from app.core.security import get_current_user
+from app.services.auth_helper import verify_vehicle_access, resolve_user_from_header_or_query
 
 router = APIRouter(prefix="/backup", tags=["Backup & Restore"])
 
@@ -159,15 +162,15 @@ def serialize_vehicle_dict(vehicle: Vehicle, service_records, fuel_logs, reminde
 @router.get("/export/{vehicle_id}")
 async def export_vehicle_backup(
     vehicle_id: int,
+    token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Exports a complete JSON backup for a single vehicle.
+    Exports a complete JSON backup for a single vehicle owned by user.
     """
-    veh_res = await db.execute(select(Vehicle).where(Vehicle.id == vehicle_id))
-    vehicle = veh_res.scalar_one_or_none()
-    if not vehicle:
-        raise HTTPException(status_code=404, detail="Автомобиль не найден")
+    user = await resolve_user_from_header_or_query(authorization, token, db)
+    vehicle = await verify_vehicle_access(db, vehicle_id, user)
 
     srv_res = await db.execute(
         select(ServiceRecord)
@@ -223,12 +226,25 @@ async def export_vehicle_backup(
 
 @router.get("/export-all")
 async def export_all_backup(
+    token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Exports a complete JSON backup of all vehicles and records in the system.
+    Exports a complete JSON backup of all vehicles owned by user.
     """
-    veh_res = await db.execute(select(Vehicle).order_by(Vehicle.id.asc()))
+    user = await resolve_user_from_header_or_query(authorization, token, db)
+    if not user:
+        raise HTTPException(status_code=401, detail="Требуется авторизация")
+
+    if user.role == UserRole.ADMIN:
+        query = select(Vehicle).order_by(Vehicle.id.asc())
+    else:
+        query = select(Vehicle).where(
+            or_(Vehicle.user_id == user.id, Vehicle.user_id.is_(None))
+        ).order_by(Vehicle.id.asc())
+
+    veh_res = await db.execute(query)
     vehicles = veh_res.scalars().all()
 
     all_data = []
@@ -292,20 +308,18 @@ async def export_all_backup(
 @router.post("/import")
 async def import_backup(
     data: Dict[str, Any] = Body(...),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-    admin: bool = Depends(require_admin),
 ):
     """
-    Imports a complete backup from Бортовой Журнал or car-maintenance-app v2.5.
+    Imports a complete backup from Бортовой Журнал and assigns it to current user.
     """
     try:
-        # Check if it's a full multi-vehicle backup
         if "data" in data and isinstance(data["data"], list) and len(data["data"]) > 0:
             target_data = data["data"][0]
         else:
             target_data = data
 
-        # 1. Extract Vehicle data
         veh_data = target_data.get("vehicle") or (target_data.get("vehicles", [{}])[0] if target_data.get("vehicles") else {})
         if not veh_data:
             raise HTTPException(status_code=400, detail="В файле бэкапа не найдены данные автомобиля")
@@ -322,6 +336,7 @@ async def import_backup(
         oil_spec = str(veh_data.get("oil_spec") or "")
 
         vehicle = Vehicle(
+            user_id=current_user.id,
             name=name,
             make=make,
             model=model,
@@ -340,9 +355,8 @@ async def import_backup(
         db.add(vehicle)
         await db.flush()
 
-        # 2. Extract Trackers / Maintenance Plans
+        # Extract Trackers
         trackers = target_data.get("trackers") or veh_data.get("trackers") or []
-        created_plans = []
         for t in trackers:
             plan = MaintenancePlan(
                 vehicle_id=vehicle.id,
@@ -366,10 +380,9 @@ async def import_backup(
                 notes=str(t.get("notes") or ""),
             )
             db.add(plan)
-            await db.flush()
-            created_plans.append(plan)
+        await db.flush()
 
-        # 3. Extract Service Records (both native format and legacy maintenance_records)
+        # Extract Service Records
         native_records = target_data.get("service_records") or []
         if native_records:
             for s in native_records:
@@ -414,7 +427,6 @@ async def import_backup(
                     )
                     db.add(item_entity)
         else:
-            # Legacy maintenance_records format
             m_records = target_data.get("maintenance_records") or []
             groups = {}
             for r in m_records:
@@ -482,7 +494,7 @@ async def import_backup(
                     )
                     db.add(item_entity)
 
-        # 4. Extract Fuel Logs
+        # Extract Fuel Logs
         fuel_logs = target_data.get("fuel_logs") or []
         for f in fuel_logs:
             raw_date = f.get("date")
@@ -506,7 +518,7 @@ async def import_backup(
             )
             db.add(fuel_log)
 
-        # 5. Extract Tyre Sets
+        # Extract Tyre Sets
         tyres = target_data.get("tyre_sets") or []
         for t in tyres:
             ins_date = None
@@ -534,7 +546,7 @@ async def import_backup(
             )
             db.add(tyre)
 
-        # 6. Extract Insurances / Documents
+        # Extract Insurances / Documents
         documents = target_data.get("documents") or target_data.get("insurances") or []
         for doc_item in documents:
             start_d = None
@@ -572,7 +584,7 @@ async def import_backup(
         return {
             "status": "success",
             "vehicle_id": vehicle.id,
-            "message": f"Автомобиль {vehicle.make} {vehicle.model} ({vehicle.license_plate or 'без номера'}) успешно восстановлен!",
+            "message": f"Автомобиль {vehicle.make} {vehicle.model} ({vehicle.license_plate or 'без номера'}) успешно восстановлен в ваш гараж!",
         }
     except Exception as e:
         await db.rollback()

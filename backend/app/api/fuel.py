@@ -3,19 +3,23 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.db.session import get_db
+from app.models.user import User
 from app.models.vehicle import Vehicle
 from app.models.fuel import FuelLog
 from app.schemas.fuel import FuelLogCreate, FuelLogUpdate, FuelLogResponse
 from app.services.fuel_service import recalculate_fuel_logs
-from app.core.security import require_admin
+from app.core.security import get_current_user
+from app.services.auth_helper import verify_vehicle_access
 
 router = APIRouter(prefix="/fuel-logs", tags=["Fuel Logs"])
 
 @router.get("", response_model=List[FuelLogResponse])
 async def get_fuel_logs(
     vehicle_id: int = Query(..., description="ID автомобиля"),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    await verify_vehicle_access(db, vehicle_id, current_user)
     query = select(FuelLog).where(FuelLog.vehicle_id == vehicle_id).order_by(FuelLog.date.desc(), FuelLog.odometer.desc())
     result = await db.execute(query)
     logs = result.scalars().all()
@@ -25,13 +29,10 @@ async def get_fuel_logs(
 async def create_fuel_log(
     payload: FuelLogCreate,
     vehicle_id: int = Query(...),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-    admin: bool = Depends(require_admin),
 ):
-    veh_res = await db.execute(select(Vehicle).where(Vehicle.id == vehicle_id))
-    vehicle = veh_res.scalar_one_or_none()
-    if not vehicle:
-        raise HTTPException(status_code=404, detail="Автомобиль не найден")
+    vehicle = await verify_vehicle_access(db, vehicle_id, current_user)
 
     data = payload.model_dump()
     # If unit_price or total_cost is 0, auto-fill
@@ -59,13 +60,15 @@ async def create_fuel_log(
 async def update_fuel_log(
     log_id: int,
     payload: FuelLogUpdate,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-    admin: bool = Depends(require_admin),
 ):
     result = await db.execute(select(FuelLog).where(FuelLog.id == log_id))
     log = result.scalar_one_or_none()
     if not log:
         raise HTTPException(status_code=404, detail="Запись заправки не найдена")
+
+    await verify_vehicle_access(db, log.vehicle_id, current_user)
 
     update_data = payload.model_dump(exclude_unset=True)
     for key, value in update_data.items():
@@ -80,14 +83,15 @@ async def update_fuel_log(
 @router.delete("/{log_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_fuel_log(
     log_id: int,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-    admin: bool = Depends(require_admin),
 ):
     result = await db.execute(select(FuelLog).where(FuelLog.id == log_id))
     log = result.scalar_one_or_none()
     if not log:
         raise HTTPException(status_code=404, detail="Запись заправки не найдена")
 
+    await verify_vehicle_access(db, log.vehicle_id, current_user)
     vehicle_id = log.vehicle_id
     await db.delete(log)
     await db.commit()

@@ -4,23 +4,23 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.db.session import get_db
+from app.models.user import User
 from app.models.vehicle import Vehicle
 from app.models.reminder import MaintenancePlan
 from app.schemas.reminder import MaintenancePlanCreate, MaintenancePlanUpdate, MaintenancePlanResponse
 from app.services.reminder_service import compute_reminder_status, sync_reminder_baselines
-from app.core.security import require_admin
+from app.core.security import get_current_user
+from app.services.auth_helper import verify_vehicle_access
 
 router = APIRouter(prefix="/reminders", tags=["Maintenance Planner & Reminders"])
 
 @router.get("", response_model=List[MaintenancePlanResponse])
 async def get_reminders(
     vehicle_id: int = Query(..., description="ID автомобиля"),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    veh_res = await db.execute(select(Vehicle).where(Vehicle.id == vehicle_id))
-    vehicle = veh_res.scalar_one_or_none()
-    if not vehicle:
-        raise HTTPException(status_code=404, detail="Автомобиль не найден")
+    vehicle = await verify_vehicle_access(db, vehicle_id, current_user)
 
     # Automatically sync reminders with latest service records
     await sync_reminder_baselines(db, vehicle_id)
@@ -46,13 +46,10 @@ async def get_reminders(
 async def create_reminder(
     payload: MaintenancePlanCreate,
     vehicle_id: int = Query(...),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-    admin: bool = Depends(require_admin),
 ):
-    veh_res = await db.execute(select(Vehicle).where(Vehicle.id == vehicle_id))
-    vehicle = veh_res.scalar_one_or_none()
-    if not vehicle:
-        raise HTTPException(status_code=404, detail="Автомобиль не найден")
+    vehicle = await verify_vehicle_access(db, vehicle_id, current_user)
 
     data = payload.model_dump()
     if data.get("last_service_odometer") == 0.0 and vehicle.current_odometer:
@@ -73,16 +70,15 @@ async def create_reminder(
 async def update_reminder(
     plan_id: int,
     payload: MaintenancePlanUpdate,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-    admin: bool = Depends(require_admin),
 ):
     result = await db.execute(select(MaintenancePlan).where(MaintenancePlan.id == plan_id))
     plan = result.scalar_one_or_none()
     if not plan:
         raise HTTPException(status_code=404, detail="Напоминание не найдено")
 
-    veh_res = await db.execute(select(Vehicle).where(Vehicle.id == plan.vehicle_id))
-    vehicle = veh_res.scalar_one()
+    vehicle = await verify_vehicle_access(db, plan.vehicle_id, current_user)
 
     update_data = payload.model_dump(exclude_unset=True)
     for key, value in update_data.items():
@@ -102,8 +98,8 @@ async def mark_reminder_done(
     plan_id: int,
     odometer: float = Query(None, description="Пробег при выполнении"),
     hours: float = Query(None, description="Моточасы при выполнении"),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-    admin: bool = Depends(require_admin),
 ):
     """Resets reminder to current odometer and date when completed."""
     result = await db.execute(select(MaintenancePlan).where(MaintenancePlan.id == plan_id))
@@ -111,8 +107,7 @@ async def mark_reminder_done(
     if not plan:
         raise HTTPException(status_code=404, detail="Напоминание не найдено")
 
-    veh_res = await db.execute(select(Vehicle).where(Vehicle.id == plan.vehicle_id))
-    vehicle = veh_res.scalar_one()
+    vehicle = await verify_vehicle_access(db, plan.vehicle_id, current_user)
 
     done_odo = odometer if odometer is not None else vehicle.current_odometer
     done_hours = hours if hours is not None else vehicle.current_engine_hours
@@ -138,14 +133,15 @@ async def mark_reminder_done(
 @router.delete("/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_reminder(
     plan_id: int,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-    admin: bool = Depends(require_admin),
 ):
     result = await db.execute(select(MaintenancePlan).where(MaintenancePlan.id == plan_id))
     plan = result.scalar_one_or_none()
     if not plan:
         raise HTTPException(status_code=404, detail="Напоминание не найдено")
 
+    await verify_vehicle_access(db, plan.vehicle_id, current_user)
     await db.delete(plan)
     await db.commit()
     return None

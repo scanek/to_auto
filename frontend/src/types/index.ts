@@ -26,6 +26,29 @@ export interface Vehicle {
   avg_fuel_consumption?: number | null;
 }
 
+export interface User {
+  id: number;
+  username: string;
+  email?: string | null;
+  full_name?: string | null;
+  role: 'admin' | 'user';
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  user: User;
+  message: string;
+}
+
+export interface SetupStatus {
+  has_users: boolean;
+  allow_registration: boolean;
+}
+
 export interface ServiceItem {
   id?: number;
   name: string;

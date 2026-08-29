@@ -4,18 +4,22 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.db.session import get_db
+from app.models.user import User
 from app.models.vehicle import Vehicle
 from app.models.document import DocumentNote
 from app.schemas.document import DocumentNoteCreate, DocumentNoteUpdate, DocumentNoteResponse
-from app.core.security import require_admin
+from app.core.security import get_current_user
+from app.services.auth_helper import verify_vehicle_access
 
 router = APIRouter(prefix="/documents", tags=["Documents & Notes"])
 
 @router.get("", response_model=List[DocumentNoteResponse])
 async def get_documents(
     vehicle_id: int = Query(..., description="ID автомобиля"),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    await verify_vehicle_access(db, vehicle_id, current_user)
     query = select(DocumentNote).where(DocumentNote.vehicle_id == vehicle_id).order_by(DocumentNote.created_at.desc())
     result = await db.execute(query)
     docs = result.scalars().all()
@@ -35,12 +39,10 @@ async def get_documents(
 async def create_document(
     payload: DocumentNoteCreate,
     vehicle_id: int = Query(...),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-    admin: bool = Depends(require_admin),
 ):
-    veh_res = await db.execute(select(Vehicle).where(Vehicle.id == vehicle_id))
-    if not veh_res.scalar_one_or_none():
-        raise HTTPException(status_code=404, detail="Автомобиль не найден")
+    await verify_vehicle_access(db, vehicle_id, current_user)
 
     doc = DocumentNote(**payload.model_dump(), vehicle_id=vehicle_id)
     db.add(doc)
@@ -58,13 +60,15 @@ async def create_document(
 async def update_document(
     doc_id: int,
     payload: DocumentNoteUpdate,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-    admin: bool = Depends(require_admin),
 ):
     result = await db.execute(select(DocumentNote).where(DocumentNote.id == doc_id))
     doc = result.scalar_one_or_none()
     if not doc:
         raise HTTPException(status_code=404, detail="Документ не найден")
+
+    await verify_vehicle_access(db, doc.vehicle_id, current_user)
 
     update_data = payload.model_dump(exclude_unset=True)
     for key, value in update_data.items():
@@ -83,14 +87,15 @@ async def update_document(
 @router.delete("/{doc_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_document(
     doc_id: int,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-    admin: bool = Depends(require_admin),
 ):
     result = await db.execute(select(DocumentNote).where(DocumentNote.id == doc_id))
     doc = result.scalar_one_or_none()
     if not doc:
         raise HTTPException(status_code=404, detail="Документ не найден")
 
+    await verify_vehicle_access(db, doc.vehicle_id, current_user)
     await db.delete(doc)
     await db.commit()
     return None

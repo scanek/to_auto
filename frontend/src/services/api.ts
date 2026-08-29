@@ -146,22 +146,26 @@ export const api = {
   // -------------------------------------------------------------
   // Auth & Permissions
   // -------------------------------------------------------------
-  getAuthStatus: () =>
-    request<{ has_pin: boolean; is_authenticated: boolean }>(
-      `${API_BASE}/auth/status`,
-      undefined,
-      {
-        cacheKey: 'auth_status',
-        fallbackMock: () => ({ has_pin: true, is_authenticated: !!getAuthToken() }),
-      }
-    ),
-  loginPin: (pin: string) =>
-    request<{ token: string; message: string }>(`${API_BASE}/auth/login`, {
-      method: 'POST',
-      body: JSON.stringify({ pin }),
+  getSetupStatus: () =>
+    request<SetupStatus>(`${API_BASE}/auth/setup-status`, undefined, {
+      fallbackMock: () => ({ has_users: true, allow_registration: true }),
     }),
-  changePin: (data: { old_pin?: string; new_pin: string }) =>
-    request<{ token: string; message: string }>(`${API_BASE}/auth/set-pin`, {
+  getMe: () =>
+    request<User>(`${API_BASE}/auth/me`, undefined, {
+      cacheKey: 'current_user',
+    }),
+  register: (data: { username: string; email?: string; password: string; full_name?: string }) =>
+    request<AuthResponse>(`${API_BASE}/auth/register`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  login: (data: { username: string; password: string }) =>
+    request<AuthResponse>(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  changePassword: (data: { old_password: string; new_password: string }) =>
+    request<{ message: string }>(`${API_BASE}/auth/change-password`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),
@@ -544,8 +548,22 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  exportVehicleBackupUrl: (vehicleId: number) => `${API_BASE}/backup/export/${vehicleId}`,
-  exportAllBackupUrl: () => `${API_BASE}/backup/export-all`,
+  exportVehicleBackupUrl: (vehicleId: number) => {
+    const token = getAuthToken();
+    return `${API_BASE}/backup/export/${vehicleId}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+  },
+  exportAllBackupUrl: () => {
+    const token = getAuthToken();
+    return `${API_BASE}/backup/export-all${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+  },
+  exportServiceBookletUrl: (vehicleId: number) => {
+    const token = getAuthToken();
+    return `${API_BASE}/export/service-booklet/${vehicleId}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+  },
+  exportExcelUrl: (vehicleId: number) => {
+    const token = getAuthToken();
+    return `${API_BASE}/export/excel/${vehicleId}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+  },
 
   // -------------------------------------------------------------
   // Synchronize Offline Queue

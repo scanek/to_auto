@@ -1,5 +1,6 @@
 import urllib.parse
-from fastapi import APIRouter, Depends, HTTPException, Response
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, Response, Header, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -9,15 +10,19 @@ from app.models import Vehicle, ServiceRecord, FuelLog, MaintenancePlan, TyreSet
 from app.services.pdf_service import generate_service_booklet_html
 from app.services.excel_service import generate_vehicle_excel
 from app.services.analytics_service import compute_vehicle_analytics
+from app.services.auth_helper import verify_vehicle_access, resolve_user_from_header_or_query
 
 router = APIRouter(prefix="/export", tags=["Export"])
 
 @router.get("/service-booklet/{vehicle_id}")
-async def export_service_booklet(vehicle_id: int, db: AsyncSession = Depends(get_db)):
-    veh_res = await db.execute(select(Vehicle).where(Vehicle.id == vehicle_id))
-    vehicle = veh_res.scalar_one_or_none()
-    if not vehicle:
-        raise HTTPException(status_code=404, detail="Автомобиль не найден")
+async def export_service_booklet(
+    vehicle_id: int,
+    token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
+    db: AsyncSession = Depends(get_db),
+):
+    user = await resolve_user_from_header_or_query(authorization, token, db)
+    vehicle = await verify_vehicle_access(db, vehicle_id, user)
 
     srv_res = await db.execute(
         select(ServiceRecord)
@@ -43,11 +48,14 @@ async def export_service_booklet(vehicle_id: int, db: AsyncSession = Depends(get
     )
 
 @router.get("/excel/{vehicle_id}")
-async def export_excel(vehicle_id: int, db: AsyncSession = Depends(get_db)):
-    veh_res = await db.execute(select(Vehicle).where(Vehicle.id == vehicle_id))
-    vehicle = veh_res.scalar_one_or_none()
-    if not vehicle:
-        raise HTTPException(status_code=404, detail="Автомобиль не найден")
+async def export_excel(
+    vehicle_id: int,
+    token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
+    db: AsyncSession = Depends(get_db),
+):
+    user = await resolve_user_from_header_or_query(authorization, token, db)
+    vehicle = await verify_vehicle_access(db, vehicle_id, user)
 
     srv_res = await db.execute(
         select(ServiceRecord)

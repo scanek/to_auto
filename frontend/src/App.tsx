@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Vehicle, ServiceRecord, FuelLog, MaintenancePlan, DocumentNote, TyreSet } from './types';
-import { api } from './services/api';
+import { Vehicle, ServiceRecord, FuelLog, MaintenancePlan, DocumentNote, TyreSet, User } from './types';
+import { api, removeAuthToken } from './services/api';
 import { offlineStorage } from './services/offlineStorage';
 import { notificationService } from './services/notificationService';
 import { Navbar } from './components/Navbar';
@@ -14,7 +14,7 @@ import { DocumentModal } from './components/DocumentModal';
 import { TyreModal } from './components/TyreModal';
 import { ImportBackupModal } from './components/ImportBackupModal';
 import { InstallAppModal } from './components/InstallAppModal';
-import { PinModal } from './components/PinModal';
+import { AuthModal } from './components/AuthModal';
 import { NotificationSettingsModal } from './components/NotificationSettingsModal';
 import { Github, ZapOff, RefreshCw, CheckCircle2 } from 'lucide-react';
 
@@ -23,9 +23,10 @@ export function App() {
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Authentication state (Owner / Guest mode)
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
-  const [isPinModalOpen, setIsPinModalOpen] = useState(false);
+  // Authentication state (Multi-User)
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
 
   // Offline & Synchronization state
@@ -33,12 +34,40 @@ export function App() {
   const [pendingSyncCount, setPendingSyncCount] = useState<number>(0);
   const [syncToast, setSyncToast] = useState<{ message: string; type: 'success' | 'info' | 'warning' } | null>(null);
 
+  const loadVehicles = async () => {
+    try {
+      const data = await api.getVehicles();
+      setVehicles(data);
+      if (selectedVehicle) {
+        const updated = data.find((v) => v.id === selectedVehicle.id);
+        if (updated) {
+          setSelectedVehicle({ ...updated, updated_at: new Date().toISOString() });
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load vehicles', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const checkAuthStatus = useCallback(async () => {
     try {
-      const status = await api.getAuthStatus();
-      setIsAuthenticated(status.is_authenticated);
-    } catch (err) {
-      console.error('Failed to check auth status', err);
+      const user = await api.getMe();
+      setCurrentUser(user);
+      setIsAuthenticated(true);
+      await loadVehicles();
+    } catch {
+      setCurrentUser(null);
+      setIsAuthenticated(false);
+      setLoading(false);
+      // If no users exist in database, pop setup modal
+      try {
+        const setup = await api.getSetupStatus();
+        if (!setup.has_users) {
+          setIsAuthModalOpen(true);
+        }
+      } catch {}
     }
   }, []);
 
@@ -82,7 +111,6 @@ export function App() {
   const [isIOS, setIsIOS] = useState(false);
 
   useEffect(() => {
-    // Check if iOS
     const userAgent = window.navigator.userAgent.toLowerCase();
     const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
     setIsIOS(isIosDevice);
@@ -96,7 +124,7 @@ export function App() {
     return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
   }, []);
 
-  // Update page title dynamically (only show car when opened)
+  // Update page title dynamically
   useEffect(() => {
     if (selectedVehicle) {
       document.title = `Бортовой Журнал Автомобиля ${selectedVehicle.make} ${selectedVehicle.model}`;
@@ -151,27 +179,6 @@ export function App() {
 
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
-  const loadVehicles = async () => {
-    try {
-      const data = await api.getVehicles();
-      setVehicles(data);
-      if (selectedVehicle) {
-        const updated = data.find((v) => v.id === selectedVehicle.id);
-        if (updated) {
-          setSelectedVehicle({ ...updated, updated_at: new Date().toISOString() });
-        }
-      }
-    } catch (err) {
-      console.error('Failed to load vehicles', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadVehicles();
-  }, []);
-
   // Manual & Automatic Sync Handler
   const handleSyncOfflineQueue = useCallback(async () => {
     if (!navigator.onLine) {
@@ -179,32 +186,34 @@ export function App() {
         message: '⚠️ Нет подключения к интернету для синхронизации',
         type: 'warning',
       });
-      setTimeout(() => setSyncToast(null), 3000);
       return;
     }
 
     try {
-      const res = await api.syncOfflineQueue();
-      if (res.processed > 0) {
+      const { processed, failed } = await api.syncOfflineQueue();
+      if (processed > 0) {
         setSyncToast({
-          message: `✅ Успешно синхронизировано записей: ${res.processed}`,
+          message: `Синхронизировано ${processed} ${processed === 1 ? 'действие' : 'действий'} с сервером!`,
           type: 'success',
         });
-        setTimeout(() => setSyncToast(null), 3500);
         await loadVehicles();
-      } else if (res.failed > 0) {
+      } else if (failed > 0) {
         setSyncToast({
-          message: `⚠️ Не удалось отправить ${res.failed} записей. Попробуем снова позже.`,
+          message: `⚠️ Не удалось отправить ${failed} действий. Повторим при следующем подключении`,
           type: 'warning',
         });
-        setTimeout(() => setSyncToast(null), 3500);
       }
-    } catch (e) {
-      console.error('Sync queue error', e);
+    } catch {
+      setSyncToast({
+        message: '⚠️ Ошибка синхронизации с сервером',
+        type: 'warning',
+      });
+    } finally {
+      setTimeout(() => setSyncToast(null), 4000);
     }
-  }, []);
+  }, [selectedVehicle]);
 
-  // Automatically trigger sync when network is restored
+  // Online / Offline Window Events
   useEffect(() => {
     const handleOnlineEvent = () => {
       offlineStorage.setOnline(true);
@@ -224,8 +233,28 @@ export function App() {
     };
   }, [handleSyncOfflineQueue]);
 
+  // Auth Handlers
+  const handleAuthSuccess = (user: User) => {
+    setCurrentUser(user);
+    setIsAuthenticated(true);
+    loadVehicles();
+  };
+
+  const handleLogout = () => {
+    removeAuthToken();
+    setCurrentUser(null);
+    setIsAuthenticated(false);
+    setVehicles([]);
+    setSelectedVehicle(null);
+    setIsAuthModalOpen(true);
+  };
+
   // Handlers for Vehicle Modal
   const handleOpenAddVehicle = () => {
+    if (!currentUser) {
+      setIsAuthModalOpen(true);
+      return;
+    }
     setEditingVehicle(null);
     setIsVehicleModalOpen(true);
   };
@@ -240,7 +269,7 @@ export function App() {
       const updated = await api.updateVehicle(editingVehicle.id, data);
       await loadVehicles();
       if (selectedVehicle?.id === editingVehicle.id) {
-        setSelectedVehicle(updated);
+        setSelectedVehicle({ ...updated, updated_at: new Date().toISOString() });
       }
     } else {
       const created = await api.createVehicle(data);
@@ -250,15 +279,21 @@ export function App() {
   };
 
   const handleDeleteVehicle = async (id: number) => {
-    await api.deleteVehicle(id);
-    if (selectedVehicle?.id === id) {
-      setSelectedVehicle(null);
+    if (confirm('Вы уверены, что хотите удалить этот автомобиль и всю его историю?')) {
+      await api.deleteVehicle(id);
+      if (selectedVehicle?.id === id) {
+        setSelectedVehicle(null);
+      }
+      await loadVehicles();
     }
-    await loadVehicles();
   };
 
   // Handlers for Service Modal
   const handleOpenServiceModal = (type: 'service' | 'repair' | 'upgrade' = 'service', record?: ServiceRecord) => {
+    if (!currentUser) {
+      setIsAuthModalOpen(true);
+      return;
+    }
     setServiceModalType(type);
     setEditingServiceRecord(record || null);
     setIsServiceModalOpen(true);
@@ -276,6 +311,10 @@ export function App() {
 
   // Handlers for Fuel Modal
   const handleOpenFuelModal = (log?: FuelLog) => {
+    if (!currentUser) {
+      setIsAuthModalOpen(true);
+      return;
+    }
     setEditingFuelLog(log || null);
     setIsFuelModalOpen(true);
   };
@@ -292,6 +331,10 @@ export function App() {
 
   // Handlers for Reminder Modal
   const handleOpenReminderModal = (plan?: MaintenancePlan) => {
+    if (!currentUser) {
+      setIsAuthModalOpen(true);
+      return;
+    }
     setEditingReminder(plan || null);
     setIsReminderModalOpen(true);
   };
@@ -308,6 +351,10 @@ export function App() {
 
   // Handlers for Tyre Modal
   const handleOpenTyreModal = (tyre?: TyreSet) => {
+    if (!currentUser) {
+      setIsAuthModalOpen(true);
+      return;
+    }
     setEditingTyre(tyre || null);
     setIsTyreModalOpen(true);
   };
@@ -324,6 +371,10 @@ export function App() {
 
   // Handlers for Document Modal
   const handleOpenDocModal = (doc?: DocumentNote) => {
+    if (!currentUser) {
+      setIsAuthModalOpen(true);
+      return;
+    }
     setEditingDoc(doc || null);
     setIsDocModalOpen(true);
   };
@@ -340,98 +391,137 @@ export function App() {
 
   const handleImportSuccess = async (newVehicleId: number) => {
     await loadVehicles();
-    const updated = await api.getVehicles();
-    const target = updated.find((v) => v.id === newVehicleId);
-    if (target) setSelectedVehicle(target);
+    const data = await api.getVehicles();
+    const found = data.find((v) => v.id === newVehicleId);
+    if (found) {
+      setSelectedVehicle(found);
+    }
   };
 
-  const isNotificationsActive =
-    notificationService.getSettings().enabled && notificationService.getPermission() === 'granted';
-
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-dark-900 text-slate-900 dark:text-slate-100 flex flex-col transition-colors">
+    <div className="min-h-screen bg-slate-50 dark:bg-dark-900 text-slate-900 dark:text-slate-100 transition-colors flex flex-col selection:bg-brand-500 selection:text-white">
       <Navbar
         vehicles={vehicles}
         selectedVehicle={selectedVehicle}
         theme={theme}
-        isAuthenticated={isAuthenticated}
+        currentUser={currentUser}
         isOnline={isOnline}
         pendingSyncCount={pendingSyncCount}
-        isNotificationsEnabled={isNotificationsActive}
+        isNotificationsEnabled={notificationService.areNotificationsEnabled()}
         onToggleTheme={handleToggleTheme}
         onSelectVehicle={setSelectedVehicle}
         onAddVehicle={handleOpenAddVehicle}
         onOpenImportModal={() => setIsImportModalOpen(true)}
         onOpenInstallModal={handleOpenInstall}
-        onOpenPinModal={() => setIsPinModalOpen(true)}
+        onOpenAuthModal={() => setIsAuthModalOpen(true)}
+        onLogout={handleLogout}
         onOpenNotificationModal={() => setIsNotificationModalOpen(true)}
         onSyncNow={handleSyncOfflineQueue}
       />
 
-      {/* Offline Status Banner */}
+      {/* Offline Alert Banner */}
       {!isOnline && (
-        <div className="bg-amber-500/15 border-b border-amber-500/25 px-3 py-2 text-center text-xs font-semibold text-amber-700 dark:text-amber-300 flex items-center justify-center space-x-2">
-          <ZapOff className="w-3.5 h-3.5 flex-shrink-0 text-amber-500" />
-          <span>
-            Офлайн-режим: данные загружены из памяти устройства. Все новые записи сохранятся и отправятся на сервер при появлении сети.
-          </span>
+        <div className="bg-amber-500/15 border-b border-amber-500/30 text-amber-800 dark:text-amber-300 px-4 py-2 text-xs font-semibold flex items-center justify-between animate-fade-in">
+          <div className="flex items-center space-x-2">
+            <ZapOff className="w-4 h-4 text-amber-500 flex-shrink-0" />
+            <span>
+              <strong>Автономный режим (Офлайн)</strong> — все изменения сохраняются на телефоне и будут автоматически отправлены на сервер при подключении.
+            </span>
+          </div>
           {pendingSyncCount > 0 && (
-            <span className="bg-amber-500/25 px-1.5 py-0.5 rounded text-[11px] font-bold font-mono">
+            <span className="bg-amber-500/20 px-2 py-0.5 rounded text-[11px] font-bold">
               В очереди: {pendingSyncCount}
             </span>
           )}
         </div>
       )}
 
-      {/* Sync Toast Notification */}
+      {/* Sync Notification Toast */}
       {syncToast && (
-        <div className="fixed bottom-6 right-4 sm:right-6 z-50 bg-slate-900 dark:bg-dark-800 text-white border border-slate-700 dark:border-dark-700 px-4 py-3 rounded-2xl shadow-2xl flex items-center space-x-2.5 text-xs font-bold animate-bounce">
+        <div className="fixed bottom-6 right-6 z-50 bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-700 shadow-2xl rounded-2xl p-3.5 flex items-center space-x-2.5 text-xs font-bold animate-slide-up">
           {syncToast.type === 'success' ? (
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
           ) : (
-            <RefreshCw className="w-4 h-4 text-amber-400 flex-shrink-0" />
+            <RefreshCw className="w-4 h-4 text-blue-500 flex-shrink-0" />
           )}
-          <span>{syncToast.message}</span>
+          <span className="text-slate-800 dark:text-slate-200">{syncToast.message}</span>
         </div>
       )}
 
-      <main className="flex-1">
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 flex-1 w-full">
         {loading ? (
-          <div className="flex items-center justify-center h-64">
+          <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-3">
             <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Загрузка данных гаража...</p>
+          </div>
+        ) : !currentUser ? (
+          <div className="flex flex-col items-center justify-center min-h-[60vh] max-w-md mx-auto text-center space-y-4 p-6 bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-3xl shadow-sm">
+            <div className="w-16 h-16 rounded-3xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center">
+              <ZapOff className="w-8 h-8" />
+            </div>
+            <h2 className="text-xl font-extrabold text-slate-900 dark:text-white">
+              Личный гараж
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              Войдите в свой аккаунт или зарегистрируйтесь, чтобы получить доступ к вашим автомобилям, записям ТО, заправкам и страхованию.
+            </p>
+            <button
+              onClick={() => setIsAuthModalOpen(true)}
+              className="w-full py-3 px-6 rounded-2xl bg-brand-500 hover:bg-brand-600 active:scale-95 text-white font-bold text-xs shadow-md shadow-brand-500/20 transition-all"
+            >
+              Войти / Регистрация
+            </button>
           </div>
         ) : selectedVehicle ? (
           <VehicleDetails
             vehicle={selectedVehicle}
-            isAuthenticated={isAuthenticated}
             onBack={() => setSelectedVehicle(null)}
-            onRefreshVehicle={loadVehicles}
+            onEditVehicle={() => handleOpenEditVehicle(selectedVehicle)}
+            onDeleteVehicle={() => handleDeleteVehicle(selectedVehicle.id)}
             onOpenServiceModal={handleOpenServiceModal}
             onOpenFuelModal={handleOpenFuelModal}
             onOpenReminderModal={handleOpenReminderModal}
             onOpenDocModal={handleOpenDocModal}
             onOpenTyreModal={handleOpenTyreModal}
+            onRefreshVehicle={loadVehicles}
+            isAuthenticated={isAuthenticated}
           />
         ) : (
           <Garage
             vehicles={vehicles}
-            isAuthenticated={isAuthenticated}
             onSelectVehicle={setSelectedVehicle}
             onAddVehicle={handleOpenAddVehicle}
             onEditVehicle={handleOpenEditVehicle}
             onDeleteVehicle={handleDeleteVehicle}
             onOpenImportModal={() => setIsImportModalOpen(true)}
+            onOpenServiceModal={(type) => {
+              if (vehicles.length > 0) {
+                setSelectedVehicle(vehicles[0]);
+                handleOpenServiceModal(type);
+              }
+            }}
+            onOpenFuelModal={() => {
+              if (vehicles.length > 0) {
+                setSelectedVehicle(vehicles[0]);
+                handleOpenFuelModal();
+              }
+            }}
+            onOpenReminderModal={() => {
+              if (vehicles.length > 0) {
+                setSelectedVehicle(vehicles[0]);
+                handleOpenReminderModal();
+              }
+            }}
+            isAuthenticated={isAuthenticated}
           />
         )}
       </main>
 
-      {/* Footer with Author and GitHub Link */}
-      <footer className="border-t border-slate-200 dark:border-dark-800 bg-white/70 dark:bg-dark-850/70 backdrop-blur-sm py-4 px-3 sm:px-6 text-xs text-slate-500 dark:text-slate-400">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
-          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 font-medium">
-            <span className="font-bold text-slate-900 dark:text-white">Бортовой Журнал</span>
-            <span>•</span>
-            <span>Автор: <strong className="text-slate-800 dark:text-slate-200">Александр Щеголев</strong></span>
+      {/* Clean Footer */}
+      <footer className="mt-auto border-t border-slate-200 dark:border-dark-800 bg-white/50 dark:bg-dark-900/50 backdrop-blur-sm py-4">
+        <div className="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500 dark:text-slate-400 space-y-1.5">
+          <div>
+            Бортовой Журнал • Автор: <strong className="text-slate-800 dark:text-slate-200">Александр Щеголев</strong>
           </div>
           <a
             href="https://github.com/scanek/to_auto"
@@ -445,18 +535,10 @@ export function App() {
         </div>
       </footer>
 
-      <PinModal
-        isOpen={isPinModalOpen}
-        onClose={() => setIsPinModalOpen(false)}
-        isAuthenticated={isAuthenticated}
-        onAuthSuccess={() => {
-          setIsAuthenticated(true);
-          checkAuthStatus();
-        }}
-        onLogout={() => {
-          setIsAuthenticated(false);
-          checkAuthStatus();
-        }}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onSuccess={handleAuthSuccess}
       />
 
       <NotificationSettingsModal

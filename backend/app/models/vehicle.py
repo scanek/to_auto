@@ -1,5 +1,5 @@
 import datetime
-from sqlalchemy import Column, Integer, String, Float, DateTime, Text
+from sqlalchemy import Column, Integer, String, Float, DateTime, Text, ForeignKey
 from sqlalchemy.orm import relationship
 from app.db.session import Base
 
@@ -7,6 +7,7 @@ class Vehicle(Base):
     __tablename__ = "vehicles"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
     name = Column(String(100), nullable=True) # Custom nickname e.g. "Changan CS55 Plus"
     make = Column(String(100), nullable=False) # e.g. Changan
     model = Column(String(100), nullable=False) # e.g. CS55 Plus
@@ -28,6 +29,7 @@ class Vehicle(Base):
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
     # Relationships
+    user = relationship("User", back_populates="vehicles")
     service_records = relationship("ServiceRecord", back_populates="vehicle", cascade="all, delete-orphan", order_by="desc(ServiceRecord.date)")
     fuel_logs = relationship("FuelLog", back_populates="vehicle", cascade="all, delete-orphan", order_by="desc(FuelLog.date)")
     reminders = relationship("MaintenancePlan", back_populates="vehicle", cascade="all, delete-orphan")

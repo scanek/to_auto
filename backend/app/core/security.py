@@ -1,67 +1,124 @@
 import os
-import hmac
-import hashlib
+import datetime
+import bcrypt
 from typing import Optional
+import jwt
 from fastapi import Header, HTTPException, status, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.db.session import get_db
-from app.models.setting import Setting
-from app.core.config import settings
+from app.models.user import User, UserRole
 
-SECRET_KEY = os.getenv("SECRET_KEY", "autotracker-super-secret-salt-key-2026")
-DEFAULT_ENV_PIN = os.getenv("MASTER_PIN", "")
+# Secret key and JWT config
+SECRET_KEY = os.getenv("SECRET_KEY", "autotracker-jwt-secret-key-prod-2026-very-secure")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_DAYS = int(os.getenv("ACCESS_TOKEN_EXPIRE_DAYS", "30"))
 
-def hash_pin(pin: str) -> str:
-    """Hash PIN with secret salt."""
-    return hashlib.sha256(f"{SECRET_KEY}:{pin}".encode("utf-8")).hexdigest()
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    try:
+        if not plain_password or not hashed_password:
+            return False
+        # bcrypt requires bytes
+        password_bytes = plain_password.encode("utf-8")
+        if len(password_bytes) > 72:
+            password_bytes = password_bytes[:72]
+        hashed_bytes = hashed_password.encode("utf-8")
+        return bcrypt.checkpw(password_bytes, hashed_bytes)
+    except Exception:
+        return False
 
-def verify_pin_str(pin: str, hashed: str) -> bool:
-    return hmac.compare_digest(hash_pin(pin), hashed)
+def get_password_hash(password: str) -> str:
+    password_bytes = password.encode("utf-8")
+    if len(password_bytes) > 72:
+        password_bytes = password_bytes[:72]
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password_bytes, salt)
+    return hashed.decode("utf-8")
 
-async def get_db_pin_hash(db: AsyncSession) -> Optional[str]:
-    res = await db.execute(select(Setting).where(Setting.key == "master_pin_hash"))
-    setting = res.scalar_one_or_none()
-    if setting and setting.value:
-        return setting.value
-    if DEFAULT_ENV_PIN:
-        return hash_pin(DEFAULT_ENV_PIN)
+def create_access_token(data: dict, expires_delta: Optional[datetime.timedelta] = None) -> str:
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.datetime.utcnow() + datetime.timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
+    to_encode.update({"exp": expire, "iat": datetime.datetime.utcnow()})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+def decode_access_token(token: str) -> Optional[dict]:
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload
+    except Exception:
+        return None
+
+async def get_optional_current_user(
+    authorization: Optional[str] = Header(None),
+    db: AsyncSession = Depends(get_db),
+) -> Optional[User]:
+    if not authorization:
+        return None
+    token = authorization
+    if token.startswith("Bearer "):
+        token = token[7:].strip()
+    
+    payload = decode_access_token(token)
+    if not payload:
+        return None
+    
+    user_id = payload.get("sub")
+    if not user_id:
+        return None
+    
+    try:
+        res = await db.execute(select(User).where(User.id == int(user_id)))
+        user = res.scalar_one_or_none()
+        if user and user.is_active:
+            return user
+    except Exception:
+        return None
     return None
 
-async def set_db_pin_hash(db: AsyncSession, pin: str) -> None:
-    res = await db.execute(select(Setting).where(Setting.key == "master_pin_hash"))
-    setting = res.scalar_one_or_none()
-    if not setting:
-        setting = Setting(key="master_pin_hash", value=hash_pin(pin))
-        db.add(setting)
-    else:
-        setting.value = hash_pin(pin)
-    await db.commit()
-
-async def require_admin(
+async def get_current_user(
     authorization: Optional[str] = Header(None),
-    x_admin_pin: Optional[str] = Header(None),
     db: AsyncSession = Depends(get_db),
-):
-    current_hash = await get_db_pin_hash(db)
-    
-    # If no PIN has ever been set, editing is allowed by default until a PIN is created
-    if not current_hash:
-        return True
-
-    # 1. Check Bearer Token (token is hash of valid pin)
-    if authorization and authorization.startswith("Bearer "):
-        token = authorization.split("Bearer ")[1].strip()
-        if token == current_hash:
-            return True
-
-    # 2. Check X-Admin-Pin header directly
-    if x_admin_pin:
-        if verify_pin_str(x_admin_pin, current_hash):
-            return True
-
-    raise HTTPException(
+) -> User:
+    credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Требуется PIN-код владельца для редактирования",
+        detail="Требуется авторизация для доступа к гаражу",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    if not authorization:
+        raise credentials_exception
+
+    token = authorization
+    if token.startswith("Bearer "):
+        token = token[7:].strip()
+
+    payload = decode_access_token(token)
+    if not payload:
+        raise credentials_exception
+
+    user_id = payload.get("sub")
+    if not user_id:
+        raise credentials_exception
+
+    res = await db.execute(select(User).where(User.id == int(user_id)))
+    user = res.scalar_one_or_none()
+    if not user or not user.is_active:
+        raise credentials_exception
+
+    return user
+
+async def get_current_admin(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Недостаточно прав. Требуются права администратора",
+        )
+    return current_user
+
+# Alias for backward compatibility if needed
+require_admin = get_current_user

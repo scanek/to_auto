@@ -4,11 +4,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from app.db.session import get_db
+from app.models.user import User
 from app.models.vehicle import Vehicle
 from app.models.service import ServiceRecord, ServiceItem, RecordType
 from app.models.reminder import MaintenancePlan
 from app.schemas.service import ServiceRecordCreate, ServiceRecordUpdate, ServiceRecordResponse
-from app.core.security import require_admin
+from app.core.security import get_current_user
+from app.services.auth_helper import verify_vehicle_access
 
 router = APIRouter(prefix="/service-records", tags=["Service Records"])
 
@@ -16,8 +18,11 @@ router = APIRouter(prefix="/service-records", tags=["Service Records"])
 async def get_service_records(
     vehicle_id: int = Query(..., description="ID автомобиля"),
     record_type: Optional[str] = Query(None, description="Фильтр по типу: service, repair, upgrade"),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    await verify_vehicle_access(db, vehicle_id, current_user)
+
     query = (
         select(ServiceRecord)
         .where(ServiceRecord.vehicle_id == vehicle_id)
@@ -41,13 +46,10 @@ async def get_service_records(
 async def create_service_record(
     payload: ServiceRecordCreate,
     vehicle_id: int = Query(...),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-    admin: bool = Depends(require_admin),
 ):
-    veh_res = await db.execute(select(Vehicle).where(Vehicle.id == vehicle_id))
-    vehicle = veh_res.scalar_one_or_none()
-    if not vehicle:
-        raise HTTPException(status_code=404, detail="Автомобиль не найден")
+    vehicle = await verify_vehicle_access(db, vehicle_id, current_user)
     
     data = payload.model_dump(exclude={"items"})
     items_data = payload.items or []
@@ -85,7 +87,6 @@ async def create_service_record(
         plans_res = await db.execute(select(MaintenancePlan).where(MaintenancePlan.vehicle_id == vehicle_id))
         plans = plans_res.scalars().all()
         for p in plans:
-            # If reminder title is in record title or description
             if p.title.lower() in record.title.lower() or (record.description and p.title.lower() in record.description.lower()):
                 if record.odometer >= p.last_service_odometer:
                     p.last_service_odometer = record.odometer
@@ -105,26 +106,10 @@ async def create_service_record(
     return resp
 
 @router.get("/{record_id}", response_model=ServiceRecordResponse)
-async def get_service_record(record_id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(
-        select(ServiceRecord)
-        .where(ServiceRecord.id == record_id)
-        .options(selectinload(ServiceRecord.items), selectinload(ServiceRecord.attachments))
-    )
-    record = result.scalar_one_or_none()
-    if not record:
-        raise HTTPException(status_code=404, detail="Запись не найдена")
-    
-    resp = ServiceRecordResponse.model_validate(record)
-    resp.attachments_count = len(record.attachments)
-    return resp
-
-@router.put("/{record_id}", response_model=ServiceRecordResponse)
-async def update_service_record(
+async def get_service_record(
     record_id: int,
-    payload: ServiceRecordUpdate,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-    admin: bool = Depends(require_admin),
 ):
     result = await db.execute(
         select(ServiceRecord)
@@ -134,6 +119,30 @@ async def update_service_record(
     record = result.scalar_one_or_none()
     if not record:
         raise HTTPException(status_code=404, detail="Запись не найдена")
+    
+    await verify_vehicle_access(db, record.vehicle_id, current_user)
+    
+    resp = ServiceRecordResponse.model_validate(record)
+    resp.attachments_count = len(record.attachments)
+    return resp
+
+@router.put("/{record_id}", response_model=ServiceRecordResponse)
+async def update_service_record(
+    record_id: int,
+    payload: ServiceRecordUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(ServiceRecord)
+        .where(ServiceRecord.id == record_id)
+        .options(selectinload(ServiceRecord.items), selectinload(ServiceRecord.attachments))
+    )
+    record = result.scalar_one_or_none()
+    if not record:
+        raise HTTPException(status_code=404, detail="Запись не найдена")
+    
+    await verify_vehicle_access(db, record.vehicle_id, current_user)
     
     update_data = payload.model_dump(exclude_unset=True, exclude={"items"})
     for key, value in update_data.items():
@@ -150,7 +159,6 @@ async def update_service_record(
             new_item = ServiceItem(**it_dict, service_record_id=record.id)
             db.add(new_item)
 
-    # Recalculate total if requested or needed
     if record.cost_parts or record.cost_labor:
         calc_total = (record.cost_parts or 0.0) + (record.cost_labor or 0.0)
         if not payload.total_cost:
@@ -171,14 +179,15 @@ async def update_service_record(
 @router.delete("/{record_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_service_record(
     record_id: int,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-    admin: bool = Depends(require_admin),
 ):
     result = await db.execute(select(ServiceRecord).where(ServiceRecord.id == record_id))
     record = result.scalar_one_or_none()
     if not record:
         raise HTTPException(status_code=404, detail="Запись не найдена")
     
+    await verify_vehicle_access(db, record.vehicle_id, current_user)
     await db.delete(record)
     await db.commit()
     return None

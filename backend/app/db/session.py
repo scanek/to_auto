@@ -33,6 +33,7 @@ async def auto_migrate_sqlite(conn):
     # Columns to check and add
     column_migrations = {
         "vehicles": [
+            ("user_id", "INTEGER REFERENCES users(id)"),
             ("engine", "VARCHAR(100)"),
             ("current_engine_hours", "FLOAT DEFAULT 0.0"),
             ("oil_spec", "VARCHAR(200)"),
