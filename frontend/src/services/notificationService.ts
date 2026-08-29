@@ -35,6 +35,10 @@ class NotificationService {
     return Notification.permission;
   }
 
+  public areNotificationsEnabled(): boolean {
+    return this.getSettings().enabled && this.getPermission() === 'granted';
+  }
+
   public getSettings(): NotificationSettings {
     try {
       const raw = localStorage.getItem(SETTINGS_KEY);
@@ -72,10 +76,10 @@ class NotificationService {
       return false;
     }
 
-    const defaultOptions: NotificationOptions = {
+    const defaultOptions: any = {
       icon: '/icons/icon-192.png',
       badge: '/icons/icon-192.png',
-      vibrate: [200, 100, 200] as any,
+      vibrate: [200, 100, 200],
       tag: 'bortovoi-maintenance',
       renotify: true,
       ...options,
@@ -184,8 +188,8 @@ class NotificationService {
     // 2. Check Documents (ОСАГО, КАСКО, Техосмотр)
     if (settings.notifyInsurance && documents && documents.length > 0) {
       for (const doc of documents) {
-        if (!doc.expiry_date) continue;
-        const expDate = new Date(doc.expiry_date).getTime();
+        if (!doc.expiration_date) continue;
+        const expDate = new Date(doc.expiration_date).getTime();
         const daysLeft = Math.ceil((expDate - now) / (1000 * 60 * 60 * 24));
 
         if (daysLeft <= settings.notifyDays) {

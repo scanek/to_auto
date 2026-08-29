@@ -52,6 +52,8 @@ interface VehicleDetailsProps {
   isAuthenticated: boolean;
   onBack: () => void;
   onRefreshVehicle: () => Promise<void>;
+  onEditVehicle?: () => void;
+  onDeleteVehicle?: () => void;
   onOpenServiceModal: (type?: 'service' | 'repair' | 'upgrade', record?: ServiceRecord) => void;
   onOpenFuelModal: (log?: FuelLog) => void;
   onOpenReminderModal: (plan?: MaintenancePlan) => void;

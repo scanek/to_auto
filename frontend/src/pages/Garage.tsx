@@ -20,6 +20,9 @@ interface GarageProps {
   onEditVehicle: (v: Vehicle) => void;
   onDeleteVehicle: (id: number) => void;
   onOpenImportModal: () => void;
+  onOpenServiceModal?: (type: 'service' | 'repair' | 'upgrade') => void;
+  onOpenFuelModal?: () => void;
+  onOpenReminderModal?: () => void;
 }
 
 export const Garage: React.FC<GarageProps> = ({

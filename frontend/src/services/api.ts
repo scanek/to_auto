@@ -6,6 +6,9 @@ import {
   DocumentNote,
   VehicleAnalytics,
   TyreSet,
+  User,
+  AuthResponse,
+  SetupStatus,
 } from '../types';
 import { offlineStorage, QueuedAction } from './offlineStorage';
 
@@ -511,6 +514,8 @@ export const api = {
     request<VehicleAnalytics>(`${API_BASE}/analytics/${vehicleId}`, undefined, {
       cacheKey: `analytics_${vehicleId}`,
       fallbackMock: () => ({
+        vehicle_id: vehicleId,
+        total_distance_tracked: 0,
         total_spend: 0,
         total_service_spend: 0,
         total_repair_spend: 0,
@@ -518,11 +523,13 @@ export const api = {
         total_fuel_spend: 0,
         total_tyre_spend: 0,
         total_document_spend: 0,
-        tracked_distance: 0,
         cost_per_distance_unit: 0,
-        avg_fuel_consumption: 0,
-        monthly_costs: [],
+        avg_fuel_consumption: null,
+        avg_fuel_price: null,
+        total_fuel_liters: 0,
         categories: [],
+        monthly_costs: [],
+        fuel_trend: [],
       }),
     }),
 
@@ -563,6 +570,7 @@ export const api = {
     }
     return res.json();
   },
+  uploadPhoto: (file: File) => api.uploadFile(file),
 
   // -------------------------------------------------------------
   // Backup & Export
