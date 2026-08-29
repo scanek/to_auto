@@ -97,9 +97,10 @@ async def compute_vehicle_analytics(session: AsyncSession, vehicle: Vehicle) -> 
 
     total_spend = service_spend + repair_spend + upgrade_spend + fuel_spend + tyre_spend + document_spend
     
-    # Distance tracked
-    total_dist = max(0.0, (vehicle.current_odometer or 0.0) - (vehicle.starting_odometer or 0.0))
-    cost_per_distance = round(total_spend / total_dist, 2) if total_dist > 0 else 0.0
+    # Distance tracked (if vehicle was added at 26636 km and tracked since 0 or same, use effective mileage)
+    tracked_dist = max(0.0, (vehicle.current_odometer or 0.0) - (vehicle.starting_odometer or 0.0))
+    effective_dist = tracked_dist if tracked_dist > 0 else (vehicle.current_odometer or 0.0)
+    cost_per_distance = round(total_spend / effective_dist, 2) if effective_dist > 0 else 0.0
 
     avg_consumption = round(total_consumption_sum / consumption_count, 2) if consumption_count > 0 else None
     avg_fuel_price = round(fuel_spend / total_fuel_liters, 2) if total_fuel_liters > 0 else None
@@ -138,7 +139,7 @@ async def compute_vehicle_analytics(session: AsyncSession, vehicle: Vehicle) -> 
 
     return VehicleAnalytics(
         vehicle_id=vehicle.id,
-        total_distance_tracked=round(total_dist, 1),
+        total_distance_tracked=round(effective_dist, 1),
         total_spend=round(total_spend, 2),
         total_service_spend=round(service_spend, 2),
         total_repair_spend=round(repair_spend, 2),
