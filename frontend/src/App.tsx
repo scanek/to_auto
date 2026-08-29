@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Vehicle, ServiceRecord, FuelLog, MaintenancePlan, DocumentNote } from './types';
+import { Vehicle, ServiceRecord, FuelLog, MaintenancePlan, DocumentNote, TyreSet } from './types';
 import { api } from './services/api';
 import { Navbar } from './components/Navbar';
 import { Garage } from './pages/Garage';
@@ -9,6 +9,8 @@ import { ServiceModal } from './components/ServiceModal';
 import { FuelModal } from './components/FuelModal';
 import { ReminderModal } from './components/ReminderModal';
 import { DocumentModal } from './components/DocumentModal';
+import { TyreModal } from './components/TyreModal';
+import { ImportBackupModal } from './components/ImportBackupModal';
 
 export function App() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -31,6 +33,11 @@ export function App() {
 
   const [isDocModalOpen, setIsDocModalOpen] = useState(false);
   const [editingDoc, setEditingDoc] = useState<DocumentNote | null>(null);
+
+  const [isTyreModalOpen, setIsTyreModalOpen] = useState(false);
+  const [editingTyre, setEditingTyre] = useState<TyreSet | null>(null);
+
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   const loadVehicles = async () => {
     try {
@@ -133,6 +140,22 @@ export function App() {
     await loadVehicles();
   };
 
+  // Handlers for Tyre Modal
+  const handleOpenTyreModal = (tyre?: TyreSet) => {
+    setEditingTyre(tyre || null);
+    setIsTyreModalOpen(true);
+  };
+
+  const handleSaveTyre = async (data: Partial<TyreSet>) => {
+    if (!selectedVehicle) return;
+    if (editingTyre) {
+      await api.updateTyreSet(editingTyre.id, data);
+    } else {
+      await api.createTyreSet(selectedVehicle.id, data);
+    }
+    await loadVehicles();
+  };
+
   // Handlers for Document Modal
   const handleOpenDocModal = (doc?: DocumentNote) => {
     setEditingDoc(doc || null);
@@ -149,6 +172,13 @@ export function App() {
     await loadVehicles();
   };
 
+  const handleImportSuccess = async (newVehicleId: number) => {
+    await loadVehicles();
+    const updated = await api.getVehicles();
+    const target = updated.find((v) => v.id === newVehicleId);
+    if (target) setSelectedVehicle(target);
+  };
+
   return (
     <div className="min-h-screen bg-dark-900 text-slate-100 flex flex-col">
       <Navbar
@@ -156,6 +186,7 @@ export function App() {
         selectedVehicle={selectedVehicle}
         onSelectVehicle={setSelectedVehicle}
         onAddVehicle={handleOpenAddVehicle}
+        onOpenImportModal={() => setIsImportModalOpen(true)}
       />
 
       <main className="flex-1">
@@ -172,6 +203,7 @@ export function App() {
             onOpenFuelModal={handleOpenFuelModal}
             onOpenReminderModal={handleOpenReminderModal}
             onOpenDocModal={handleOpenDocModal}
+            onOpenTyreModal={handleOpenTyreModal}
           />
         ) : (
           <Garage
@@ -190,6 +222,12 @@ export function App() {
         onClose={() => setIsVehicleModalOpen(false)}
         onSave={handleSaveVehicle}
         vehicle={editingVehicle}
+      />
+
+      <ImportBackupModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onSuccess={handleImportSuccess}
       />
 
       {selectedVehicle && (
@@ -216,6 +254,14 @@ export function App() {
             onClose={() => setIsReminderModalOpen(false)}
             onSave={handleSaveReminder}
             plan={editingReminder}
+            vehicle={selectedVehicle}
+          />
+
+          <TyreModal
+            isOpen={isTyreModalOpen}
+            onClose={() => setIsTyreModalOpen(false)}
+            onSave={handleSaveTyre}
+            tyre={editingTyre}
             vehicle={selectedVehicle}
           />
 

@@ -7,10 +7,13 @@ class VehicleBase(BaseModel):
     make: str
     model: str
     year: Optional[int] = None
+    engine: Optional[str] = None
     license_plate: Optional[str] = None
     vin: Optional[str] = None
     starting_odometer: float = 0.0
     current_odometer: float = 0.0
+    current_engine_hours: float = 0.0
+    oil_spec: Optional[str] = None
     distance_unit: str = "km"
     fuel_unit: str = "L"
     currency: str = "RUB"
@@ -25,10 +28,13 @@ class VehicleUpdate(BaseModel):
     make: Optional[str] = None
     model: Optional[str] = None
     year: Optional[int] = None
+    engine: Optional[str] = None
     license_plate: Optional[str] = None
     vin: Optional[str] = None
     starting_odometer: Optional[float] = None
     current_odometer: Optional[float] = None
+    current_engine_hours: Optional[float] = None
+    oil_spec: Optional[str] = None
     distance_unit: Optional[str] = None
     fuel_unit: Optional[str] = None
     currency: Optional[str] = None

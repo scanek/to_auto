@@ -4,6 +4,7 @@ from app.models.fuel import FuelLog
 from app.models.reminder import MaintenancePlan
 from app.models.document import DocumentNote
 from app.models.attachment import Attachment
+from app.models.tyre import TyreSet
 
 __all__ = [
     "Vehicle",
@@ -14,4 +15,5 @@ __all__ = [
     "MaintenancePlan",
     "DocumentNote",
     "Attachment",
+    "TyreSet",
 ]

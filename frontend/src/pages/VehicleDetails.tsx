@@ -14,6 +14,10 @@ import {
   AlertTriangle,
   Sparkles,
   Check,
+  Disc,
+  ExternalLink,
+  Clock,
+  CheckCircle,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -36,6 +40,7 @@ import {
   MaintenancePlan,
   DocumentNote,
   VehicleAnalytics,
+  TyreSet,
 } from '../types';
 import { api } from '../services/api';
 import { ProgressBar } from '../components/ProgressBar';
@@ -48,6 +53,7 @@ interface VehicleDetailsProps {
   onOpenFuelModal: (log?: FuelLog) => void;
   onOpenReminderModal: (plan?: MaintenancePlan) => void;
   onOpenDocModal: (doc?: DocumentNote) => void;
+  onOpenTyreModal: (tyre?: TyreSet) => void;
 }
 
 export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
@@ -58,46 +64,50 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   onOpenFuelModal,
   onOpenReminderModal,
   onOpenDocModal,
+  onOpenTyreModal,
 }) => {
   const [activeTab, setActiveTab] = useState<
-    'service' | 'repairs' | 'upgrades' | 'fuel' | 'reminders' | 'analytics' | 'documents'
+    'service' | 'repairs' | 'upgrades' | 'fuel' | 'reminders' | 'tyres' | 'analytics' | 'documents'
   >('service');
 
   const [serviceRecords, setServiceRecords] = useState<ServiceRecord[]>([]);
   const [fuelLogs, setFuelLogs] = useState<FuelLog[]>([]);
   const [reminders, setReminders] = useState<MaintenancePlan[]>([]);
   const [documents, setDocuments] = useState<DocumentNote[]>([]);
+  const [tyres, setTyres] = useState<TyreSet[]>([]);
   const [analytics, setAnalytics] = useState<VehicleAnalytics | null>(null);
 
-  const [loading, setLoading] = useState(true);
   const [editingOdometer, setEditingOdometer] = useState(false);
   const [newOdometerVal, setNewOdometerVal] = useState(vehicle.current_odometer);
 
+  const [editingHours, setEditingHours] = useState(false);
+  const [newHoursVal, setNewHoursVal] = useState(vehicle.current_engine_hours || 0);
+
   const loadData = async () => {
-    setLoading(true);
     try {
-      const [srv, fuel, rem, docs, an] = await Promise.all([
+      const [srv, fuel, rem, docs, an, ty] = await Promise.all([
         api.getServiceRecords(vehicle.id),
         api.getFuelLogs(vehicle.id),
         api.getReminders(vehicle.id),
         api.getDocuments(vehicle.id),
         api.getAnalytics(vehicle.id),
+        api.getTyreSets(vehicle.id),
       ]);
       setServiceRecords(srv);
       setFuelLogs(fuel);
       setReminders(rem);
       setDocuments(docs);
       setAnalytics(an);
+      setTyres(ty);
     } catch (err) {
       console.error('Error loading vehicle data', err);
-    } finally {
-      setLoading(false);
     }
   };
 
   useEffect(() => {
     loadData();
     setNewOdometerVal(vehicle.current_odometer);
+    setNewHoursVal(vehicle.current_engine_hours || 0);
   }, [vehicle.id]);
 
   const handleUpdateOdometer = async () => {
@@ -111,13 +121,33 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
     }
   };
 
+  const handleUpdateHours = async () => {
+    try {
+      await api.updateVehicle(vehicle.id, { current_engine_hours: newHoursVal });
+      setEditingHours(false);
+      await onRefreshVehicle();
+      await loadData();
+    } catch (err) {
+      alert('Ошибка обновления моточасов');
+    }
+  };
+
   const handleMarkReminderDone = async (id: number) => {
     try {
-      await api.markReminderDone(id);
+      await api.markReminderDone(id, vehicle.current_odometer, vehicle.current_engine_hours);
       await onRefreshVehicle();
       await loadData();
     } catch (err) {
       alert('Ошибка при отметке напоминания');
+    }
+  };
+
+  const handleActivateTyre = async (id: number) => {
+    try {
+      await api.activateTyreSet(id, vehicle.current_odometer);
+      await loadData();
+    } catch (err) {
+      alert('Ошибка активации комплекта шин');
     }
   };
 
@@ -139,6 +169,12 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
     if (!confirm('Удалить это напоминание?')) return;
     await api.deleteReminder(id);
     await onRefreshVehicle();
+    await loadData();
+  };
+
+  const handleDeleteTyre = async (id: number) => {
+    if (!confirm('Удалить этот комплект шин?')) return;
+    await api.deleteTyreSet(id);
     await loadData();
   };
 
@@ -173,9 +209,9 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
-              <div className="flex items-center space-x-2.5">
+              <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-2xl font-black text-white tracking-tight">
-                  {vehicle.make} {vehicle.model}
+                  {vehicle.name || `${vehicle.make} ${vehicle.model}`}
                 </h1>
                 {vehicle.year && (
                   <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-dark-750 text-slate-300 border border-dark-700">
@@ -187,10 +223,15 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                     {vehicle.license_plate}
                   </span>
                 )}
+                {vehicle.engine && (
+                  <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded-md bg-dark-900 text-slate-300 border border-dark-700">
+                    {vehicle.engine}
+                  </span>
+                )}
               </div>
-              {vehicle.vin && (
-                <span className="text-xs text-slate-400 font-mono block mt-0.5">
-                  VIN: {vehicle.vin}
+              {vehicle.oil_spec && (
+                <span className="text-xs text-amber-400/90 font-mono block mt-1">
+                  🛢️ Масло: {vehicle.oil_spec}
                 </span>
               )}
             </div>
@@ -226,7 +267,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               href={`/api/v1/export/service-booklet/${vehicle.id}`}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center space-x-1.5 bg-dark-800 hover:bg-dark-750 text-slate-200 px-3.5 py-2 rounded-xl text-xs font-semibold border border-dark-700 transition-all"
+              className="flex items-center space-x-1.5 bg-dark-800 hover:bg-dark-750 text-slate-200 px-3.5 py-2 rounded-xl text-xs font-semibold border border-dark-750 transition-all"
             >
               <Printer className="w-4 h-4 text-brand-400" />
               <span>Сервисная книжка (PDF)</span>
@@ -234,12 +275,12 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
           </div>
         </div>
 
-        {/* Vehicle Stats Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-dark-750">
+        {/* Vehicle Stats Bar (with Odometer & Engine Hours) */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-4 border-t border-dark-750">
           {/* Odometer Quick Editor */}
           <div className="bg-dark-900/80 p-3 rounded-xl border border-dark-750">
             <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
-              Текущий пробег
+              Пробег
             </span>
             {editingOdometer ? (
               <div className="flex items-center space-x-1.5 mt-1">
@@ -247,7 +288,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                   type="number"
                   value={newOdometerVal}
                   onChange={(e) => setNewOdometerVal(parseFloat(e.target.value) || 0)}
-                  className="w-24 bg-dark-800 border border-brand-500 rounded px-1.5 py-0.5 text-xs text-white font-mono"
+                  className="w-20 bg-dark-800 border border-brand-500 rounded px-1.5 py-0.5 text-xs text-white font-mono"
                 />
                 <button
                   onClick={handleUpdateOdometer}
@@ -265,6 +306,39 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                   {Math.round(vehicle.current_odometer).toLocaleString('ru-RU')} {vehicle.distance_unit}
                 </span>
                 <Edit2 className="w-3 h-3 text-slate-500 group-hover:text-brand-400" />
+              </div>
+            )}
+          </div>
+
+          {/* Engine Hours (Моточасы) Quick Editor */}
+          <div className="bg-dark-900/80 p-3 rounded-xl border border-dark-750">
+            <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
+              Моточасы
+            </span>
+            {editingHours ? (
+              <div className="flex items-center space-x-1.5 mt-1">
+                <input
+                  type="number"
+                  value={newHoursVal}
+                  onChange={(e) => setNewHoursVal(parseFloat(e.target.value) || 0)}
+                  className="w-20 bg-dark-800 border border-brand-500 rounded px-1.5 py-0.5 text-xs text-white font-mono"
+                />
+                <button
+                  onClick={handleUpdateHours}
+                  className="p-1 bg-brand-500 text-white rounded hover:bg-brand-600 text-xs"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <div
+                onClick={() => setEditingHours(true)}
+                className="flex items-center space-x-1.5 cursor-pointer group"
+              >
+                <span className="text-base font-extrabold text-cyan-400 font-mono group-hover:text-cyan-300 transition-colors">
+                  {Math.round(vehicle.current_engine_hours || 0)} м/ч
+                </span>
+                <Edit2 className="w-3 h-3 text-slate-500 group-hover:text-cyan-400" />
               </div>
             )}
           </div>
@@ -302,7 +376,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
         </div>
       </div>
 
-      {/* Navigation Tabs (LubeLogger Style) */}
+      {/* Navigation Tabs (LubeLogger Style + Tyres) */}
       <div className="flex items-center space-x-2 overflow-x-auto pb-1 scrollbar-none border-b border-dark-800">
         {[
           { id: 'service', label: 'Плановое ТО', icon: Wrench, count: serviceRecords.filter(r => r.record_type === 'service').length },
@@ -310,8 +384,9 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
           { id: 'upgrades', label: 'Тюнинг & Допы', icon: Sparkles, count: serviceRecords.filter(r => r.record_type === 'upgrade').length },
           { id: 'fuel', label: 'Заправки', icon: Fuel, count: fuelLogs.length },
           { id: 'reminders', label: 'План и Регламенты', icon: CalendarClock, count: reminders.length },
+          { id: 'tyres', label: 'Шины и Колеса', icon: Disc, count: tyres.length },
           { id: 'analytics', label: 'Аналитика', icon: BarChart3 },
-          { id: 'documents', label: 'Документы', icon: FileText, count: documents.length },
+          { id: 'documents', label: 'Документы & Страховки', icon: FileText, count: documents.length },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -384,13 +459,38 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div className="flex items-center space-x-3">
                         <div className="w-10 h-10 rounded-xl bg-dark-800 border border-dark-700 flex items-center justify-center text-brand-400 font-bold text-sm">
-                          <Wrench className="w-5 h-5" />
+                          {rec.to_tag ? (
+                            <span className="font-mono text-xs font-extrabold">{rec.to_tag}</span>
+                          ) : (
+                            <Wrench className="w-5 h-5" />
+                          )}
                         </div>
                         <div>
-                          <h4 className="text-sm font-bold text-white">{rec.title}</h4>
+                          <div className="flex items-center space-x-2">
+                            <h4 className="text-sm font-bold text-white">{rec.title}</h4>
+                            {rec.store && (
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-dark-800 text-slate-400 border border-dark-700">
+                                🛒 {rec.store}
+                              </span>
+                            )}
+                            {rec.url && (
+                              <a
+                                href={rec.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-brand-400 hover:text-brand-300 text-xs"
+                                title="Открыть ссылку"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5 inline" />
+                              </a>
+                            )}
+                          </div>
                           <div className="flex items-center space-x-3 text-xs text-slate-400 mt-0.5 font-mono">
                             <span>📅 {new Date(rec.date).toLocaleDateString('ru-RU')}</span>
                             <span>🛣️ {Math.round(rec.odometer).toLocaleString('ru-RU')} {vehicle.distance_unit}</span>
+                            {rec.engine_hours && (
+                              <span>⏱️ {rec.engine_hours} м/ч</span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -434,7 +534,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                     {rec.items && rec.items.length > 0 && (
                       <div className="space-y-1.5 pt-2 border-t border-dark-750/70">
                         <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
-                          Запчасти и материалы:
+                          Позиции и артикулы ({rec.items.length}):
                         </span>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           {rec.items.map((it, idx) => (
@@ -443,21 +543,333 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                               className="flex items-center justify-between text-xs bg-dark-900 p-2 rounded-lg border border-dark-750 text-slate-300"
                             >
                               <div className="truncate mr-2">
-                                <span className="font-medium">{it.name}</span>
+                                <div className="flex items-center space-x-1.5">
+                                  <span className="font-medium text-white">{it.name}</span>
+                                  {it.brand && (
+                                    <span className="text-[10px] text-brand-400 font-semibold">
+                                      ({it.brand})
+                                    </span>
+                                  )}
+                                  {it.url && (
+                                    <a
+                                      href={it.url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-slate-400 hover:text-brand-400"
+                                    >
+                                      <ExternalLink className="w-3 h-3 inline" />
+                                    </a>
+                                  )}
+                                </div>
                                 {it.part_number && (
-                                  <span className="text-[10px] text-slate-500 block font-mono">
-                                    Арт: {it.part_number}
+                                  <span className="text-[10px] text-slate-400 font-mono block">
+                                    Арт: <strong>{it.part_number}</strong>
+                                    {it.store && ` • ${it.store}`}
                                   </span>
                                 )}
                               </div>
-                              <span className="font-mono text-slate-200 whitespace-nowrap">
-                                {it.quantity} × {it.unit_price} = {it.total_price} {vehicle.currency}
+                              <span className="font-mono text-slate-200 whitespace-nowrap text-[11px] font-bold">
+                                {it.total_price.toLocaleString('ru-RU')} {vehicle.currency}
                               </span>
                             </div>
                           ))}
                         </div>
                       </div>
                     )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Reminders / Planner Tab (with Engine Hours support!) */}
+        {activeTab === 'reminders' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                План регламентов ТО и износа ({reminders.length})
+              </span>
+              <button
+                onClick={() => onOpenReminderModal()}
+                className="flex items-center space-x-1.5 text-xs font-bold text-amber-400 hover:text-amber-300 bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-lg transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Новый регламент</span>
+              </button>
+            </div>
+
+            {reminders.length === 0 ? (
+              <div className="bg-dark-850 border border-dark-750 rounded-2xl p-10 text-center space-y-3">
+                <CalendarClock className="w-10 h-10 text-slate-600 mx-auto" />
+                <div className="text-sm font-bold text-white">Регламенты не настроены</div>
+                <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                  Добавьте регламент замены масла, фильтров, свечей или колодок, и система заранее предупредит о необходимости ТО.
+                </p>
+                <button
+                  onClick={() => onOpenReminderModal()}
+                  className="inline-flex items-center space-x-1.5 bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-xl text-xs font-bold"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Создать регламент</span>
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {reminders.map((rem) => {
+                  const isOverdue = rem.status === 'overdue';
+                  const isDueSoon = rem.status === 'due_soon';
+
+                  return (
+                    <div
+                      key={rem.id}
+                      className={`bg-dark-850 border rounded-2xl p-5 shadow-lg space-y-4 transition-all ${
+                        isOverdue
+                          ? 'border-rose-500/50 shadow-rose-500/5'
+                          : isDueSoon
+                          ? 'border-amber-500/40'
+                          : 'border-dark-750'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="flex items-center space-x-2">
+                            <h4 className="text-sm font-bold text-white">{rem.title}</h4>
+                            {isOverdue && (
+                              <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                                Просрочено
+                              </span>
+                            )}
+                            {isDueSoon && (
+                              <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                                Скоро ТО
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="text-xs text-slate-400 mt-1">
+                            Интервал:{' '}
+                            {rem.interval_distance ? `${rem.interval_distance.toLocaleString('ru-RU')} ${vehicle.distance_unit}` : ''}
+                            {rem.interval_distance && rem.interval_hours ? ' / ' : ''}
+                            {rem.interval_hours ? `${rem.interval_hours} м/ч` : ''}
+                            {(rem.interval_distance || rem.interval_hours) && rem.interval_months ? ' / ' : ''}
+                            {rem.interval_months ? `${rem.interval_months} мес.` : ''}
+                          </div>
+
+                          {(rem.brand || rem.article || rem.spec) && (
+                            <div className="text-[11px] text-slate-500 mt-1 font-mono">
+                              {rem.brand && <span>{rem.brand} </span>}
+                              {rem.article && <span className="text-slate-400">[арт: {rem.article}]</span>}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center space-x-1">
+                          <button
+                            onClick={() => onOpenReminderModal(rem)}
+                            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-dark-750"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteReminder(rem.id)}
+                            className="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-rose-500/10"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Progress bar */}
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-slate-400">
+                            Осталось:{' '}
+                            {rem.remaining_distance !== null && rem.remaining_distance !== undefined && (
+                              <span
+                                className={`font-mono font-bold ${
+                                  rem.remaining_distance <= 0 ? 'text-rose-400' : 'text-slate-200'
+                                }`}
+                              >
+                                {Math.round(rem.remaining_distance).toLocaleString('ru-RU')} {vehicle.distance_unit}
+                              </span>
+                            )}
+                            {rem.remaining_distance !== null && rem.remaining_hours !== null && ' / '}
+                            {rem.remaining_hours !== null && rem.remaining_hours !== undefined && (
+                              <span
+                                className={`font-mono font-bold ${
+                                  rem.remaining_hours <= 0 ? 'text-rose-400' : 'text-cyan-400'
+                                }`}
+                              >
+                                {Math.round(rem.remaining_hours)} м/ч
+                              </span>
+                            )}
+                            {rem.remaining_days !== null && rem.remaining_days !== undefined && !rem.remaining_hours && (
+                              <span
+                                className={`font-bold ${
+                                  rem.remaining_days <= 0 ? 'text-rose-400' : 'text-slate-200'
+                                }`}
+                              >
+                                {rem.remaining_days} дн.
+                              </span>
+                            )}
+                          </span>
+                          <span className="font-mono text-[11px] text-slate-400 font-bold">
+                            {rem.progress_percentage}%
+                          </span>
+                        </div>
+                        <ProgressBar percentage={rem.progress_percentage} status={rem.status} />
+                      </div>
+
+                      {/* Last done baseline and Mark Done button */}
+                      <div className="flex items-center justify-between pt-3 border-t border-dark-750/70 text-xs">
+                        <div className="text-[11px] text-slate-500">
+                          Было: {Math.round(rem.last_service_odometer).toLocaleString('ru-RU')} {vehicle.distance_unit}
+                          {rem.last_service_hours ? ` (${rem.last_service_hours} м/ч)` : ''}
+                        </div>
+
+                        <button
+                          onClick={() => handleMarkReminderDone(rem.id)}
+                          className="flex items-center space-x-1.5 bg-dark-800 hover:bg-emerald-600 hover:text-white text-slate-300 px-3 py-1.5 rounded-lg text-xs font-semibold border border-dark-700 transition-all"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Выполнено</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tyres & Wheels Tab */}
+        {activeTab === 'tyres' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                Комплекты шин и дисков ({tyres.length})
+              </span>
+              <button
+                onClick={() => onOpenTyreModal()}
+                className="flex items-center space-x-1.5 text-xs font-bold text-brand-400 hover:text-brand-300 bg-brand-500/10 border border-brand-500/20 px-3 py-1.5 rounded-lg transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Добавить комплект</span>
+              </button>
+            </div>
+
+            {tyres.length === 0 ? (
+              <div className="bg-dark-850 border border-dark-750 rounded-2xl p-10 text-center space-y-3">
+                <Disc className="w-10 h-10 text-slate-600 mx-auto" />
+                <div className="text-sm font-bold text-white">Комплекты шин не добавлены</div>
+                <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                  Ведите учет летнего и зимнего комплектов резины, глубины остатка протектора в мм и пробега.
+                </p>
+                <button
+                  onClick={() => onOpenTyreModal()}
+                  className="inline-flex items-center space-x-1.5 bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-xl text-xs font-bold"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Добавить комплект</span>
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {tyres.map((t) => (
+                  <div
+                    key={t.id}
+                    className={`bg-dark-850 border rounded-2xl p-5 shadow-lg space-y-4 transition-all ${
+                      t.is_active ? 'border-brand-500/60 bg-dark-850/90' : 'border-dark-750'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="flex items-center space-x-2">
+                          <h4 className="text-sm font-bold text-white">{t.name}</h4>
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                              t.season === 'summer'
+                                ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                : 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'
+                            }`}
+                          >
+                            {t.season === 'summer' ? '☀️ Летние' : '❄️ Зимние'}
+                          </span>
+                          {t.is_active && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                              На автомобиле
+                            </span>
+                          )}
+                        </div>
+                        {t.brand_model && (
+                          <div className="text-xs text-slate-300 font-semibold mt-1">
+                            {t.brand_model} {t.size && <span className="font-mono text-slate-400">({t.size})</span>}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center space-x-1">
+                        <button
+                          onClick={() => onOpenTyreModal(t)}
+                          className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-dark-750"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteTyre(t.id)}
+                          className="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-rose-500/10"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 bg-dark-900/80 p-3 rounded-xl border border-dark-750 text-xs">
+                      <div>
+                        <span className="text-[10px] text-slate-500 uppercase font-bold block">
+                          Пробег на комплекте
+                        </span>
+                        <span className="font-mono font-bold text-white text-sm">
+                          {Math.round(t.current_km).toLocaleString('ru-RU')} км
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-500 uppercase font-bold block">
+                          Остаток протектора
+                        </span>
+                        <span className="font-mono font-bold text-emerald-400 text-sm">
+                          {t.tread_depth_mm} мм
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-3 border-t border-dark-750/70 text-xs">
+                      <div className="text-slate-400">
+                        {t.storage_location && <span>📍 Хранение: {t.storage_location}</span>}
+                        {t.total_price > 0 && (
+                          <span className="block font-mono text-brand-400 font-bold">
+                            {t.total_price.toLocaleString('ru-RU')} {vehicle.currency}
+                          </span>
+                        )}
+                      </div>
+
+                      {!t.is_active ? (
+                        <button
+                          onClick={() => handleActivateTyre(t.id)}
+                          className="flex items-center space-x-1.5 bg-dark-800 hover:bg-brand-500 hover:text-white text-slate-300 px-3 py-1.5 rounded-lg text-xs font-semibold border border-dark-700 transition-all"
+                        >
+                          <Disc className="w-3.5 h-3.5" />
+                          <span>Поставить на авто</span>
+                        </button>
+                      ) : (
+                        <span className="text-emerald-400 font-bold text-[11px] flex items-center gap-1">
+                          <CheckCircle className="w-3.5 h-3.5" />
+                          Активен
+                        </span>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -572,153 +984,9 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
           </div>
         )}
 
-        {/* Reminders / Planner Tab (LubeLogger Style) */}
-        {activeTab === 'reminders' && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                План регламентов ТО и износа ({reminders.length})
-              </span>
-              <button
-                onClick={() => onOpenReminderModal()}
-                className="flex items-center space-x-1.5 text-xs font-bold text-amber-400 hover:text-amber-300 bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-lg transition-colors"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Новый регламент</span>
-              </button>
-            </div>
-
-            {reminders.length === 0 ? (
-              <div className="bg-dark-850 border border-dark-750 rounded-2xl p-10 text-center space-y-3">
-                <CalendarClock className="w-10 h-10 text-slate-600 mx-auto" />
-                <div className="text-sm font-bold text-white">Регламенты не настроены</div>
-                <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                  Добавьте регламент замены масла, фильтров, свечей или колодок, и система заранее предупредит о необходимости ТО.
-                </p>
-                <button
-                  onClick={() => onOpenReminderModal()}
-                  className="inline-flex items-center space-x-1.5 bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-xl text-xs font-bold"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Создать регламент</span>
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {reminders.map((rem) => {
-                  const isOverdue = rem.status === 'overdue';
-                  const isDueSoon = rem.status === 'due_soon';
-
-                  return (
-                    <div
-                      key={rem.id}
-                      className={`bg-dark-850 border rounded-2xl p-5 shadow-lg space-y-4 transition-all ${
-                        isOverdue
-                          ? 'border-rose-500/50 shadow-rose-500/5'
-                          : isDueSoon
-                          ? 'border-amber-500/40'
-                          : 'border-dark-750'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <div className="flex items-center space-x-2">
-                            <h4 className="text-sm font-bold text-white">{rem.title}</h4>
-                            {isOverdue && (
-                              <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30">
-                                Просрочено
-                              </span>
-                            )}
-                            {isDueSoon && (
-                              <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                                Скоро ТО
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="text-xs text-slate-400 mt-1">
-                            Интервал:{' '}
-                            {rem.interval_distance ? `${rem.interval_distance.toLocaleString('ru-RU')} ${vehicle.distance_unit}` : ''}
-                            {rem.interval_distance && rem.interval_months ? ' или ' : ''}
-                            {rem.interval_months ? `${rem.interval_months} мес.` : ''}
-                          </div>
-                        </div>
-
-                        <div className="flex items-center space-x-1">
-                          <button
-                            onClick={() => onOpenReminderModal(rem)}
-                            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-dark-750"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteReminder(rem.id)}
-                            className="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-rose-500/10"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Progress bar */}
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-slate-400">
-                            Осталось:{' '}
-                            {rem.remaining_distance !== null && rem.remaining_distance !== undefined && (
-                              <span
-                                className={`font-mono font-bold ${
-                                  rem.remaining_distance <= 0 ? 'text-rose-400' : 'text-slate-200'
-                                }`}
-                              >
-                                {Math.round(rem.remaining_distance).toLocaleString('ru-RU')} {vehicle.distance_unit}
-                              </span>
-                            )}
-                            {rem.remaining_distance !== null && rem.remaining_days !== null && ' / '}
-                            {rem.remaining_days !== null && rem.remaining_days !== undefined && (
-                              <span
-                                className={`font-bold ${
-                                  rem.remaining_days <= 0 ? 'text-rose-400' : 'text-slate-200'
-                                }`}
-                              >
-                                {rem.remaining_days} дн.
-                              </span>
-                            )}
-                          </span>
-                          <span className="font-mono text-[11px] text-slate-400 font-bold">
-                            {rem.progress_percentage}%
-                          </span>
-                        </div>
-                        <ProgressBar percentage={rem.progress_percentage} status={rem.status} />
-                      </div>
-
-                      {/* Last done baseline and Mark Done button */}
-                      <div className="flex items-center justify-between pt-3 border-t border-dark-750/70 text-xs">
-                        <div className="text-[11px] text-slate-500">
-                          Было: {Math.round(rem.last_service_odometer).toLocaleString('ru-RU')} {vehicle.distance_unit} (
-                          {new Date(rem.last_service_date).toLocaleDateString('ru-RU')})
-                        </div>
-
-                        <button
-                          onClick={() => handleMarkReminderDone(rem.id)}
-                          className="flex items-center space-x-1.5 bg-dark-800 hover:bg-emerald-600 hover:text-white text-slate-300 px-3 py-1.5 rounded-lg text-xs font-semibold border border-dark-700 transition-all"
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                          <span>Выполнено</span>
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
         {/* Analytics Tab (Charts) */}
         {activeTab === 'analytics' && analytics && (
           <div className="space-y-6">
-            {/* Top Stat Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="bg-dark-850 border border-dark-750 p-5 rounded-2xl">
                 <span className="text-xs uppercase font-semibold text-slate-400">
@@ -741,17 +1009,16 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
 
               <div className="bg-dark-850 border border-dark-750 p-5 rounded-2xl">
                 <span className="text-xs uppercase font-semibold text-slate-400">
-                  Заправлено литров
+                  Тюнинг и доработки
                 </span>
                 <div className="text-xl font-extrabold text-amber-400 mt-1 font-mono">
-                  {analytics.total_fuel_liters.toLocaleString('ru-RU')} {vehicle.fuel_unit}
+                  {analytics.total_upgrade_spend.toLocaleString('ru-RU')} {vehicle.currency}
                 </div>
               </div>
             </div>
 
             {/* Charts Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Category Breakdown Pie */}
               <div className="bg-dark-850 border border-dark-750 p-5 rounded-2xl space-y-4">
                 <h4 className="text-sm font-bold text-white">Структура расходов</h4>
                 {analytics.categories.length > 0 ? (
@@ -787,7 +1054,6 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 )}
               </div>
 
-              {/* Monthly Costs Bar Chart */}
               <div className="bg-dark-850 border border-dark-750 p-5 rounded-2xl space-y-4">
                 <h4 className="text-sm font-bold text-white">Расходы по месяцам</h4>
                 {analytics.monthly_costs.length > 0 ? (
@@ -814,33 +1080,6 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                   </div>
                 )}
               </div>
-
-              {/* Fuel Economy Trend */}
-              {analytics.fuel_trend.length > 0 && (
-                <div className="bg-dark-850 border border-dark-750 p-5 rounded-2xl space-y-4 lg:col-span-2">
-                  <h4 className="text-sm font-bold text-white">Динамика расхода топлива (л/100км)</h4>
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={analytics.fuel_trend}>
-                        <XAxis dataKey="date" stroke="#718096" fontSize={11} />
-                        <YAxis stroke="#718096" fontSize={11} domain={['auto', 'auto']} />
-                        <Tooltip
-                          formatter={(value: any) => [`${value} л/100км`, 'Расход']}
-                          contentStyle={{ backgroundColor: '#1b2230', borderColor: '#2d3748', borderRadius: 8 }}
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="consumption"
-                          name="Расход л/100км"
-                          stroke="#10b981"
-                          strokeWidth={2}
-                          dot={{ r: 4, fill: '#10b981' }}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         )}
@@ -891,9 +1130,16 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                   >
                     <div className="flex items-start justify-between">
                       <div>
-                        <h4 className="text-sm font-bold text-white">{doc.title}</h4>
+                        <div className="flex items-center space-x-2">
+                          <h4 className="text-sm font-bold text-white">{doc.title}</h4>
+                          {doc.company && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-dark-800 text-brand-400 border border-brand-500/20">
+                              {doc.company}
+                            </span>
+                          )}
+                        </div>
                         {doc.document_number && (
-                          <span className="text-xs text-slate-400 font-mono block">
+                          <span className="text-xs text-slate-400 font-mono block mt-0.5">
                             № {doc.document_number}
                           </span>
                         )}
@@ -938,11 +1184,18 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                       </div>
                     )}
 
-                    {doc.notes && (
-                      <p className="text-xs text-slate-400 italic">
-                        {doc.notes}
-                      </p>
-                    )}
+                    <div className="flex items-center justify-between text-xs pt-2 border-t border-dark-750/60">
+                      {doc.price > 0 && (
+                        <span className="font-mono text-brand-400 font-bold">
+                          {doc.price.toLocaleString('ru-RU')} {vehicle.currency}
+                        </span>
+                      )}
+                      {doc.notes && (
+                        <span className="text-slate-400 italic text-[11px] truncate max-w-[200px]">
+                          {doc.notes}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

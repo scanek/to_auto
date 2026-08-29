@@ -1,5 +1,5 @@
 import React from 'react';
-import { Wrench, Plus, Car } from 'lucide-react';
+import { Wrench, Plus, Car, UploadCloud } from 'lucide-react';
 import { Vehicle } from '../types';
 
 interface NavbarProps {
@@ -7,6 +7,7 @@ interface NavbarProps {
   selectedVehicle: Vehicle | null;
   onSelectVehicle: (v: Vehicle | null) => void;
   onAddVehicle: () => void;
+  onOpenImportModal: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -14,6 +15,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   selectedVehicle,
   onSelectVehicle,
   onAddVehicle,
+  onOpenImportModal,
 }) => {
   return (
     <header className="sticky top-0 z-40 bg-dark-900/90 backdrop-blur-md border-b border-dark-800">
@@ -35,7 +37,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2.5">
           {vehicles.length > 0 && (
             <div className="flex items-center bg-dark-850 border border-dark-750 rounded-lg p-1">
               <button
@@ -59,6 +61,15 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </div>
           )}
+
+          <button
+            onClick={onOpenImportModal}
+            className="flex items-center space-x-1.5 bg-dark-800 hover:bg-dark-750 text-slate-200 border border-dark-700 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+            title="Импорт бэкапа из car-maintenance-app или AutoTracker"
+          >
+            <UploadCloud className="w-4 h-4 text-brand-400" />
+            <span className="hidden md:inline">Импорт бэкапа</span>
+          </button>
 
           <button
             onClick={onAddVehicle}

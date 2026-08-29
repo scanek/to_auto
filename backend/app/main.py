@@ -16,6 +16,8 @@ from app.api import (
     analytics,
     export,
     uploads,
+    tyres,
+    backup,
 )
 
 @asynccontextmanager
@@ -54,12 +56,14 @@ app.include_router(documents.router, prefix=api_v1_prefix)
 app.include_router(analytics.router, prefix=api_v1_prefix)
 app.include_router(export.router, prefix=api_v1_prefix)
 app.include_router(uploads.router, prefix=api_v1_prefix)
+app.include_router(tyres.router, prefix=api_v1_prefix)
+app.include_router(backup.router, prefix=api_v1_prefix)
 
 @app.get("/health", tags=["Health"])
 async def health_check():
     return {"status": "ok", "app": settings.PROJECT_NAME, "version": settings.VERSION}
 
-# Serve Frontend static build if exists (for unified single-container Docker setup)
+# Serve Frontend static build if exists
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 if STATIC_DIR.exists():
     app.mount("/assets", StaticFiles(directory=str(STATIC_DIR / "assets")), name="assets")

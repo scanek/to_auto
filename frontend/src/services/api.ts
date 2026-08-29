@@ -5,6 +5,7 @@ import {
   MaintenancePlan,
   DocumentNote,
   VehicleAnalytics,
+  TyreSet,
 } from '../types';
 
 const API_BASE = '/api/v1';
@@ -96,12 +97,33 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
-  markReminderDone: (id: number, odometer?: number) => {
-    const url = `${API_BASE}/reminders/${id}/mark-done${odometer ? `?odometer=${odometer}` : ''}`;
+  markReminderDone: (id: number, odometer?: number, hours?: number) => {
+    let url = `${API_BASE}/reminders/${id}/mark-done?`;
+    if (odometer !== undefined) url += `odometer=${odometer}&`;
     return request<MaintenancePlan>(url, { method: 'POST' });
   },
   deleteReminder: (id: number) =>
     request<void>(`${API_BASE}/reminders/${id}`, { method: 'DELETE' }),
+
+  // Tyres & Wheels
+  getTyreSets: (vehicleId: number) =>
+    request<TyreSet[]>(`${API_BASE}/tyres?vehicle_id=${vehicleId}`),
+  createTyreSet: (vehicleId: number, data: Partial<TyreSet>) =>
+    request<TyreSet>(`${API_BASE}/tyres?vehicle_id=${vehicleId}`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateTyreSet: (id: number, data: Partial<TyreSet>) =>
+    request<TyreSet>(`${API_BASE}/tyres/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  activateTyreSet: (id: number, mileage?: number) => {
+    const url = `${API_BASE}/tyres/${id}/activate${mileage ? `?mileage=${mileage}` : ''}`;
+    return request<TyreSet>(url, { method: 'POST' });
+  },
+  deleteTyreSet: (id: number) =>
+    request<void>(`${API_BASE}/tyres/${id}`, { method: 'DELETE' }),
 
   // Documents
   getDocuments: (vehicleId: number) =>
@@ -122,6 +144,13 @@ export const api = {
   // Analytics
   getAnalytics: (vehicleId: number) =>
     request<VehicleAnalytics>(`${API_BASE}/analytics/${vehicleId}`),
+
+  // Backup Import
+  importBackup: (backupJson: any) =>
+    request<{ status: string; vehicle_id: number; message: string }>(`${API_BASE}/backup/import`, {
+      method: 'POST',
+      body: JSON.stringify(backupJson),
+    }),
 
   // File Upload
   uploadFile: async (file: File, vehicleId: number, serviceRecordId?: number, fuelLogId?: number, documentId?: number) => {
