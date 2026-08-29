@@ -12,7 +12,7 @@ from app.models.tyre import TyreSet
 from app.models.document import DocumentNote
 from app.schemas.vehicle import VehicleCreate, VehicleUpdate, VehicleResponse
 from app.services.reminder_service import compute_reminder_status
-from app.core.security import get_current_user
+from app.core.security import get_current_user, get_optional_current_user
 
 router = APIRouter(prefix="/vehicles", tags=["Vehicles"])
 
@@ -74,10 +74,13 @@ async def get_user_vehicle_or_404(vehicle_id: int, user: User, db: AsyncSession)
 
 @router.get("", response_model=List[VehicleResponse])
 async def get_vehicles(
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get vehicles belonging to the current authenticated user."""
+    """Get vehicles. If not logged in, returns empty list without error."""
+    if not current_user:
+        return []
+
     if current_user.role == UserRole.ADMIN:
         query = select(Vehicle).order_by(Vehicle.created_at.desc())
     else:

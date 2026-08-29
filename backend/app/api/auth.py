@@ -36,6 +36,21 @@ async def get_setup_status(db: AsyncSession = Depends(get_db)):
         allow_registration=ALLOW_REGISTRATION or (user_count == 0),
     )
 
+@router.get("/status")
+async def get_auth_status(
+    current_user: Optional[User] = Depends(get_optional_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Backward compatibility for existing /status requests."""
+    count_res = await db.execute(select(func.count(User.id)))
+    user_count = count_res.scalar() or 0
+    return {
+        "has_users": user_count > 0,
+        "has_pin": user_count > 0,
+        "is_authenticated": current_user is not None,
+        "user": UserResponse.model_validate(current_user) if current_user else None,
+    }
+
 @router.get("/me", response_model=UserResponse)
 async def get_me(current_user: User = Depends(get_current_user)):
     """Returns the current authenticated user profile."""
