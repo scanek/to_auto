@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, Plus, Car, UploadCloud, Sun, Moon, Smartphone, Lock, Unlock } from 'lucide-react';
+import { BookOpen, Plus, Car, UploadCloud, Sun, Moon, Smartphone, Lock, Unlock, Github } from 'lucide-react';
 import { Vehicle } from '../types';
 
 interface NavbarProps {
@@ -107,6 +107,17 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Moon className="w-4 h-4 text-slate-600" />
             )}
           </button>
+
+          {/* GitHub Repository Link */}
+          <a
+            href="https://github.com/scanek/to_auto"
+            target="_blank"
+            rel="noreferrer"
+            className="p-1 sm:p-1.5 rounded-lg sm:rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-dark-700 transition-colors flex items-center justify-center"
+            title="GitHub репозиторий проекта (scanek/to_auto)"
+          >
+            <Github className="w-4 h-4 text-slate-700 dark:text-slate-300 hover:text-brand-500" />
+          </a>
 
           {vehicles.length > 0 && (
             <div className="flex items-center bg-slate-100 dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-lg sm:rounded-xl p-0.5">

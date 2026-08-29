@@ -13,6 +13,7 @@ import { TyreModal } from './components/TyreModal';
 import { ImportBackupModal } from './components/ImportBackupModal';
 import { InstallAppModal } from './components/InstallAppModal';
 import { PinModal } from './components/PinModal';
+import { Github, Heart } from 'lucide-react';
 
 export function App() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -36,10 +37,10 @@ export function App() {
     checkAuthStatus();
   }, [checkAuthStatus]);
 
-  // Theme state ('dark' | 'light')
+  // Theme state ('dark' | 'light') - Default is 'light'
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     const saved = localStorage.getItem('theme');
-    return (saved === 'light' || saved === 'dark') ? saved : 'dark';
+    return (saved === 'light' || saved === 'dark') ? saved : 'light';
   });
 
   useEffect(() => {
@@ -316,6 +317,29 @@ export function App() {
           />
         )}
       </main>
+
+      {/* Footer with Author and GitHub Link */}
+      <footer className="border-t border-slate-200 dark:border-dark-800 bg-white/70 dark:bg-dark-850/70 backdrop-blur-sm py-4 px-3 sm:px-6 text-xs text-slate-500 dark:text-slate-400">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 font-medium">
+            <span className="font-bold text-slate-900 dark:text-white">Бортовой Журнал</span>
+            <span>•</span>
+            <span className="flex items-center gap-1">
+              Автор: <strong className="text-slate-800 dark:text-slate-200">Александр Щеголев</strong>
+              <Heart className="w-3 h-3 text-rose-500 fill-rose-500 inline" />
+            </span>
+          </div>
+          <a
+            href="https://github.com/scanek/to_auto"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center space-x-2 text-slate-700 dark:text-slate-200 hover:text-brand-500 dark:hover:text-brand-400 font-bold bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-dark-700 transition-all shadow-sm active:scale-95"
+          >
+            <Github className="w-4 h-4" />
+            <span>GitHub: scanek/to_auto</span>
+          </a>
+        </div>
+      </footer>
 
       <PinModal
         isOpen={isPinModalOpen}
