@@ -106,7 +106,6 @@ export interface MaintenancePlan {
   notes?: string;
   created_at: string;
   
-  // Computed
   due_odometer?: number | null;
   due_hours?: number | null;
   due_date?: string | null;
@@ -168,6 +167,8 @@ export interface MonthlyCost {
   repair_cost: number;
   upgrade_cost: number;
   fuel_cost: number;
+  tyre_cost: number;
+  document_cost: number;
   total_cost: number;
 }
 
@@ -187,6 +188,8 @@ export interface VehicleAnalytics {
   total_repair_spend: number;
   total_upgrade_spend: number;
   total_fuel_spend: number;
+  total_tyre_spend: number;
+  total_document_spend: number;
   cost_per_distance_unit: number;
   avg_fuel_consumption?: number | null;
   avg_fuel_price?: number | null;

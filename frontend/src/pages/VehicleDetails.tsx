@@ -205,7 +205,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   const activeTyre = tyres.find((t) => t.is_active);
   const activeInsurances = documents.filter((d) => d.is_active && (d.doc_type === 'insurance' || d.doc_type === 'osago' || d.doc_type === 'kasko'));
 
-  const COLORS = ['#0ea5e9', '#f43f5e', '#10b981', '#f59e0b', '#8b5cf6'];
+  const COLORS = ['#0ea5e9', '#f43f5e', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4'];
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 animate-fadeIn">
@@ -241,15 +241,10 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                   </span>
                 )}
               </div>
-              {vehicle.oil_spec && (
-                <span className="text-xs text-amber-600 dark:text-amber-400/90 font-mono block mt-1">
-                  🛢️ Масло: {vehicle.oil_spec}
-                </span>
-              )}
             </div>
           </div>
 
-          {/* Quick Actions Buttons (Service, Fuel, Reminder, PDF, Excel) */}
+          {/* Quick Actions Buttons */}
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => onOpenServiceModal('service')}
@@ -378,7 +373,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
 
           <div className="bg-slate-50 dark:bg-dark-900/80 p-3 rounded-xl border border-slate-200 dark:border-dark-750">
             <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block mb-1">
-              Всего затрат
+              Все расходы
             </span>
             <span className="text-base font-extrabold text-brand-600 dark:text-brand-400 font-mono">
               {Math.round(analytics?.total_spend || 0).toLocaleString('ru-RU')} {vehicle.currency}
@@ -397,7 +392,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
           </div>
         </div>
 
-        {/* Quick Status Widgets Grid (Active Tyres & Active Insurances from changan.scanek.ru) */}
+        {/* Quick Status Widgets Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
           {/* Widget 1: Active Tyres & 1-Click Season Swap */}
           <div className="bg-slate-50 dark:bg-dark-900/90 border border-slate-200 dark:border-dark-750 rounded-xl p-4 flex flex-col justify-between space-y-3">
@@ -515,7 +510,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
           { id: 'fuel', label: 'Заправки', icon: Fuel, count: fuelLogs.length },
           { id: 'reminders', label: 'План и Регламенты', icon: CalendarClock, count: reminders.length },
           { id: 'tyres', label: 'Шины и Колеса', icon: Disc, count: tyres.length },
-          { id: 'analytics', label: 'Аналитика', icon: BarChart3 },
+          { id: 'analytics', label: 'Аналитика всех расходов', icon: BarChart3 },
           { id: 'documents', label: 'Документы & Страховки', icon: FileText, count: documents.length },
         ].map((tab) => {
           const Icon = tab.icon;
@@ -1138,35 +1133,57 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
           </div>
         )}
 
-        {/* Analytics Tab (Charts) */}
+        {/* Analytics Tab (All Costs Breakdown & History) */}
         {activeTab === 'analytics' && analytics && (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 p-5 rounded-2xl shadow-sm">
-                <span className="text-xs uppercase font-semibold text-slate-500 dark:text-slate-400">
-                  Всего на ТО и ремонты
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+              <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 p-4 rounded-2xl shadow-sm">
+                <span className="text-[11px] uppercase font-semibold text-slate-500 dark:text-slate-400 block">
+                  ТО и Ремонты
                 </span>
-                <div className="text-xl font-extrabold text-brand-600 dark:text-brand-400 mt-1 font-mono">
+                <div className="text-lg font-extrabold text-brand-600 dark:text-brand-400 mt-1 font-mono">
                   {(analytics.total_service_spend + analytics.total_repair_spend).toLocaleString('ru-RU')}{' '}
-                  {vehicle.currency}
+                  <span className="text-xs font-sans text-slate-400">{vehicle.currency}</span>
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 p-5 rounded-2xl shadow-sm">
-                <span className="text-xs uppercase font-semibold text-slate-500 dark:text-slate-400">
-                  Всего на топливо
+              <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 p-4 rounded-2xl shadow-sm">
+                <span className="text-[11px] uppercase font-semibold text-slate-500 dark:text-slate-400 block">
+                  Топливо
                 </span>
-                <div className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1 font-mono">
-                  {analytics.total_fuel_spend.toLocaleString('ru-RU')} {vehicle.currency}
+                <div className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400 mt-1 font-mono">
+                  {analytics.total_fuel_spend.toLocaleString('ru-RU')}{' '}
+                  <span className="text-xs font-sans text-slate-400">{vehicle.currency}</span>
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 p-5 rounded-2xl shadow-sm">
-                <span className="text-xs uppercase font-semibold text-slate-500 dark:text-slate-400">
-                  Тюнинг и доработки
+              <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 p-4 rounded-2xl shadow-sm">
+                <span className="text-[11px] uppercase font-semibold text-slate-500 dark:text-slate-400 block">
+                  Тюнинг & Допы
                 </span>
-                <div className="text-xl font-extrabold text-amber-600 dark:text-amber-400 mt-1 font-mono">
-                  {analytics.total_upgrade_spend.toLocaleString('ru-RU')} {vehicle.currency}
+                <div className="text-lg font-extrabold text-amber-600 dark:text-amber-400 mt-1 font-mono">
+                  {analytics.total_upgrade_spend.toLocaleString('ru-RU')}{' '}
+                  <span className="text-xs font-sans text-slate-400">{vehicle.currency}</span>
+                </div>
+              </div>
+
+              <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 p-4 rounded-2xl shadow-sm">
+                <span className="text-[11px] uppercase font-semibold text-slate-500 dark:text-slate-400 block">
+                  Шины и Колеса
+                </span>
+                <div className="text-lg font-extrabold text-cyan-600 dark:text-cyan-400 mt-1 font-mono">
+                  {analytics.total_tyre_spend.toLocaleString('ru-RU')}{' '}
+                  <span className="text-xs font-sans text-slate-400">{vehicle.currency}</span>
+                </div>
+              </div>
+
+              <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 p-4 rounded-2xl shadow-sm">
+                <span className="text-[11px] uppercase font-semibold text-slate-500 dark:text-slate-400 block">
+                  Страховки и Документы
+                </span>
+                <div className="text-lg font-extrabold text-purple-600 dark:text-purple-400 mt-1 font-mono">
+                  {analytics.total_document_spend.toLocaleString('ru-RU')}{' '}
+                  <span className="text-xs font-sans text-slate-400">{vehicle.currency}</span>
                 </div>
               </div>
             </div>
@@ -1174,7 +1191,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
             {/* Charts Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 p-5 rounded-2xl space-y-4 shadow-sm">
-                <h4 className="text-sm font-bold text-slate-900 dark:text-white">Структура расходов</h4>
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white">Структура всех расходов</h4>
                 {analytics.categories.length > 0 ? (
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
@@ -1225,6 +1242,8 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                         <Bar dataKey="repair_cost" name="Ремонт" stackId="a" fill="#f43f5e" />
                         <Bar dataKey="upgrade_cost" name="Тюнинг" stackId="a" fill="#10b981" />
                         <Bar dataKey="fuel_cost" name="Топливо" stackId="a" fill="#f59e0b" />
+                        <Bar dataKey="tyre_cost" name="Шины" stackId="a" fill="#06b6d4" />
+                        <Bar dataKey="document_cost" name="Страховки" stackId="a" fill="#8b5cf6" />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>

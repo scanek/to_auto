@@ -4,6 +4,8 @@ from sqlalchemy import select
 from app.models.vehicle import Vehicle
 from app.models.service import ServiceRecord, RecordType
 from app.models.fuel import FuelLog
+from app.models.tyre import TyreSet
+from app.models.document import DocumentNote
 from app.schemas.analytics import VehicleAnalytics, CategoryCost, MonthlyCost, FuelEconomyPoint
 
 async def compute_vehicle_analytics(session: AsyncSession, vehicle: Vehicle) -> VehicleAnalytics:
@@ -17,14 +19,26 @@ async def compute_vehicle_analytics(session: AsyncSession, vehicle: Vehicle) -> 
     fuel_result = await session.execute(fuel_query)
     fuel_logs = fuel_result.scalars().all()
 
+    # 3. Fetch all tyre sets
+    tyre_query = select(TyreSet).where(TyreSet.vehicle_id == vehicle.id)
+    tyre_result = await session.execute(tyre_query)
+    tyres = tyre_result.scalars().all()
+
+    # 4. Fetch all documents / insurances
+    doc_query = select(DocumentNote).where(DocumentNote.vehicle_id == vehicle.id)
+    doc_result = await session.execute(doc_query)
+    documents = doc_result.scalars().all()
+
     # Aggregations
     service_spend = 0.0
     repair_spend = 0.0
     upgrade_spend = 0.0
     fuel_spend = 0.0
+    tyre_spend = 0.0
+    document_spend = 0.0
     total_fuel_liters = 0.0
 
-    monthly_map = defaultdict(lambda: {"service": 0.0, "repair": 0.0, "upgrade": 0.0, "fuel": 0.0})
+    monthly_map = defaultdict(lambda: {"service": 0.0, "repair": 0.0, "upgrade": 0.0, "fuel": 0.0, "tyre": 0.0, "doc": 0.0})
 
     for s in service_records:
         cost = s.total_cost or 0.0
@@ -65,7 +79,23 @@ async def compute_vehicle_analytics(session: AsyncSession, vehicle: Vehicle) -> 
                 distance=f.distance_traveled or 0.0,
             ))
 
-    total_spend = service_spend + repair_spend + upgrade_spend + fuel_spend
+    for t in tyres:
+        cost = t.total_price or 0.0
+        if cost > 0:
+            tyre_spend += cost
+            t_date = t.install_date or t.created_at
+            month_key = t_date.strftime("%Y-%m") if t_date else "Неизвестно"
+            monthly_map[month_key]["tyre"] += cost
+
+    for d in documents:
+        cost = d.price or 0.0
+        if cost > 0:
+            document_spend += cost
+            d_date = d.issue_date or d.created_at
+            month_key = d_date.strftime("%Y-%m") if d_date else "Неизвестно"
+            monthly_map[month_key]["doc"] += cost
+
+    total_spend = service_spend + repair_spend + upgrade_spend + fuel_spend + tyre_spend + document_spend
     
     # Distance tracked
     total_dist = max(0.0, (vehicle.current_odometer or 0.0) - (vehicle.starting_odometer or 0.0))
@@ -78,25 +108,31 @@ async def compute_vehicle_analytics(session: AsyncSession, vehicle: Vehicle) -> 
     categories = []
     if total_spend > 0:
         if service_spend > 0:
-            categories.append(CategoryCost(category="Плановое ТО", amount=service_spend, percentage=round(service_spend/total_spend*100, 1)))
+            categories.append(CategoryCost(category="Плановое ТО", amount=round(service_spend, 2), percentage=round(service_spend/total_spend*100, 1)))
         if repair_spend > 0:
-            categories.append(CategoryCost(category="Ремонт", amount=repair_spend, percentage=round(repair_spend/total_spend*100, 1)))
+            categories.append(CategoryCost(category="Ремонт", amount=round(repair_spend, 2), percentage=round(repair_spend/total_spend*100, 1)))
         if upgrade_spend > 0:
-            categories.append(CategoryCost(category="Тюнинг / Дооснащение", amount=upgrade_spend, percentage=round(upgrade_spend/total_spend*100, 1)))
+            categories.append(CategoryCost(category="Тюнинг & Допы", amount=round(upgrade_spend, 2), percentage=round(upgrade_spend/total_spend*100, 1)))
         if fuel_spend > 0:
-            categories.append(CategoryCost(category="Топливо", amount=fuel_spend, percentage=round(fuel_spend/total_spend*100, 1)))
+            categories.append(CategoryCost(category="Топливо", amount=round(fuel_spend, 2), percentage=round(fuel_spend/total_spend*100, 1)))
+        if tyre_spend > 0:
+            categories.append(CategoryCost(category="Шины и Колеса", amount=round(tyre_spend, 2), percentage=round(tyre_spend/total_spend*100, 1)))
+        if document_spend > 0:
+            categories.append(CategoryCost(category="Страхование & Документы", amount=round(document_spend, 2), percentage=round(document_spend/total_spend*100, 1)))
     
     # Monthly costs sorted by month
     monthly_costs = []
     for month in sorted(monthly_map.keys()):
         data = monthly_map[month]
-        total_m = data["service"] + data["repair"] + data["upgrade"] + data["fuel"]
+        total_m = data["service"] + data["repair"] + data["upgrade"] + data["fuel"] + data["tyre"] + data["doc"]
         monthly_costs.append(MonthlyCost(
             month=month,
             service_cost=round(data["service"], 2),
             repair_cost=round(data["repair"], 2),
             upgrade_cost=round(data["upgrade"], 2),
             fuel_cost=round(data["fuel"], 2),
+            tyre_cost=round(data["tyre"], 2),
+            document_cost=round(data["doc"], 2),
             total_cost=round(total_m, 2),
         ))
 
@@ -108,6 +144,8 @@ async def compute_vehicle_analytics(session: AsyncSession, vehicle: Vehicle) -> 
         total_repair_spend=round(repair_spend, 2),
         total_upgrade_spend=round(upgrade_spend, 2),
         total_fuel_spend=round(fuel_spend, 2),
+        total_tyre_spend=round(tyre_spend, 2),
+        total_document_spend=round(document_spend, 2),
         cost_per_distance_unit=cost_per_distance,
         avg_fuel_consumption=avg_consumption,
         avg_fuel_price=avg_fuel_price,
