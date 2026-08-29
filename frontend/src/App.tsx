@@ -157,7 +157,9 @@ export function App() {
       setVehicles(data);
       if (selectedVehicle) {
         const updated = data.find((v) => v.id === selectedVehicle.id);
-        if (updated) setSelectedVehicle(updated);
+        if (updated) {
+          setSelectedVehicle({ ...updated, updated_at: new Date().toISOString() });
+        }
       }
     } catch (err) {
       console.error('Failed to load vehicles', err);

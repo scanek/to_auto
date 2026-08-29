@@ -102,7 +102,14 @@ async def compute_vehicle_analytics(session: AsyncSession, vehicle: Vehicle) -> 
     effective_dist = tracked_dist if tracked_dist > 0 else (vehicle.current_odometer or 0.0)
     cost_per_distance = round(total_spend / effective_dist, 2) if effective_dist > 0 else 0.0
 
-    avg_consumption = round(total_consumption_sum / consumption_count, 2) if consumption_count > 0 else None
+    if consumption_count > 0:
+        avg_consumption = round(total_consumption_sum / consumption_count, 2)
+    elif total_fuel_liters > 0 and effective_dist > 0:
+        candidate = round((total_fuel_liters / effective_dist) * 100.0, 2)
+        avg_consumption = candidate if 2.0 <= candidate <= 40.0 else None
+    else:
+        avg_consumption = None
+
     avg_fuel_price = round(fuel_spend / total_fuel_liters, 2) if total_fuel_liters > 0 else None
 
     # Categories breakdown

@@ -115,7 +115,15 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
     loadData();
     setNewOdometerVal(vehicle.current_odometer);
     setNewHoursVal(vehicle.current_engine_hours || 0);
-  }, [vehicle.id]);
+  }, [
+    vehicle.id,
+    vehicle.updated_at,
+    vehicle.current_odometer,
+    vehicle.current_engine_hours,
+    vehicle.total_fuel_cost,
+    vehicle.total_service_cost,
+    vehicle.total_cost,
+  ]);
 
   const handleUpdateOdometer = async () => {
     try {
@@ -459,9 +467,15 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               Средний расход
             </span>
             <span className="text-sm sm:text-base font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
-              {analytics?.avg_fuel_consumption
-                ? `${analytics.avg_fuel_consumption} л/100км`
-                : '—'}
+              {analytics?.avg_fuel_consumption ? (
+                `${analytics.avg_fuel_consumption} л/100км`
+              ) : fuelLogs.length === 1 ? (
+                <span className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold" title="Первая заправка служит базовой точкой отсчета. При следующей заправке будет рассчитан расход">
+                  Точка отсчета 📍
+                </span>
+              ) : (
+                '—'
+              )}
             </span>
           </div>
 
@@ -1177,7 +1191,20 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 )}
               </div>
             ) : (
-              <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl overflow-hidden shadow-sm">
+              <div className="space-y-3">
+                {fuelLogs.length === 1 && !fuelLogs[0].consumption && (
+                  <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 p-3.5 rounded-2xl text-xs flex items-start space-x-2.5">
+                    <Fuel className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-bold">Первая заправка зафиксирована как точка отсчета!</div>
+                      <div className="text-[11px] opacity-90 mt-0.5">
+                        Расход рассчитывается между заправками методом «от полного до полного». При добавлении <strong>следующей заправки</strong> система автоматически рассчитает точный средний расход (л/100 км) и построит график динамики расхода!
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl overflow-hidden shadow-sm">
                 <div className="overflow-x-auto w-full">
                   <table className="w-full text-left text-xs min-w-[620px]">
                     <thead className="bg-slate-100 dark:bg-dark-900 border-b border-slate-200 dark:border-dark-750 text-slate-600 dark:text-slate-400 font-bold uppercase text-[10px]">
@@ -1250,8 +1277,9 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                   </table>
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
+        </div>
         )}
 
         {/* Analytics Tab (All Costs Breakdown & History) */}
