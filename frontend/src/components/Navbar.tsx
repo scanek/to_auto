@@ -1,5 +1,5 @@
 import React from 'react';
-import { Wrench, Plus, Car, UploadCloud, Sun, Moon } from 'lucide-react';
+import { Wrench, Plus, Car, UploadCloud, Sun, Moon, Smartphone } from 'lucide-react';
 import { Vehicle } from '../types';
 
 interface NavbarProps {
@@ -10,6 +10,7 @@ interface NavbarProps {
   onSelectVehicle: (v: Vehicle | null) => void;
   onAddVehicle: () => void;
   onOpenImportModal: () => void;
+  onOpenInstallModal: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -20,6 +21,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onSelectVehicle,
   onAddVehicle,
   onOpenImportModal,
+  onOpenInstallModal,
 }) => {
   return (
     <header className="sticky top-0 z-40 bg-white/95 dark:bg-dark-900/95 backdrop-blur-md border-b border-slate-200 dark:border-dark-800 transition-colors shadow-sm dark:shadow-none">
@@ -44,6 +46,16 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Actions */}
         <div className="flex items-center space-x-2 sm:space-x-2.5">
+          {/* Install App Button */}
+          <button
+            onClick={onOpenInstallModal}
+            className="flex items-center space-x-1.5 bg-brand-500/10 hover:bg-brand-500/20 text-brand-600 dark:text-brand-400 border border-brand-500/30 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm"
+            title="Установить приложение на телефон или рабочий стол"
+          >
+            <Smartphone className="w-4 h-4 text-brand-500" />
+            <span className="hidden md:inline">Установить приложение</span>
+          </button>
+
           {/* Theme Toggle (Sun / Moon) */}
           <button
             onClick={onToggleTheme}
@@ -88,7 +100,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             title="Восстановить историю из бэкапа JSON"
           >
             <UploadCloud className="w-4 h-4 text-emerald-500" />
-            <span className="hidden sm:inline">Импорт бэкапа</span>
+            <span className="hidden sm:inline">Импорт</span>
           </button>
 
           {/* Add Vehicle Button */}
