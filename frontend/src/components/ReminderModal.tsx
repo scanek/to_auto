@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, CalendarClock } from 'lucide-react';
+import { X, CalendarClock, History, Sparkles } from 'lucide-react';
 import { MaintenancePlan, Vehicle } from '../types';
 
 interface ReminderModalProps {
@@ -19,14 +19,15 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({
 }) => {
   const [formData, setFormData] = useState({
     title: '',
+    tracker_id: '',
     category: 'Обслуживание',
     brand: '',
     article: '',
     interval_distance: 7500,
     interval_hours: 250,
     interval_months: 12,
-    last_service_odometer: vehicle.current_odometer || 0,
-    last_service_hours: vehicle.current_engine_hours || 0,
+    last_service_odometer: vehicle.starting_odometer || 0,
+    last_service_hours: 0,
     last_service_date: new Date().toISOString().split('T')[0],
     is_active: true,
     notify_before_distance: 500,
@@ -41,13 +42,14 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({
     if (plan) {
       setFormData({
         title: plan.title,
+        tracker_id: plan.tracker_id || '',
         category: plan.category || 'Обслуживание',
         brand: plan.brand || '',
         article: plan.article || '',
         interval_distance: plan.interval_distance || 0,
         interval_hours: plan.interval_hours || 0,
         interval_months: plan.interval_months || 0,
-        last_service_odometer: plan.last_service_odometer,
+        last_service_odometer: plan.last_service_odometer ?? (vehicle.starting_odometer || 0),
         last_service_hours: plan.last_service_hours || 0,
         last_service_date: plan.last_service_date ? plan.last_service_date.split('T')[0] : new Date().toISOString().split('T')[0],
         is_active: plan.is_active,
@@ -59,14 +61,15 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({
     } else {
       setFormData({
         title: '',
+        tracker_id: '',
         category: 'Обслуживание',
         brand: '',
         article: '',
         interval_distance: 7500,
         interval_hours: 250,
         interval_months: 12,
-        last_service_odometer: vehicle.current_odometer || 0,
-        last_service_hours: vehicle.current_engine_hours || 0,
+        last_service_odometer: vehicle.starting_odometer || 0,
+        last_service_hours: 0,
         last_service_date: new Date().toISOString().split('T')[0],
         is_active: true,
         notify_before_distance: 500,
@@ -80,21 +83,41 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({
   if (!isOpen) return null;
 
   const quickPresets = [
-    { title: 'Моторное масло и фильтр', dist: 7500, hours: 250, months: 12 },
-    { title: 'Воздушный и салонный фильтры', dist: 15000, hours: 500, months: 12 },
-    { title: 'Свечи зажигания', dist: 30000, hours: 0, months: 24 },
-    { title: 'Тормозная жидкость (DOT-4)', dist: 40000, hours: 0, months: 24 },
-    { title: 'Масло в коробке (АКПП / РКПП)', dist: 50000, hours: 0, months: 36 },
-    { title: 'Антифриз (Охлаждающая жидкость)', dist: 50000, hours: 0, months: 48 },
+    { title: 'Моторное масло и фильтр', tracker_id: 'engine_oil', dist: 7500, hours: 250, months: 12 },
+    { title: 'Воздушный и салонный фильтры', tracker_id: 'air_filter', dist: 15000, hours: 500, months: 12 },
+    { title: 'Свечи зажигания', tracker_id: 'spark_plugs', dist: 30000, hours: 0, months: 24 },
+    { title: 'Тормозная жидкость (DOT-4)', tracker_id: 'brake_fluid', dist: 40000, hours: 0, months: 24 },
+    { title: 'Масло в коробке (АКПП / РКПП / Вариатор)', tracker_id: 'dct_fluid', dist: 50000, hours: 0, months: 36 },
+    { title: 'Антифриз (Охлаждающая жидкость)', tracker_id: 'antifreeze', dist: 50000, hours: 0, months: 48 },
   ];
 
   const handleApplyPreset = (p: typeof quickPresets[0]) => {
     setFormData((prev) => ({
       ...prev,
       title: p.title,
+      tracker_id: p.tracker_id,
       interval_distance: p.dist,
       interval_hours: p.hours,
       interval_months: p.months,
+    }));
+  };
+
+  const handleSetBaselineToPurchase = () => {
+    const purchaseDate = vehicle.created_at ? vehicle.created_at.split('T')[0] : new Date().toISOString().split('T')[0];
+    setFormData((prev) => ({
+      ...prev,
+      last_service_odometer: vehicle.starting_odometer || 0,
+      last_service_hours: 0,
+      last_service_date: purchaseDate,
+    }));
+  };
+
+  const handleSetBaselineToCurrent = () => {
+    setFormData((prev) => ({
+      ...prev,
+      last_service_odometer: vehicle.current_odometer || 0,
+      last_service_hours: vehicle.current_engine_hours || 0,
+      last_service_date: new Date().toISOString().split('T')[0],
     }));
   };
 
@@ -104,6 +127,8 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({
     try {
       await onSave({
         ...formData,
+        last_service_odometer: parseFloat(String(formData.last_service_odometer)) || 0,
+        last_service_hours: parseFloat(String(formData.last_service_hours)) || 0,
         last_service_date: new Date(formData.last_service_date).toISOString(),
         interval_distance: formData.interval_distance > 0 ? formData.interval_distance : null,
         interval_hours: formData.interval_hours > 0 ? formData.interval_hours : null,
@@ -166,7 +191,7 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({
               placeholder="Замена моторного масла, фильтра, свечей..."
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
+              className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-medium"
             />
           </div>
 
@@ -177,7 +202,7 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({
               </label>
               <input
                 type="text"
-                placeholder="Лукойл, VIC, Denso..."
+                placeholder="Лукойл, VIC, Denso, ZIC..."
                 value={formData.brand}
                 onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
                 className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
@@ -197,6 +222,7 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({
             </div>
           </div>
 
+          {/* Intervals */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 dark:bg-dark-900 p-3.5 rounded-2xl border border-slate-200 dark:border-dark-750">
             <div>
               <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
@@ -246,55 +272,84 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Пробег последнего ТО *
-              </label>
-              <input
-                type="number"
-                step="any"
-                required
-                value={formData.last_service_odometer}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    last_service_odometer: parseFloat(e.target.value) || 0,
-                  })
-                }
-                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-mono"
-              />
+          {/* Baseline (Last Service) Section */}
+          <div className="bg-slate-50 dark:bg-dark-900 p-3.5 rounded-2xl border border-slate-200 dark:border-dark-750 space-y-2.5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <History className="w-3.5 h-3.5 text-brand-500" />
+                Точка отсчета регламента (последняя замена / покупка)
+              </span>
+
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={handleSetBaselineToPurchase}
+                  className="text-[10px] font-semibold bg-white dark:bg-dark-850 hover:bg-brand-50 dark:hover:bg-dark-750 text-brand-600 dark:text-brand-400 border border-slate-200 dark:border-dark-700 px-2 py-0.5 rounded-md transition"
+                  title="Установить начальный пробег и дату покупки автомобиля"
+                >
+                  С момента покупки ({vehicle.starting_odometer || 0} {vehicle.distance_unit})
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSetBaselineToCurrent}
+                  className="text-[10px] font-semibold bg-white dark:bg-dark-850 hover:bg-slate-100 dark:hover:bg-dark-750 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-dark-700 px-2 py-0.5 rounded-md transition"
+                  title="Установить текущий пробег и сегодняшнюю дату"
+                >
+                  С текущего ({Math.round(vehicle.current_odometer || 0)} {vehicle.distance_unit})
+                </button>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Моточасы последнего ТО
-              </label>
-              <input
-                type="number"
-                step="any"
-                value={formData.last_service_hours || ''}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    last_service_hours: parseFloat(e.target.value) || 0,
-                  })
-                }
-                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-mono"
-              />
-            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Пробег отсчета ({vehicle.distance_unit}) *
+                </label>
+                <input
+                  type="number"
+                  step="any"
+                  required
+                  value={formData.last_service_odometer}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      last_service_odometer: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                  className="w-full bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-mono font-semibold"
+                />
+              </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Дата последнего ТО *
-              </label>
-              <input
-                type="date"
-                required
-                value={formData.last_service_date}
-                onChange={(e) => setFormData({ ...formData, last_service_date: e.target.value })}
-                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
-              />
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Моточасы отсчета
+                </label>
+                <input
+                  type="number"
+                  step="any"
+                  value={formData.last_service_hours || ''}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      last_service_hours: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                  className="w-full bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Дата отсчета *
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={formData.last_service_date}
+                  onChange={(e) => setFormData({ ...formData, last_service_date: e.target.value })}
+                  className="w-full bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-semibold"
+                />
+              </div>
             </div>
           </div>
 
@@ -304,7 +359,7 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({
             </label>
             <input
               type="text"
-              placeholder="Объем 4.5 л, допуск SP / C5..."
+              placeholder="Объем 4.5 л, допуск SP / C5, допуск DCTF..."
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"

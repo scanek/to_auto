@@ -52,9 +52,6 @@ async def create_reminder(
     vehicle = await verify_vehicle_access(db, vehicle_id, current_user, require_owner=True)
 
     data = payload.model_dump()
-    if data.get("last_service_odometer") == 0.0 and vehicle.current_odometer:
-        data["last_service_odometer"] = vehicle.current_odometer
-
     plan = MaintenancePlan(**data, vehicle_id=vehicle_id)
     db.add(plan)
     await db.commit()

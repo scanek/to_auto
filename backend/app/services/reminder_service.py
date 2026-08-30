@@ -7,8 +7,13 @@ from app.models.reminder import MaintenancePlan
 from app.models.vehicle import Vehicle
 from app.models.service import ServiceRecord, ServiceItem
 
+TRANSMISSION_KEYWORDS = [
+    "коробк", "трансмисс", "ркпп", "кпп", "акпп", "мкпп", "dct", "7dct", "dctf", "atf", "cvt",
+    "вариатор", "редуктор", "раздатк", "дифференциал", "75w-90", "75w-80", "sp-iv", "ws"
+]
+
 MATCH_RULES = {
-    "engine_oil": ["масло", "oil", "моторн", "zic", "genesis", "lukoil", "лукойл"],
+    "engine_oil": ["масло моторное", "моторн", "двс", "engine oil", "0w-20", "5w-30", "5w-40", "0w-30", "zic", "genesis", "lukoil", "лукойл"],
     "oil_filter": ["маслян", "1012010mk01", "c-933", "c933", "масляный"],
     "air_filter": ["воздуш", "af162", "1109190-mk01", "воздушный"],
     "cabin_filter": ["салон", "cn1305k", "8104020-mk01", "салонный", "угольн"],
@@ -16,25 +21,44 @@ MATCH_RULES = {
     "spark_plugs": ["свеч", "3707010-ne01", "hu10a80p", "зажигани"],
     "antifreeze": ["антифриз", "ож", "58888973218", "felix", "dragon", "охлажд"],
     "brake_fluid": ["тормозн", "тормоз", "dot-4"],
-    "dct_fluid": ["коробк", "трансмисс", "ркпп", "dct", "7dct", "dctf"],
+    "dct_fluid": TRANSMISSION_KEYWORDS,
 }
 
 def is_item_match_for_plan(plan: MaintenancePlan, item: ServiceItem) -> bool:
     it_name = (item.name or "").lower()
     it_art = (item.part_number or "").lower()
     it_brand = (item.brand or "").lower()
+    plan_title = (plan.title or "").lower()
+    tracker_id = (plan.tracker_id or "").lower()
 
+    # If plan has an exact article
     if plan.article and len(plan.article) >= 4 and (plan.article.lower() in it_art or plan.article.lower() in it_name):
         return True
 
-    tracker_id = plan.tracker_id or ""
+    # Check transmission oil match rule
+    is_transmission_plan = (tracker_id == "dct_fluid") or any(kw in plan_title for kw in ["коробк", "трансмисс", "кпп", "акпп", "ркпп", "dct", "вариатор", "cvt", "atf", "редуктор"])
+    is_engine_oil_plan = (tracker_id == "engine_oil") or ("моторн" in plan_title) or ("масло" in plan_title and not is_transmission_plan)
+
+    # If this is a transmission plan, ONLY match if item explicitly mentions transmission/gearbox keywords
+    if is_transmission_plan:
+        return any(kw in it_name or kw in it_art or kw in it_brand for kw in TRANSMISSION_KEYWORDS)
+
+    # If this is an engine oil plan, make sure item is NOT transmission oil
+    if is_engine_oil_plan:
+        if any(kw in it_name or kw in it_art or kw in it_brand for kw in TRANSMISSION_KEYWORDS):
+            return False
+        if any(kw in it_name or kw in it_art or kw in it_brand for kw in MATCH_RULES["engine_oil"]) or ("масло" in it_name and "трансмисс" not in it_name and "коробк" not in it_name and "кпп" not in it_name):
+            return True
+
+    # Tracker ID keywords match
     keywords = MATCH_RULES.get(tracker_id, [])
     for kw in keywords:
         if kw in it_name or kw in it_art or kw in it_brand:
             return True
 
-    # Fallback to title keywords
-    title_words = [w for w in plan.title.lower().split() if len(w) > 3 and not w.startswith("(")]
+    # Fallback to title keywords (excluding ambiguous stop words)
+    stop_words = {"масло", "замена", "жидкость", "фильтр", "фильтры", "смазка"}
+    title_words = [w for w in plan_title.split() if len(w) > 3 and not w.startswith("(") and w not in stop_words]
     for tw in title_words:
         if tw in it_name:
             return True
