@@ -88,19 +88,40 @@ def generate_service_booklet_html(
             )
             active_class = " active" if t.is_active else ""
 
-            purchase_str = ""
+            # Tyre purchase & DOT info
+            t_purchase_parts = []
             if t.purchase_date:
                 t_pdate = t.purchase_date.strftime("%d.%m.%Y") if hasattr(t.purchase_date, "strftime") else str(t.purchase_date)[:10]
-                dot_str = f" [DOT {t.dot_code}]" if t.dot_code else ""
-                purchase_str = f'<div>Куплены: <strong>{t_pdate}{dot_str}</strong></div>'
+                t_purchase_parts.append(f"Куплены: <strong>{t_pdate}</strong>")
+            if t.dot_code:
+                t_purchase_parts.append(f"DOT: <strong>{t.dot_code}</strong>")
+            t_purchase_line = f"<div>{' • '.join(t_purchase_parts)}</div>" if t_purchase_parts else ""
 
-            rims_str = ""
+            # Tyre pricing
+            tyre_price_str = ""
+            if t.total_price and t.total_price > 0:
+                qty_txt = f"{int(t.quantity)} шт." if t.quantity else "4 шт."
+                tyre_price_str = f"<div>Стоимость шин: <strong>{t.total_price:,.0f} {vehicle.currency}</strong> ({qty_txt})</div>".replace(",", " ")
+
+            # Rims info
             if t.has_separate_rims:
                 r_model = t.rims_brand_model or "Отдельные диски"
                 r_size = f" ({t.rims_size})" if t.rims_size else ""
                 r_date = f", куплены {t.rims_purchase_date.strftime('%d.%m.%Y')}" if (t.rims_purchase_date and hasattr(t.rims_purchase_date, "strftime")) else ""
-                r_tpms = f", {t.tpms_sensors}" if t.tpms_sensors else ""
-                rims_str = f'<div style="grid-column: span 2; margin-top: 3px; color: #b45309;">🔘 Диски: <strong>{r_model}{r_size}</strong>{r_date}{r_tpms}</div>'
+                r_tpms = f", TPMS: {t.tpms_sensors}" if t.tpms_sensors else ""
+                r_price = f" — {t.rims_price:,.0f} {vehicle.currency}".replace(",", " ") if (t.rims_price and t.rims_price > 0) else ""
+                rims_line = f'<div style="grid-column: span 2; margin-top: 4px; padding-top: 4px; border-top: 1px dashed #cbd5e1; color: #92400e;">🔘 <strong>Диски:</strong> {r_model}{r_size}{r_date}{r_tpms}{r_price}</div>'
+            else:
+                rims_model = t.rims_brand_model if t.rims_brand_model else "Штатные / заводские диски"
+                rims_size = f" ({t.rims_size})" if t.rims_size else ""
+                rims_tpms = f", TPMS: {t.tpms_sensors}" if t.tpms_sensors else ""
+                rims_line = f'<div style="grid-column: span 2; margin-top: 4px; padding-top: 4px; border-top: 1px dashed #e2e8f0; color: #475569;">🔘 <strong>Диски:</strong> {rims_model}{rims_size}{rims_tpms}</div>'
+
+            total_set_cost = (t.total_price or 0.0) + (t.rims_price or 0.0 if t.has_separate_rims else 0.0)
+            total_cost_line = f'<div style="grid-column: span 2; font-weight: 700; color: #0284c7; margin-top: 2px;">💰 Итого за комплект: {total_set_cost:,.0f} {vehicle.currency}</div>'.replace(",", " ") if total_set_cost > 0 else ""
+
+            tyre_brand_display = t.brand_model if t.brand_model else "Шины"
+            tyre_size_display = f" ({t.size})" if t.size else ""
 
             tyre_cards += f"""
             <div class="tyre-card{active_class}">
@@ -108,15 +129,17 @@ def generate_service_booklet_html(
                     <div class="tyre-name">{t.name}</div>
                     <div>{season_badge} {active_badge}</div>
                 </div>
-                <div style="font-size: 12px; font-weight: 600; color: #2d3748; margin-top: 2px;">
-                    {t.brand_model or ''} {f'({t.size})' if t.size else ''}
+                <div style="font-size: 12px; font-weight: 700; color: #1e293b; margin-top: 2px;">
+                    🛞 {tyre_brand_display}{tyre_size_display}
                 </div>
                 <div class="tyre-details">
-                    <div>Пробег на комплекте: <strong>{int(t.current_km or 0):,} км</strong></div>
+                    <div>Пробег на резине: <strong>{int(t.current_km or 0):,} км</strong></div>
                     <div>Остаток протектора: <strong>{t.tread_depth_mm or 0} мм</strong></div>
-                    {purchase_str}
-                    {f'<div>Место хранения: <em>{t.storage_location}</em></div>' if t.storage_location else ''}
-                    {rims_str}
+                    {t_purchase_line}
+                    {tyre_price_str}
+                    {f'<div>Хранение: <em>{t.storage_location}</em></div>' if t.storage_location else ''}
+                    {rims_line}
+                    {total_cost_line}
                 </div>
             </div>
             """
