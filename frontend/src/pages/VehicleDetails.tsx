@@ -789,9 +789,16 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                                   </span>
                                 )}
                               </div>
-                              <span className="font-mono text-slate-900 dark:text-slate-200 whitespace-nowrap text-[11px] font-bold">
-                                {it.total_price.toLocaleString('ru-RU')} {vehicle.currency}
-                              </span>
+                              <div className="flex flex-col items-end flex-shrink-0 font-mono text-right pl-2">
+                                <span className="text-slate-900 dark:text-slate-200 whitespace-nowrap text-[11px] font-bold">
+                                  {Math.round(it.total_price || 0).toLocaleString('ru-RU')} {vehicle.currency}
+                                </span>
+                                {it.quantity > 1 && it.unit_price > 0 && (
+                                  <span className="text-[9px] text-slate-400 dark:text-slate-500 whitespace-nowrap">
+                                    {it.quantity} {it.unit || 'шт'} × {Math.round(it.unit_price).toLocaleString('ru-RU')}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           ))}
                         </div>

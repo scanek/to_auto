@@ -12,6 +12,7 @@ interface ServiceModalProps {
 }
 
 const POPULAR_STORES = ['Ozon', 'Wildberries', 'Exist', 'Автодок', 'Emex', 'Авито', 'Дилер'];
+const ITEM_UNITS = ['шт', 'л', 'компл', 'кан', 'уп', 'кг', 'г', 'м'];
 
 const QUICK_PART_PRESETS = [
   { name: 'Масло моторное', brand: '', unit: 'л', quantity: 4 },
@@ -353,7 +354,7 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
                     Купленные расходники и запчасти ({items.length})
                   </h3>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Артикулы, бренды, цены и ссылки на Ozon / Exist / Автодок
+                    Артикулы, бренды, цены, количество и ссылки на Ozon / Exist / Автодок
                   </p>
                 </div>
               </div>
@@ -423,7 +424,7 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
                           placeholder="Бренд (VIC, Lukoil...)"
                           value={item.brand || ''}
                           onChange={(e) => handleUpdateItem(idx, 'brand', e.target.value)}
-                          className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white text-xs focus:outline-none focus:border-brand-500"
+                          className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-lg px-2 py-1.5 text-slate-900 dark:text-white text-xs focus:outline-none focus:border-brand-500"
                         />
                       </div>
                       <div className="col-span-5 sm:col-span-3">
@@ -435,7 +436,7 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
                           placeholder="Артикул (C-933...)"
                           value={item.part_number || ''}
                           onChange={(e) => handleUpdateItem(idx, 'part_number', e.target.value)}
-                          className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white font-mono text-xs focus:outline-none focus:border-brand-500"
+                          className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-lg px-2 py-1.5 text-slate-900 dark:text-white font-mono text-xs focus:outline-none focus:border-brand-500"
                         />
                       </div>
                       <div className="col-span-1 flex justify-end sm:justify-center">
@@ -450,7 +451,7 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
                       </div>
                     </div>
 
-                    {/* Line 2: Store, URL, Quantity, Unit Price, Total */}
+                    {/* Line 2: Store, URL, Quantity + Unit, Unit Price, Total */}
                     <div className="grid grid-cols-12 gap-2 items-center pt-2 border-t border-slate-100 dark:border-dark-750">
                       <div className="col-span-12 sm:col-span-4 space-y-1">
                         <input
@@ -495,38 +496,56 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
                         )}
                       </div>
 
-                      <div className="col-span-4 sm:col-span-2 flex items-center space-x-1">
+                      <div className="col-span-5 sm:col-span-2 flex items-center space-x-1">
                         <input
                           type="number"
-                          min="0.1"
+                          min="0.01"
                           step="any"
                           placeholder="Кол-во"
                           value={item.quantity}
                           onChange={(e) =>
                             handleUpdateItem(idx, 'quantity', parseFloat(e.target.value) || 0)
                           }
-                          className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-lg px-1.5 py-1 text-slate-900 dark:text-white text-[11px] text-center font-mono focus:outline-none focus:border-brand-500"
+                          className="w-14 bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-lg px-1.5 py-1 text-slate-900 dark:text-white text-[11px] text-center font-mono focus:outline-none focus:border-brand-500"
+                          title="Количество"
                         />
-                        <span className="text-[10px] text-slate-400 font-mono">{item.unit || 'шт'}</span>
+                        <select
+                          value={item.unit || 'шт'}
+                          onChange={(e) => handleUpdateItem(idx, 'unit', e.target.value)}
+                          className="bg-slate-100 dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-lg px-1 py-1 text-slate-700 dark:text-slate-300 text-[11px] font-semibold focus:outline-none focus:border-brand-500 cursor-pointer"
+                          title="Единица измерения"
+                        >
+                          {ITEM_UNITS.map((u) => (
+                            <option key={u} value={u}>
+                              {u}
+                            </option>
+                          ))}
+                        </select>
                       </div>
 
                       <div className="col-span-4 sm:col-span-2">
                         <input
                           type="number"
                           step="any"
-                          placeholder="Цена/ед"
+                          placeholder={`Цена/${item.unit || 'ед'}`}
                           value={item.unit_price}
                           onChange={(e) =>
                             handleUpdateItem(idx, 'unit_price', parseFloat(e.target.value) || 0)
                           }
                           className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-lg px-1.5 py-1 text-slate-900 dark:text-white text-[11px] text-right font-mono focus:outline-none focus:border-brand-500"
+                          title={`Цена за 1 ${item.unit || 'ед.'}`}
                         />
                       </div>
 
-                      <div className="col-span-4 sm:col-span-1 text-right">
-                        <span className="font-mono font-bold text-brand-600 dark:text-brand-400 text-xs block truncate">
+                      <div className="col-span-3 sm:col-span-1 text-right">
+                        <span className="font-mono font-bold text-brand-600 dark:text-brand-400 text-xs block truncate" title={`${item.quantity} ${item.unit || 'шт'} × ${item.unit_price} ₽ = ${Math.round(item.total_price || 0)} ₽`}>
                           {Math.round(item.total_price || 0).toLocaleString('ru-RU')} ₽
                         </span>
+                        {item.quantity > 1 && item.unit_price > 0 && (
+                          <span className="text-[9px] text-slate-400 font-mono block truncate">
+                            {item.quantity} × {Math.round(item.unit_price)}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
