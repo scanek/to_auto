@@ -89,8 +89,9 @@ async def auto_migrate_sqlite(conn):
 async def heal_service_records_totals():
     """
     Synchronizes cost_parts and total_cost for any existing records in the database.
+    Also creates line items for records that had URLs/stores/parts costs without items.
     """
-    from app.models.service import ServiceRecord
+    from app.models.service import ServiceRecord, ServiceItem
     from sqlalchemy.orm import selectinload
     from sqlalchemy import select
 
@@ -102,7 +103,27 @@ async def heal_service_records_totals():
             records = res.scalars().all()
             changed = False
             for r in records:
-                if r.items:
+                if not r.items and (r.url or (r.cost_parts and r.cost_parts > 0)):
+                    item_name = r.title if r.title else "Расходники / Детали"
+                    price = r.cost_parts if (r.cost_parts and r.cost_parts > 0) else (r.total_cost or 0.0)
+                    new_item = ServiceItem(
+                        service_record_id=r.id,
+                        name=item_name,
+                        store=r.store,
+                        url=r.url,
+                        quantity=1.0,
+                        unit_price=price,
+                        total_price=price,
+                        category="part",
+                        unit="шт"
+                    )
+                    session.add(new_item)
+                    if not r.cost_parts or r.cost_parts == 0.0:
+                        r.cost_parts = price
+                    if not r.total_cost or r.total_cost < price:
+                        r.total_cost = price
+                    changed = True
+                elif r.items:
                     items_parts = sum(
                         (it.total_price if it.total_price is not None and it.total_price > 0 else (it.quantity * it.unit_price))
                         for it in r.items if it.category != "labor"
