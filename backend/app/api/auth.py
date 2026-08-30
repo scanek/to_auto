@@ -11,6 +11,7 @@ from app.schemas.user import (
     UserLogin,
     UserChangePassword,
     UserResponse,
+    AdminUserResponse,
     TokenResponse,
     SetupStatusResponse,
 )
@@ -179,3 +180,96 @@ async def change_password(
     await db.commit()
 
     return {"message": "Пароль успешно изменен"}
+
+@router.delete("/me")
+async def delete_me(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Allows authenticated user to delete their own account and all associated data."""
+    # Delete all vehicles of this user
+    vehicles_res = await db.execute(select(Vehicle).where(Vehicle.user_id == current_user.id))
+    vehicles = vehicles_res.scalars().all()
+    for v in vehicles:
+        await db.delete(v)
+
+    await db.delete(current_user)
+    await db.commit()
+    return {"message": "Ваш аккаунт и все связанные автомобили успешно удалены"}
+
+@router.get("/users", response_model=list[AdminUserResponse])
+async def get_all_users(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Admin only: list all registered users with their vehicle counts."""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Доступ разрешен только администраторам",
+        )
+
+    users_res = await db.execute(
+        select(User).order_by(User.created_at.desc())
+    )
+    users = users_res.scalars().all()
+
+    result = []
+    for u in users:
+        v_count_res = await db.execute(
+            select(func.count(Vehicle.id)).where(Vehicle.user_id == u.id)
+        )
+        count = v_count_res.scalar() or 0
+        u_dict = {
+            "id": u.id,
+            "username": u.username,
+            "email": u.email,
+            "full_name": u.full_name,
+            "role": u.role,
+            "is_active": u.is_active,
+            "created_at": u.created_at,
+            "updated_at": u.updated_at,
+            "vehicles_count": count,
+        }
+        result.append(AdminUserResponse(**u_dict))
+
+    return result
+
+@router.delete("/users/{user_id}")
+async def delete_user_by_admin(
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Admin only: delete a user by ID and all their vehicles/records."""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Доступ разрешен только администраторам",
+        )
+
+    if user_id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Администратор не может удалить свой собственный аккаунт через эту панель",
+        )
+
+    target_user_res = await db.execute(select(User).where(User.id == user_id))
+    target_user = target_user_res.scalar_one_or_none()
+    if not target_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Пользователь не найден",
+        )
+
+    # Delete target user's vehicles
+    vehicles_res = await db.execute(select(Vehicle).where(Vehicle.user_id == target_user.id))
+    vehicles = vehicles_res.scalars().all()
+    for v in vehicles:
+        await db.delete(v)
+
+    username = target_user.username
+    await db.delete(target_user)
+    await db.commit()
+
+    return {"message": f"Пользователь '{username}' и все его автомобили успешно удалены"}

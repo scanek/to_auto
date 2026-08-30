@@ -12,13 +12,16 @@ async def verify_vehicle_access(
     vehicle_id: int,
     user: Optional[User],
     require_owner: bool = False,
+    allow_admin_override: bool = False,
 ) -> Vehicle:
     """
     Verifies access to a vehicle.
     - If require_owner=True (mutating actions: add record, edit car, delete):
-      Requires user to be the owner (or admin). If user is viewing a public car owned by another user, raises 403 Forbidden.
+      Requires user to be the real owner. Non-owners (even admins in regular garage mode) receive 403 Forbidden.
     - If require_owner=False (reading actions):
       Allows if vehicle belongs to user OR vehicle is public (is_public=True) OR user is admin.
+    - allow_admin_override=True:
+      Used exclusively in dedicated admin moderation endpoints.
     """
     res = await db.execute(
         select(Vehicle).options(selectinload(Vehicle.user)).where(Vehicle.id == vehicle_id)
@@ -30,12 +33,12 @@ async def verify_vehicle_access(
             detail="Автомобиль не найден",
         )
 
-    # If admin, always allowed
-    if user and user.role == UserRole.ADMIN:
-        return vehicle
-
-    # Check ownership
+    # Check true ownership
     is_owner = bool(user and vehicle.user_id == user.id) or (vehicle.user_id is None)
+
+    # Admin moderation override (only for specific admin endpoints)
+    if allow_admin_override and user and user.role == UserRole.ADMIN:
+        return vehicle
 
     if require_owner:
         if not user or not is_owner:
@@ -45,8 +48,8 @@ async def verify_vehicle_access(
             )
         return vehicle
 
-    # For read actions: allow owner OR if vehicle is marked public
-    if is_owner or getattr(vehicle, "is_public", False):
+    # For read actions: allow owner OR if vehicle is marked public OR admin
+    if is_owner or getattr(vehicle, "is_public", False) or (user and user.role == UserRole.ADMIN):
         return vehicle
 
     # Otherwise denied

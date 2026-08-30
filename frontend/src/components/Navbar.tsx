@@ -3,16 +3,11 @@ import {
   BookOpen,
   Plus,
   Car,
-  UploadCloud,
-  Sun,
-  Moon,
-  Smartphone,
-  User as UserIcon,
+  Settings,
   LogIn,
   LogOut,
   ZapOff,
   RefreshCw,
-  Bell,
   ShieldCheck,
 } from 'lucide-react';
 import { Vehicle, User } from '../types';
@@ -20,38 +15,28 @@ import { Vehicle, User } from '../types';
 interface NavbarProps {
   vehicles: Vehicle[];
   selectedVehicle: Vehicle | null;
-  theme: 'dark' | 'light';
   currentUser: User | null;
   isOnline?: boolean;
   pendingSyncCount?: number;
-  isNotificationsEnabled?: boolean;
-  onToggleTheme: () => void;
   onSelectVehicle: (v: Vehicle | null) => void;
-  onAddVehicle: () => void;
-  onOpenImportModal: () => void;
-  onOpenInstallModal: () => void;
+  onOpenSettingsModal: () => void;
   onOpenAuthModal: () => void;
+  onAddVehicle: () => void;
   onLogout: () => void;
-  onOpenNotificationModal?: () => void;
   onSyncNow?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   vehicles,
   selectedVehicle,
-  theme,
   currentUser,
   isOnline = true,
   pendingSyncCount = 0,
-  isNotificationsEnabled = false,
-  onToggleTheme,
   onSelectVehicle,
-  onAddVehicle,
-  onOpenImportModal,
-  onOpenInstallModal,
+  onOpenSettingsModal,
   onOpenAuthModal,
+  onAddVehicle,
   onLogout,
-  onOpenNotificationModal,
   onSyncNow,
 }) => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -89,7 +74,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Actions */}
-        <div className="flex items-center space-x-1 sm:space-x-1.5 flex-shrink-0">
+        <div className="flex items-center space-x-1.5 sm:space-x-2 flex-shrink-0">
           {/* Offline / Pending Sync Badges */}
           {!isOnline && (
             <div
@@ -112,22 +97,56 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
+          {/* Garage Switcher (Back to Garage button) */}
+          {selectedVehicle && (
+            <button
+              onClick={() => onSelectVehicle(null)}
+              className="flex items-center space-x-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-dark-700 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95"
+              title="Вернуться к списку всех авто"
+            >
+              <Car className="w-3.5 h-3.5 text-brand-500" />
+              <span className="hidden sm:inline">Гараж</span>
+            </button>
+          )}
+
+          {/* Add Vehicle Quick Button */}
+          {currentUser && (
+            <button
+              onClick={onAddVehicle}
+              className="flex items-center space-x-1 bg-brand-500 hover:bg-brand-600 active:scale-95 text-white px-2.5 py-1.5 rounded-xl text-xs font-bold shadow-md shadow-brand-500/20 transition-all"
+              title="Добавить новый автомобиль"
+            >
+              <Plus className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="hidden sm:inline">Авто</span>
+            </button>
+          )}
+
+          {/* Unified Settings & Tools Button */}
+          <button
+            onClick={onOpenSettingsModal}
+            className="flex items-center space-x-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-dark-700 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95"
+            title="Настройки, экспорт, сервисная книжка, бэкап и профиль"
+          >
+            <Settings className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 group-hover:rotate-45 transition-transform" />
+            <span className="hidden sm:inline">Настройки</span>
+          </button>
+
           {/* User Account Button / Menu */}
           {currentUser ? (
             <div className="relative">
               <button
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                className="flex items-center space-x-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-dark-700 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] font-bold transition-all shadow-sm"
-                title="Личный профиль пользователя"
+                className="flex items-center space-x-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-dark-700 px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm"
+                title="Личный профиль"
               >
-                <div className="w-4 h-4 rounded-full bg-brand-500 text-white flex items-center justify-center text-[9px] font-bold flex-shrink-0">
+                <div className="w-5 h-5 rounded-lg bg-brand-500 text-white flex items-center justify-center text-[10px] font-bold flex-shrink-0">
                   {(currentUser.full_name || currentUser.username).charAt(0).toUpperCase()}
                 </div>
                 <span className="hidden md:inline truncate max-w-[100px]">
                   {currentUser.full_name || currentUser.username}
                 </span>
                 {currentUser.role === 'admin' && (
-                  <ShieldCheck className="w-3 h-3 text-brand-500 hidden sm:inline" />
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-500 hidden sm:inline" />
                 )}
               </button>
 
@@ -146,11 +165,28 @@ export const Navbar: React.FC<NavbarProps> = ({
                         {currentUser.email || `@${currentUser.username}`}
                       </div>
                       <div className="mt-1">
-                        <span className="inline-block px-1.5 py-0.5 rounded bg-brand-500/10 text-brand-600 dark:text-brand-400 font-bold text-[10px]">
-                          {currentUser.role === 'admin' ? 'Администратор' : 'Пользователь'}
+                        <span
+                          className={`inline-block px-1.5 py-0.5 rounded font-bold text-[10px] ${
+                            currentUser.role === 'admin'
+                              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                              : 'bg-brand-500/10 text-brand-600 dark:text-brand-400'
+                          }`}
+                        >
+                          {currentUser.role === 'admin' ? '👑 Администратор' : '👤 Пользователь'}
                         </span>
                       </div>
                     </div>
+
+                    <button
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        onOpenSettingsModal();
+                      }}
+                      className="w-full flex items-center space-x-2 p-2 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-dark-800 font-semibold transition-colors text-left"
+                    >
+                      <Settings className="w-4 h-4 text-slate-400" />
+                      <span>Панель настроек</span>
+                    </button>
 
                     <button
                       onClick={() => {
@@ -169,95 +205,11 @@ export const Navbar: React.FC<NavbarProps> = ({
           ) : (
             <button
               onClick={onOpenAuthModal}
-              className="flex items-center space-x-1 bg-brand-500 hover:bg-brand-600 active:scale-95 text-white px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] font-bold transition-all shadow-md shadow-brand-500/20"
+              className="flex items-center space-x-1 bg-brand-500 hover:bg-brand-600 active:scale-95 text-white px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl text-xs font-bold transition-all shadow-md shadow-brand-500/20"
               title="Войти или зарегистрироваться"
             >
               <LogIn className="w-3.5 h-3.5 flex-shrink-0" />
               <span>Войти</span>
-            </button>
-          )}
-
-          {/* Compact Install App Button */}
-          <button
-            onClick={onOpenInstallModal}
-            className="flex items-center space-x-1 bg-brand-500/10 hover:bg-brand-500/20 text-brand-600 dark:text-brand-400 border border-brand-500/20 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] font-semibold transition-all shadow-sm"
-            title="Установить приложение на телефон или рабочий стол"
-          >
-            <Smartphone className="w-3.5 h-3.5 text-brand-500 flex-shrink-0" />
-            <span className="hidden sm:inline">Приложение</span>
-          </button>
-
-          {/* Notification Settings Button */}
-          {onOpenNotificationModal && (
-            <button
-              onClick={onOpenNotificationModal}
-              className={`p-1 sm:p-1.5 rounded-lg sm:rounded-xl border transition-all relative ${
-                isNotificationsEnabled
-                  ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30'
-                  : 'bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-dark-700'
-              }`}
-              title="Настройки Push-уведомлений о регламентах ТО"
-            >
-              <Bell className="w-4 h-4" />
-              {isNotificationsEnabled && (
-                <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-amber-500 rounded-full"></span>
-              )}
-            </button>
-          )}
-
-          {/* Theme Toggle (Sun / Moon) */}
-          <button
-            onClick={onToggleTheme}
-            className="p-1 sm:p-1.5 rounded-lg sm:rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-dark-700 transition-colors"
-            title={theme === 'dark' ? 'Включить светлую тему' : 'Включить темную тему'}
-          >
-            {theme === 'dark' ? (
-              <Sun className="w-4 h-4 text-amber-400" />
-            ) : (
-              <Moon className="w-4 h-4 text-slate-600" />
-            )}
-          </button>
-
-          {vehicles.length > 0 && (
-            <div className="flex items-center bg-slate-100 dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-lg sm:rounded-xl p-0.5">
-              <button
-                onClick={() => onSelectVehicle(null)}
-                className={`px-2 py-1 rounded-md sm:rounded-lg text-[11px] sm:text-xs font-medium transition-all ${
-                  !selectedVehicle
-                    ? 'bg-brand-500 text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-                title="Перейти в гараж"
-              >
-                <div className="flex items-center space-x-1">
-                  <Car className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Гараж ({vehicles.length})</span>
-                </div>
-              </button>
-            </div>
-          )}
-
-          {/* Backup & Restore Button */}
-          {currentUser && (
-            <button
-              onClick={onOpenImportModal}
-              className="flex items-center space-x-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold transition-all shadow-sm"
-              title="Резервное копирование: Экспорт и Импорт базы в JSON"
-            >
-              <UploadCloud className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
-              <span className="hidden md:inline">Бэкап</span>
-            </button>
-          )}
-
-          {/* Add Vehicle Button */}
-          {currentUser && (
-            <button
-              onClick={onAddVehicle}
-              className="flex items-center space-x-1 bg-brand-500 hover:bg-brand-600 active:scale-95 text-white px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold shadow-md shadow-brand-500/20 transition-all"
-              title="Добавить новый автомобиль"
-            >
-              <Plus className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="hidden sm:inline">Авто</span>
             </button>
           )}
         </div>

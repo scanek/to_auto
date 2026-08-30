@@ -75,16 +75,19 @@ async def get_vehicles(
     if not current_user:
         return []
 
-    if current_user.role == UserRole.ADMIN:
-        query = select(Vehicle).options(selectinload(Vehicle.user)).order_by(Vehicle.created_at.desc())
-    else:
-        query = select(Vehicle).options(selectinload(Vehicle.user)).where(
+    # In regular garage view, all users (including admins) see only their own vehicles + other users' public vehicles
+    query = (
+        select(Vehicle)
+        .options(selectinload(Vehicle.user))
+        .where(
             or_(
                 Vehicle.user_id == current_user.id,
                 Vehicle.user_id.is_(None),
                 Vehicle.is_public == True,
             )
-        ).order_by(Vehicle.created_at.desc())
+        )
+        .order_by(Vehicle.created_at.desc())
+    )
         
     result = await db.execute(query)
     vehicles = result.scalars().all()
@@ -92,7 +95,7 @@ async def get_vehicles(
     responses = []
     for v in vehicles:
         resp = VehicleResponse.model_validate(v)
-        is_owner = (current_user.role == UserRole.ADMIN) or (v.user_id == current_user.id) or (v.user_id is None)
+        is_owner = (v.user_id == current_user.id) or (v.user_id is None)
         resp.is_owner = is_owner
         if v.user:
             resp.owner_name = v.user.full_name or v.user.username
@@ -100,6 +103,51 @@ async def get_vehicles(
         responses.append(resp)
 
     return responses
+
+@router.get("/admin/all", response_model=List[VehicleResponse])
+async def get_admin_all_vehicles(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Admin only: returns the complete registry of all vehicles in the platform."""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Доступ разрешен только администраторам",
+        )
+
+    query = select(Vehicle).options(selectinload(Vehicle.user)).order_by(Vehicle.created_at.desc())
+    result = await db.execute(query)
+    vehicles = result.scalars().all()
+
+    responses = []
+    for v in vehicles:
+        resp = VehicleResponse.model_validate(v)
+        resp.is_owner = (v.user_id == current_user.id) or (v.user_id is None)
+        if v.user:
+            resp.owner_name = v.user.full_name or v.user.username
+        await calculate_vehicle_totals(db, v, resp)
+        responses.append(resp)
+
+    return responses
+
+@router.delete("/admin/{vehicle_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_admin_vehicle(
+    vehicle_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Admin only: forcefully delete any vehicle (moderation)."""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Доступ разрешен только администраторам",
+        )
+
+    vehicle = await verify_vehicle_access(db, vehicle_id, current_user, require_owner=True, allow_admin_override=True)
+    await db.delete(vehicle)
+    await db.commit()
+    return None
 
 @router.post("", response_model=VehicleResponse, status_code=status.HTTP_201_CREATED)
 async def create_vehicle(
@@ -130,7 +178,7 @@ async def get_vehicle(
     """Get details of a vehicle. Allowed for owner, admin, or public vehicles."""
     vehicle = await verify_vehicle_access(db, vehicle_id, current_user, require_owner=False)
     resp = VehicleResponse.model_validate(vehicle)
-    is_owner = bool(current_user and (current_user.role == UserRole.ADMIN or vehicle.user_id == current_user.id)) or (vehicle.user_id is None)
+    is_owner = bool(current_user and (vehicle.user_id == current_user.id)) or (vehicle.user_id is None)
     resp.is_owner = is_owner
     if vehicle.user:
         resp.owner_name = vehicle.user.full_name or vehicle.user.username
@@ -144,7 +192,7 @@ async def update_vehicle(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Update vehicle. Only owner or admin can update."""
+    """Update vehicle. Only owner can update."""
     vehicle = await verify_vehicle_access(db, vehicle_id, current_user, require_owner=True)
     
     update_data = payload.model_dump(exclude_unset=True)
@@ -165,7 +213,7 @@ async def delete_vehicle(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Delete vehicle. Only owner or admin can delete."""
+    """Delete vehicle. Only owner can delete."""
     vehicle = await verify_vehicle_access(db, vehicle_id, current_user, require_owner=True)
     await db.delete(vehicle)
     await db.commit()

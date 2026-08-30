@@ -7,6 +7,7 @@ import {
   VehicleAnalytics,
   TyreSet,
   User,
+  AdminUser,
   AuthResponse,
   SetupStatus,
 } from '../types';
@@ -196,6 +197,18 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  deleteMe: () =>
+    request<{ message: string }>(`${API_BASE}/auth/me`, {
+      method: 'DELETE',
+    }),
+  getAdminUsers: () =>
+    request<AdminUser[]>(`${API_BASE}/auth/users`, undefined, {
+      cacheKey: 'admin_users_list',
+    }),
+  deleteAdminUser: (userId: number) =>
+    request<{ message: string }>(`${API_BASE}/auth/users/${userId}`, {
+      method: 'DELETE',
+    }),
 
   // -------------------------------------------------------------
   // Vehicles
@@ -204,6 +217,14 @@ export const api = {
     request<Vehicle[]>(`${API_BASE}/vehicles`, undefined, {
       cacheKey: 'vehicles_list',
       fallbackMock: () => [],
+    }),
+  getAdminAllVehicles: () =>
+    request<Vehicle[]>(`${API_BASE}/vehicles/admin/all`, undefined, {
+      cacheKey: 'admin_vehicles_all',
+    }),
+  deleteAdminVehicle: (vehicleId: number) =>
+    request<void>(`${API_BASE}/vehicles/admin/${vehicleId}`, {
+      method: 'DELETE',
     }),
   getVehicle: (id: number) =>
     request<Vehicle>(`${API_BASE}/vehicles/${id}`, undefined, {

@@ -40,6 +40,10 @@ export interface User {
   updated_at: string;
 }
 
+export interface AdminUser extends User {
+  vehicles_count: number;
+}
+
 export interface AuthResponse {
   access_token: string;
   token_type: string;

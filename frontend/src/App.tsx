@@ -16,6 +16,7 @@ import { ImportBackupModal } from './components/ImportBackupModal';
 import { InstallAppModal } from './components/InstallAppModal';
 import { AuthModal } from './components/AuthModal';
 import { NotificationSettingsModal } from './components/NotificationSettingsModal';
+import { SettingsModal } from './components/SettingsModal';
 import { Github, ZapOff, RefreshCw, CheckCircle2 } from 'lucide-react';
 
 export function App() {
@@ -28,6 +29,7 @@ export function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
   // Offline & Synchronization state
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
@@ -404,19 +406,14 @@ export function App() {
       <Navbar
         vehicles={vehicles}
         selectedVehicle={selectedVehicle}
-        theme={theme}
         currentUser={currentUser}
         isOnline={isOnline}
         pendingSyncCount={pendingSyncCount}
-        isNotificationsEnabled={notificationService.areNotificationsEnabled()}
-        onToggleTheme={handleToggleTheme}
         onSelectVehicle={setSelectedVehicle}
-        onAddVehicle={handleOpenAddVehicle}
-        onOpenImportModal={() => setIsImportModalOpen(true)}
-        onOpenInstallModal={handleOpenInstall}
+        onOpenSettingsModal={() => setIsSettingsModalOpen(true)}
         onOpenAuthModal={() => setIsAuthModalOpen(true)}
+        onAddVehicle={handleOpenAddVehicle}
         onLogout={handleLogout}
-        onOpenNotificationModal={() => setIsNotificationModalOpen(true)}
         onSyncNow={handleSyncOfflineQueue}
       />
 
@@ -535,6 +532,24 @@ export function App() {
           </a>
         </div>
       </footer>
+
+      <SettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+        currentUser={currentUser}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
+        isNotificationsEnabled={notificationService.areNotificationsEnabled()}
+        onOpenNotificationModal={() => setIsNotificationModalOpen(true)}
+        onOpenImportModal={() => setIsImportModalOpen(true)}
+        onOpenInstallModal={handleOpenInstall}
+        onAddVehicle={handleOpenAddVehicle}
+        vehicles={vehicles}
+        selectedVehicle={selectedVehicle}
+        onLogout={handleLogout}
+        onRefreshVehicles={loadVehicles}
+        onSelectVehicle={setSelectedVehicle}
+      />
 
       <AuthModal
         isOpen={isAuthModalOpen}

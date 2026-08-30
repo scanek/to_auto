@@ -38,3 +38,6 @@ class TokenResponse(BaseModel):
 class SetupStatusResponse(BaseModel):
     has_users: bool
     allow_registration: bool = True
+
+class AdminUserResponse(UserResponse):
+    vehicles_count: int = 0
