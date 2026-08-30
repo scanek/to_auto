@@ -13,6 +13,9 @@ import {
   Lock,
   User as UserIcon,
   ShieldAlert,
+  Eye,
+  EyeOff,
+  RotateCcw,
 } from 'lucide-react';
 import { Vehicle } from '../types';
 
@@ -40,15 +43,52 @@ export const Garage: React.FC<GarageProps> = ({
 }) => {
   const [filterTab, setFilterTab] = useState<'all' | 'my' | 'shared'>('all');
 
+  const [hideAllShared, setHideAllShared] = useState<boolean>(() => {
+    return localStorage.getItem('hide_shared_vehicles') === 'true';
+  });
+
+  const [hiddenSharedIds, setHiddenSharedIds] = useState<number[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('hidden_shared_ids') || '[]');
+    } catch {
+      return [];
+    }
+  });
+
+  const handleToggleHideAllShared = () => {
+    const nextState = !hideAllShared;
+    setHideAllShared(nextState);
+    localStorage.setItem('hide_shared_vehicles', String(nextState));
+  };
+
+  const handleHideSingleVehicle = (id: number) => {
+    setHiddenSharedIds((prev) => {
+      const next = prev.includes(id) ? prev : [...prev, id];
+      localStorage.setItem('hidden_shared_ids', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const handleUnhideAll = () => {
+    setHideAllShared(false);
+    setHiddenSharedIds([]);
+    localStorage.removeItem('hide_shared_vehicles');
+    localStorage.removeItem('hidden_shared_ids');
+  };
+
   const myVehicles = vehicles.filter((v) => v.is_owner !== false);
-  const sharedVehicles = vehicles.filter((v) => v.is_owner === false);
+  const allSharedVehicles = vehicles.filter((v) => v.is_owner === false);
+  const visibleSharedVehicles = allSharedVehicles.filter(
+    (v) => !hideAllShared && !hiddenSharedIds.includes(v.id)
+  );
+  const hiddenCount = allSharedVehicles.length - visibleSharedVehicles.length;
 
   const displayedVehicles =
     filterTab === 'my'
       ? myVehicles
       : filterTab === 'shared'
-      ? sharedVehicles
-      : vehicles;
+      ? visibleSharedVehicles
+      : [...myVehicles, ...visibleSharedVehicles];
 
   const totalSpendMy = myVehicles.reduce((sum, v) => sum + (v.total_cost || 0), 0);
   const totalOverdueReminders = myVehicles.reduce(
@@ -67,9 +107,9 @@ export const Garage: React.FC<GarageProps> = ({
             </span>
             <div className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white mt-0.5">
               {myVehicles.length}
-              {sharedVehicles.length > 0 && (
+              {visibleSharedVehicles.length > 0 && (
                 <span className="text-xs font-normal text-slate-400 ml-1.5">
-                  (+{sharedVehicles.length} общих)
+                  (+{visibleSharedVehicles.length} общих)
                 </span>
               )}
             </div>
@@ -156,39 +196,81 @@ export const Garage: React.FC<GarageProps> = ({
           )}
         </div>
 
-        {/* Filter Tabs if both personal and shared cars exist */}
-        {sharedVehicles.length > 0 && (
-          <div className="flex space-x-1.5 bg-slate-200/60 dark:bg-dark-800 p-1 rounded-xl w-fit text-xs font-bold">
-            <button
-              onClick={() => setFilterTab('all')}
-              className={`px-3 py-1.5 rounded-lg transition-all ${
-                filterTab === 'all'
-                  ? 'bg-white dark:bg-dark-750 text-slate-900 dark:text-white shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              Все авто ({vehicles.length})
-            </button>
-            <button
-              onClick={() => setFilterTab('my')}
-              className={`px-3 py-1.5 rounded-lg transition-all ${
-                filterTab === 'my'
-                  ? 'bg-white dark:bg-dark-750 text-slate-900 dark:text-white shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              Мой гараж ({myVehicles.length})
-            </button>
-            <button
-              onClick={() => setFilterTab('shared')}
-              className={`px-3 py-1.5 rounded-lg transition-all ${
-                filterTab === 'shared'
-                  ? 'bg-white dark:bg-dark-750 text-slate-900 dark:text-white shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              🌐 Общие ({sharedVehicles.length})
-            </button>
+        {/* Filter Tabs & Hide Shared Controls */}
+        {allSharedVehicles.length > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-2.5">
+            <div className="flex flex-wrap items-center gap-1.5 bg-slate-200/60 dark:bg-dark-800 p-1 rounded-xl text-xs font-bold">
+              <button
+                onClick={() => setFilterTab('all')}
+                className={`px-3 py-1.5 rounded-lg transition-all ${
+                  filterTab === 'all'
+                    ? 'bg-white dark:bg-dark-750 text-slate-900 dark:text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                Все авто ({myVehicles.length + visibleSharedVehicles.length})
+              </button>
+              <button
+                onClick={() => setFilterTab('my')}
+                className={`px-3 py-1.5 rounded-lg transition-all ${
+                  filterTab === 'my'
+                    ? 'bg-white dark:bg-dark-750 text-slate-900 dark:text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                Мой гараж ({myVehicles.length})
+              </button>
+              <button
+                onClick={() => setFilterTab('shared')}
+                className={`px-3 py-1.5 rounded-lg transition-all ${
+                  filterTab === 'shared'
+                    ? 'bg-white dark:bg-dark-750 text-slate-900 dark:text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                🌐 Общие ({visibleSharedVehicles.length})
+              </button>
+            </div>
+
+            {/* Quick Toggle to Hide/Show other users' public cars */}
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={handleToggleHideAllShared}
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border shadow-sm ${
+                  hideAllShared
+                    ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30'
+                    : 'bg-white dark:bg-dark-850 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-dark-750 hover:bg-slate-50 dark:hover:bg-dark-800'
+                }`}
+                title={
+                  hideAllShared
+                    ? 'Показать чужие публичные автомобили'
+                    : 'Не показывать чужие публичные автомобили в списке'
+                }
+              >
+                {hideAllShared ? (
+                  <>
+                    <EyeOff className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+                    <span>Чужие авто скрыты</span>
+                  </>
+                ) : (
+                  <>
+                    <Eye className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                    <span>Скрыть чужие авто</span>
+                  </>
+                )}
+              </button>
+
+              {hiddenCount > 0 && (
+                <button
+                  onClick={handleUnhideAll}
+                  className="flex items-center space-x-1 text-xs text-brand-600 dark:text-brand-400 hover:underline px-2 py-1"
+                  title="Вернуть отображение всех скрытых чужих автомобилей"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>Показать скрытые ({hiddenCount})</span>
+                </button>
+              )}
+            </div>
           </div>
         )}
 
@@ -344,9 +426,18 @@ export const Garage: React.FC<GarageProps> = ({
                           </div>
                         )}
                         {!isOwner && (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                            Только чтение
-                          </span>
+                          <div className="flex items-center space-x-1.5 flex-shrink-0">
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                              Только чтение
+                            </span>
+                            <button
+                              onClick={() => handleHideSingleVehicle(v.id)}
+                              className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-dark-750 rounded-lg transition-colors flex items-center"
+                              title="Не показывать этот автомобиль в моем гараже"
+                            >
+                              <EyeOff className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         )}
                       </div>
 
