@@ -331,6 +331,11 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                     {vehicle.engine}
                   </span>
                 )}
+                {vehicle.purchase_date && (
+                  <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-blue-50 dark:bg-dark-900 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60" title={`Куплен: ${new Date(vehicle.purchase_date).toLocaleDateString('ru-RU')}${vehicle.starting_odometer ? ` (с пробегом ${vehicle.starting_odometer} ${vehicle.distance_unit})` : ''}`}>
+                    📅 Куплен: {new Date(vehicle.purchase_date).toLocaleDateString('ru-RU')}
+                  </span>
+                )}
               </div>
             </div>
           </div>

@@ -103,7 +103,11 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({
   };
 
   const handleSetBaselineToPurchase = () => {
-    const purchaseDate = vehicle.created_at ? vehicle.created_at.split('T')[0] : new Date().toISOString().split('T')[0];
+    const purchaseDate = vehicle.purchase_date
+      ? vehicle.purchase_date.split('T')[0]
+      : vehicle.created_at
+      ? vehicle.created_at.split('T')[0]
+      : new Date().toISOString().split('T')[0];
     setFormData((prev) => ({
       ...prev,
       last_service_odometer: vehicle.starting_odometer || 0,

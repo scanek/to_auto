@@ -10,6 +10,7 @@ export interface Vehicle {
   starting_odometer: number;
   current_odometer: number;
   current_engine_hours: number;
+  purchase_date?: string;
   oil_spec?: string;
   distance_unit: string;
   fuel_unit: string;

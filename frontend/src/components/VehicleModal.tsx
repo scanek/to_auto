@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Car, Upload, Image as ImageIcon, Globe, Lock } from 'lucide-react';
+import { X, Car, Upload, Image as ImageIcon, Globe, Lock, Calendar, Gauge } from 'lucide-react';
 import { Vehicle } from '../types';
 import { api } from '../services/api';
 
@@ -26,6 +26,7 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
     license_plate: '',
     vin: '',
     is_public: false,
+    purchase_date: '',
     starting_odometer: 0,
     current_odometer: 0,
     current_engine_hours: 0,
@@ -51,9 +52,10 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
         license_plate: vehicle.license_plate || '',
         vin: vehicle.vin || '',
         is_public: vehicle.is_public ?? false,
-        starting_odometer: vehicle.starting_odometer || 0,
-        current_odometer: vehicle.current_odometer || 0,
-        current_engine_hours: vehicle.current_engine_hours || 0,
+        purchase_date: vehicle.purchase_date ? vehicle.purchase_date.split('T')[0] : (vehicle.created_at ? vehicle.created_at.split('T')[0] : ''),
+        starting_odometer: vehicle.starting_odometer ?? 0,
+        current_odometer: vehicle.current_odometer ?? 0,
+        current_engine_hours: vehicle.current_engine_hours ?? 0,
         distance_unit: vehicle.distance_unit || 'km',
         fuel_unit: vehicle.fuel_unit || 'L',
         currency: vehicle.currency || 'RUB',
@@ -61,6 +63,7 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
         notes: vehicle.notes || '',
       });
     } else {
+      const today = new Date().toISOString().split('T')[0];
       setFormData({
         name: '',
         make: '',
@@ -71,6 +74,7 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
         license_plate: '',
         vin: '',
         is_public: false,
+        purchase_date: today,
         starting_odometer: 0,
         current_odometer: 0,
         current_engine_hours: 0,
@@ -104,7 +108,13 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
     e.preventDefault();
     setLoading(true);
     try {
-      await onSave(formData);
+      await onSave({
+        ...formData,
+        purchase_date: formData.purchase_date ? new Date(formData.purchase_date).toISOString() : undefined,
+        starting_odometer: parseFloat(String(formData.starting_odometer)) || 0,
+        current_odometer: parseFloat(String(formData.current_odometer)) || 0,
+        current_engine_hours: parseFloat(String(formData.current_engine_hours)) || 0,
+      });
       onClose();
     } catch (err) {
       alert('Ошибка при сохранении автомобиля');
@@ -186,7 +196,7 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
                 placeholder="Changan, Toyota, BMW..."
                 value={formData.make}
                 onChange={(e) => setFormData({ ...formData, make: e.target.value })}
-                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-300 dark:border-dark-750 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
+                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-300 dark:border-dark-750 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-medium"
               />
             </div>
             <div>
@@ -199,7 +209,7 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
                 placeholder="CS55 Plus, RAV4, 320i..."
                 value={formData.model}
                 onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-300 dark:border-dark-750 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
+                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-300 dark:border-dark-750 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-medium"
               />
             </div>
           </div>
@@ -215,7 +225,7 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
                 max={new Date().getFullYear() + 1}
                 value={formData.year}
                 onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) || 0 })}
-                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-300 dark:border-dark-750 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
+                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-300 dark:border-dark-750 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-mono"
               />
             </div>
             <div>
@@ -227,7 +237,7 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
                 placeholder="А381РН252"
                 value={formData.license_plate}
                 onChange={(e) => setFormData({ ...formData, license_plate: e.target.value })}
-                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-300 dark:border-dark-750 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 uppercase font-mono"
+                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-300 dark:border-dark-750 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 uppercase font-mono font-bold"
               />
             </div>
             <div>
@@ -240,6 +250,92 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
                 value={formData.engine}
                 onChange={(e) => setFormData({ ...formData, engine: e.target.value })}
                 className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-300 dark:border-dark-750 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
+              />
+            </div>
+          </div>
+
+          {/* PURCHASE DETAILS: Date of purchase and Starting Odometer */}
+          <div className="bg-slate-50 dark:bg-dark-900/80 border border-slate-200 dark:border-dark-750 p-4 rounded-2xl space-y-3">
+            <div className="flex items-center space-x-2">
+              <Calendar className="w-4 h-4 text-brand-500" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                Момент покупки и ввода в эксплуатацию
+              </h3>
+            </div>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Служит базовой точкой отсчета для сервисной книжки, регламентов ТО и расчета общей статистики.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Дата покупки / регистрации
+                </label>
+                <input
+                  type="date"
+                  value={formData.purchase_date}
+                  onChange={(e) => setFormData({ ...formData, purchase_date: e.target.value })}
+                  className="w-full bg-white dark:bg-dark-850 border border-slate-300 dark:border-dark-700 rounded-xl px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-semibold"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Пробег при покупке ({formData.distance_unit})
+                </label>
+                <input
+                  type="number"
+                  step="any"
+                  placeholder="0 для нового авто"
+                  value={formData.starting_odometer}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      starting_odometer: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                  className="w-full bg-white dark:bg-dark-850 border border-slate-300 dark:border-dark-700 rounded-xl px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-mono font-semibold"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* CURRENT ODOMETER & ENGINE HOURS */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Текущий пробег ({formData.distance_unit}) *
+              </label>
+              <input
+                type="number"
+                step="any"
+                required
+                value={formData.current_odometer}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    current_odometer: parseFloat(e.target.value) || 0,
+                  })
+                }
+                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-300 dark:border-dark-750 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-mono font-bold"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Текущие моточасы (м/ч)
+              </label>
+              <input
+                type="number"
+                step="any"
+                placeholder="809"
+                value={formData.current_engine_hours || ''}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    current_engine_hours: parseFloat(e.target.value) || 0,
+                  })
+                }
+                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-300 dark:border-dark-750 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-mono"
               />
             </div>
           </div>
@@ -271,46 +367,6 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Текущий пробег (км) *
-              </label>
-              <input
-                type="number"
-                step="any"
-                required
-                value={formData.current_odometer}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    current_odometer: parseFloat(e.target.value) || 0,
-                    starting_odometer: formData.starting_odometer === 0 ? parseFloat(e.target.value) || 0 : formData.starting_odometer,
-                  })
-                }
-                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-300 dark:border-dark-750 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-mono"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Моточасы (м/ч)
-              </label>
-              <input
-                type="number"
-                step="any"
-                placeholder="809"
-                value={formData.current_engine_hours || ''}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    current_engine_hours: parseFloat(e.target.value) || 0,
-                  })
-                }
-                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-300 dark:border-dark-750 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-mono"
-              />
-            </div>
-          </div>
-
           <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -319,7 +375,7 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
               <select
                 value={formData.distance_unit}
                 onChange={(e) => setFormData({ ...formData, distance_unit: e.target.value })}
-                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-300 dark:border-dark-750 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
+                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-300 dark:border-dark-750 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-semibold"
               >
                 <option value="km">Километры (км)</option>
                 <option value="mi">Мили (mi)</option>
@@ -332,7 +388,7 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
               <select
                 value={formData.fuel_unit}
                 onChange={(e) => setFormData({ ...formData, fuel_unit: e.target.value })}
-                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-300 dark:border-dark-750 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
+                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-300 dark:border-dark-750 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-semibold"
               >
                 <option value="L">Литры (L)</option>
                 <option value="gal">Галлоны (gal)</option>
@@ -345,7 +401,7 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
               <select
                 value={formData.currency}
                 onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-300 dark:border-dark-750 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
+                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-300 dark:border-dark-750 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-semibold"
               >
                 <option value="RUB">₽ (RUB)</option>
                 <option value="USD">$ (USD)</option>
