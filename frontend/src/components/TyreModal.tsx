@@ -242,25 +242,27 @@ export const TyreModal: React.FC<TyreModalProps> = ({
 
           {/* Section 2: Wheel Rims (Колесные диски) */}
           <div className="bg-slate-50 dark:bg-dark-900/80 border border-slate-200 dark:border-dark-750 p-3.5 sm:p-4 rounded-2xl space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <CircleDot className="w-4 h-4 text-amber-500" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center space-x-2 min-w-0">
+                <CircleDot className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 truncate">
                   Колесные диски
                 </h3>
               </div>
 
-              <label className="relative inline-flex items-center cursor-pointer flex-shrink-0 space-x-2">
+              <label className="inline-flex items-center gap-2 cursor-pointer flex-shrink-0 select-none">
                 <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                   На отдельных дисках
                 </span>
-                <input
-                  type="checkbox"
-                  checked={formData.has_separate_rims}
-                  onChange={(e) => setFormData({ ...formData, has_separate_rims: e.target.checked })}
-                  className="sr-only peer"
-                />
-                <div className="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-dark-750 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-brand-500"></div>
+                <div className="relative inline-flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={formData.has_separate_rims}
+                    onChange={(e) => setFormData({ ...formData, has_separate_rims: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-dark-750 peer-checked:after:translate-x-4 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-brand-500"></div>
+                </div>
               </label>
             </div>
 
