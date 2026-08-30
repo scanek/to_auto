@@ -54,18 +54,25 @@ async def create_service_record(
     data = payload.model_dump(exclude={"items"})
     items_data = payload.items or []
 
-    # Calculate costs if items provided
-    items_parts_cost = sum(it.total_price or (it.quantity * it.unit_price) for it in items_data if it.category == "part")
-    items_labor_cost = sum(it.total_price or (it.quantity * it.unit_price) for it in items_data if it.category == "labor")
+    # Calculate costs from items
+    items_parts_cost = sum(
+        (it.total_price if it.total_price is not None and it.total_price > 0 else (it.quantity * it.unit_price))
+        for it in items_data if it.category != "labor"
+    )
+    items_labor_cost = sum(
+        (it.total_price if it.total_price is not None and it.total_price > 0 else (it.quantity * it.unit_price))
+        for it in items_data if it.category == "labor"
+    )
 
-    if items_parts_cost > 0 and not data.get("cost_parts"):
+    if items_parts_cost > 0 and (not data.get("cost_parts") or data.get("cost_parts") == 0.0):
         data["cost_parts"] = items_parts_cost
-    if items_labor_cost > 0 and not data.get("cost_labor"):
+    if items_labor_cost > 0 and (not data.get("cost_labor") or data.get("cost_labor") == 0.0):
         data["cost_labor"] = items_labor_cost
 
     calc_total = (data.get("cost_parts") or 0.0) + (data.get("cost_labor") or 0.0)
-    if calc_total > 0 and (not data.get("total_cost") or data.get("total_cost") == 0.0):
-        data["total_cost"] = calc_total
+    if calc_total > 0:
+        if not data.get("total_cost") or data.get("total_cost") == 0.0 or data.get("total_cost") < calc_total:
+            data["total_cost"] = calc_total
 
     record = ServiceRecord(**data, vehicle_id=vehicle_id)
     db.add(record)
@@ -74,7 +81,7 @@ async def create_service_record(
     for it in items_data:
         it_dict = it.model_dump()
         if not it_dict.get("total_price") or it_dict.get("total_price") == 0:
-            it_dict["total_price"] = it_dict["quantity"] * it_dict["unit_price"]
+            it_dict["total_price"] = (it_dict.get("quantity") or 1.0) * (it_dict.get("unit_price") or 0.0)
         item = ServiceItem(**it_dict, service_record_id=record.id)
         db.add(item)
 
@@ -149,19 +156,39 @@ async def update_service_record(
         setattr(record, key, value)
     
     if payload.items is not None:
-        # Replace items
-        for old_it in record.items:
-            await db.delete(old_it)
+        # Calculate parts & labor sum from payload items
+        items_parts_cost = sum(
+            (it.total_price if it.total_price is not None and it.total_price > 0 else (it.quantity * it.unit_price))
+            for it in payload.items if it.category != "labor"
+        )
+        items_labor_cost = sum(
+            (it.total_price if it.total_price is not None and it.total_price > 0 else (it.quantity * it.unit_price))
+            for it in payload.items if it.category == "labor"
+        )
+
+        if items_parts_cost > 0:
+            if not record.cost_parts or record.cost_parts == 0.0 or "cost_parts" not in update_data or record.cost_parts < items_parts_cost:
+                record.cost_parts = items_parts_cost
+        elif not payload.items and "cost_parts" not in update_data:
+            record.cost_parts = 0.0
+
+        if items_labor_cost > 0:
+            if not record.cost_labor or record.cost_labor == 0.0 or "cost_labor" not in update_data:
+                record.cost_labor = items_labor_cost
+
+        # Reassign items cleanly via ORM
+        new_items = []
         for it in payload.items:
             it_dict = it.model_dump()
             if not it_dict.get("total_price") or it_dict.get("total_price") == 0:
-                it_dict["total_price"] = it_dict["quantity"] * it_dict["unit_price"]
-            new_item = ServiceItem(**it_dict, service_record_id=record.id)
-            db.add(new_item)
+                it_dict["total_price"] = (it_dict.get("quantity") or 1.0) * (it_dict.get("unit_price") or 0.0)
+            new_items.append(ServiceItem(**it_dict))
+        record.items = new_items
 
-    if record.cost_parts or record.cost_labor:
-        calc_total = (record.cost_parts or 0.0) + (record.cost_labor or 0.0)
-        if not payload.total_cost:
+    # Synchronize total_cost
+    calc_total = (record.cost_parts or 0.0) + (record.cost_labor or 0.0)
+    if calc_total > 0:
+        if not record.total_cost or record.total_cost == 0.0 or "total_cost" not in update_data or record.total_cost < calc_total:
             record.total_cost = calc_total
 
     await db.commit()

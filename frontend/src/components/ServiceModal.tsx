@@ -42,6 +42,21 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
 
   useEffect(() => {
     if (record) {
+      const recordItems = record.items || [];
+      const partsSum = recordItems
+        .filter((it) => it.category !== 'labor')
+        .reduce((sum, it) => sum + (it.total_price || ((it.quantity || 1) * (it.unit_price || 0))), 0);
+      const laborSum = recordItems
+        .filter((it) => it.category === 'labor')
+        .reduce((sum, it) => sum + (it.total_price || ((it.quantity || 1) * (it.unit_price || 0))), 0);
+
+      const resolvedParts = partsSum > 0 ? partsSum : (record.cost_parts || 0);
+      const resolvedLabor = laborSum > 0 ? laborSum : (record.cost_labor || 0);
+      const minTotal = resolvedParts + resolvedLabor;
+      const resolvedTotal = (record.total_cost && record.total_cost >= minTotal && record.total_cost > 0)
+        ? record.total_cost
+        : minTotal;
+
       setFormData({
         record_type: record.record_type,
         to_tag: record.to_tag || '',
@@ -52,12 +67,12 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
         description: record.description || '',
         store: record.store || '',
         url: record.url || '',
-        cost_labor: record.cost_labor || 0,
-        cost_parts: record.cost_parts || 0,
-        total_cost: record.total_cost || 0,
+        cost_labor: resolvedLabor,
+        cost_parts: resolvedParts,
+        total_cost: resolvedTotal,
         notes: record.notes || '',
       });
-      setItems(record.items || []);
+      setItems(recordItems);
     } else {
       setFormData({
         record_type: defaultType,
@@ -80,8 +95,32 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
 
   if (!isOpen) return null;
 
+  const updateItemsAndCosts = (
+    newItems: ServiceItem[],
+    customLabor?: number,
+    customParts?: number
+  ) => {
+    setItems(newItems);
+    const partsSum = newItems
+      .filter((it) => it.category !== 'labor')
+      .reduce((sum, it) => sum + (it.total_price || ((it.quantity || 1) * (it.unit_price || 0))), 0);
+    const laborSum = newItems
+      .filter((it) => it.category === 'labor')
+      .reduce((sum, it) => sum + (it.total_price || ((it.quantity || 1) * (it.unit_price || 0))), 0);
+
+    const parts = customParts !== undefined ? customParts : (partsSum > 0 ? partsSum : (newItems.length === 0 ? formData.cost_parts : partsSum));
+    const labor = customLabor !== undefined ? customLabor : (laborSum > 0 ? laborSum : formData.cost_labor);
+
+    setFormData((prev) => ({
+      ...prev,
+      cost_parts: parts,
+      cost_labor: labor,
+      total_cost: parts + labor,
+    }));
+  };
+
   const handleAddItem = () => {
-    setItems([
+    const newItems = [
       ...items,
       {
         name: '',
@@ -95,7 +134,8 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
         unit_price: 0,
         total_price: 0,
       },
-    ]);
+    ];
+    updateItemsAndCosts(newItems);
   };
 
   const handleUpdateItem = (index: number, field: keyof ServiceItem, value: any) => {
@@ -103,50 +143,44 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
     next[index] = { ...next[index], [field]: value };
 
     if (field === 'quantity' || field === 'unit_price') {
-      const q = field === 'quantity' ? value : next[index].quantity;
-      const u = field === 'unit_price' ? value : next[index].unit_price;
-      next[index].total_price = (parseFloat(q) || 0) * (parseFloat(u) || 0);
+      const q = field === 'quantity' ? parseFloat(value) || 0 : next[index].quantity;
+      const u = field === 'unit_price' ? parseFloat(value) || 0 : next[index].unit_price;
+      next[index].total_price = q * u;
     }
 
-    setItems(next);
-
-    // Recalculate parts cost
-    const partsTotal = next
-      .filter((it) => it.category === 'part')
-      .reduce((sum, it) => sum + (it.total_price || 0), 0);
-    const laborTotal = next
-      .filter((it) => it.category === 'labor')
-      .reduce((sum, it) => sum + (it.total_price || 0), 0);
-
-    const newLabor = laborTotal > 0 ? laborTotal : formData.cost_labor;
-    const newParts = partsTotal > 0 ? partsTotal : formData.cost_parts;
-
-    setFormData((prev) => ({
-      ...prev,
-      cost_parts: partsTotal > 0 ? partsTotal : prev.cost_parts,
-      cost_labor: laborTotal > 0 ? laborTotal : prev.cost_labor,
-      total_cost: newParts + newLabor,
-    }));
+    updateItemsAndCosts(next);
   };
 
   const handleRemoveItem = (index: number) => {
     const next = items.filter((_, idx) => idx !== index);
-    setItems(next);
+    updateItemsAndCosts(next);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const total = (formData.total_cost && formData.total_cost > 0)
+      const partsSum = items
+        .filter((it) => it.category !== 'labor')
+        .reduce((sum, it) => sum + (it.total_price || ((it.quantity || 1) * (it.unit_price || 0))), 0);
+      const laborSum = items
+        .filter((it) => it.category === 'labor')
+        .reduce((sum, it) => sum + (it.total_price || ((it.quantity || 1) * (it.unit_price || 0))), 0);
+
+      const resolvedParts = partsSum > 0 ? partsSum : (formData.cost_parts || 0);
+      const resolvedLabor = laborSum > 0 ? laborSum : (formData.cost_labor || 0);
+      const minTotal = resolvedParts + resolvedLabor;
+      const finalTotal = formData.total_cost > 0 && formData.total_cost >= minTotal
         ? formData.total_cost
-        : (formData.cost_parts || 0) + (formData.cost_labor || 0);
+        : minTotal;
 
       await onSave({
         ...formData,
+        cost_parts: resolvedParts,
+        cost_labor: resolvedLabor,
+        total_cost: finalTotal,
         date: new Date(formData.date).toISOString(),
         engine_hours: formData.engine_hours > 0 ? formData.engine_hours : undefined,
-        total_cost: total,
         items,
       });
       onClose();

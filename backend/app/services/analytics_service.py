@@ -42,6 +42,9 @@ async def compute_vehicle_analytics(session: AsyncSession, vehicle: Vehicle) -> 
 
     for s in service_records:
         cost = s.total_cost or 0.0
+        calc_min = (s.cost_parts or 0.0) + (s.cost_labor or 0.0)
+        if calc_min > cost:
+            cost = calc_min
         month_key = s.date.strftime("%Y-%m") if s.date else "Неизвестно"
         
         if s.record_type == RecordType.SERVICE.value:

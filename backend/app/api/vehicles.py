@@ -23,9 +23,12 @@ router = APIRouter(prefix="/vehicles", tags=["Vehicles"])
 async def calculate_vehicle_totals(db: AsyncSession, v: Vehicle, resp: VehicleResponse):
     # Service
     srv_cost_res = await db.execute(
-        select(func.sum(ServiceRecord.total_cost)).where(ServiceRecord.vehicle_id == v.id)
+        select(ServiceRecord.total_cost, ServiceRecord.cost_parts, ServiceRecord.cost_labor).where(ServiceRecord.vehicle_id == v.id)
     )
-    resp.total_service_cost = srv_cost_res.scalar() or 0.0
+    srv_records = srv_cost_res.all()
+    resp.total_service_cost = sum(
+        max(r[0] or 0.0, (r[1] or 0.0) + (r[2] or 0.0)) for r in srv_records
+    )
 
     # Fuel
     fuel_cost_res = await db.execute(

@@ -86,6 +86,47 @@ async def auto_migrate_sqlite(conn):
                 except Exception as e:
                     print(f"Migration note for {table_name}.{col_name}: {e}")
 
+async def heal_service_records_totals():
+    """
+    Synchronizes cost_parts and total_cost for any existing records in the database.
+    """
+    from app.models.service import ServiceRecord
+    from sqlalchemy.orm import selectinload
+    from sqlalchemy import select
+
+    async with AsyncSessionLocal() as session:
+        try:
+            res = await session.execute(
+                select(ServiceRecord).options(selectinload(ServiceRecord.items))
+            )
+            records = res.scalars().all()
+            changed = False
+            for r in records:
+                if r.items:
+                    items_parts = sum(
+                        (it.total_price if it.total_price is not None and it.total_price > 0 else (it.quantity * it.unit_price))
+                        for it in r.items if it.category != "labor"
+                    )
+                    items_labor = sum(
+                        (it.total_price if it.total_price is not None and it.total_price > 0 else (it.quantity * it.unit_price))
+                        for it in r.items if it.category == "labor"
+                    )
+                    if items_parts > 0 and (not r.cost_parts or r.cost_parts == 0.0 or r.cost_parts < items_parts):
+                        r.cost_parts = items_parts
+                        changed = True
+                    if items_labor > 0 and (not r.cost_labor or r.cost_labor == 0.0):
+                        r.cost_labor = items_labor
+                        changed = True
+                    
+                    calc_total = (r.cost_parts or 0.0) + (r.cost_labor or 0.0)
+                    if calc_total > 0 and (not r.total_cost or r.total_cost < calc_total):
+                        r.total_cost = calc_total
+                        changed = True
+            if changed:
+                await session.commit()
+        except Exception as e:
+            print(f"Service records healing note: {e}")
+
 async def init_db():
     async with engine.begin() as conn:
         # 1. Create tables if they don't exist
@@ -93,3 +134,5 @@ async def init_db():
         # 2. Automatically apply SQLite migrations for existing DB volumes
         if "sqlite" in settings.DATABASE_URL:
             await auto_migrate_sqlite(conn)
+    # 3. Heal any existing service records costs
+    await heal_service_records_totals()
