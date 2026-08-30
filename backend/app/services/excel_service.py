@@ -168,7 +168,7 @@ def generate_vehicle_excel(vehicle, service_records, fuel_logs, reminders, tyres
     ws4 = wb.create_sheet(title="Шины и Колеса")
     ws4.views.sheetView[0].showGridLines = True
     
-    headers_s4 = ["Комплект", "Сезон", "Размерность", "Модель", "Пробег (км)", "Остаток (мм)", "Хранение", "Статус", f"Стоимость ({vehicle.currency})"]
+    headers_s4 = ["Комплект", "Сезон", "Размер шин", "Модель резины", "Дата покупки шин", "DOT", "Диски", "Параметры дисков", "Дата покупки дисков", "TPMS", "Пробег (км)", "Остаток (мм)", "Хранение", "Статус", f"Шины ({vehicle.currency})", f"Диски ({vehicle.currency})", f"Всего ({vehicle.currency})"]
     for col_idx, h in enumerate(headers_s4, 1):
         cell = ws4.cell(row=1, column=col_idx, value=h)
         cell.font = header_font
@@ -179,16 +179,32 @@ def generate_vehicle_excel(vehicle, service_records, fuel_logs, reminders, tyres
     for t in tyres:
         season_str = "Лето ☀️" if t.season == "summer" else "Зима ❄️"
         status_str = "На автомобиле (Активен)" if t.is_active else "В хранении"
+        p_date = t.purchase_date.strftime("%d.%m.%Y") if getattr(t, "purchase_date", None) else "—"
+        r_pdate = t.rims_purchase_date.strftime("%d.%m.%Y") if (getattr(t, "rims_purchase_date", None) and t.has_separate_rims) else "—"
+        rims_title = t.rims_brand_model if t.has_separate_rims else "Без отдельных дисков"
+        rims_size = t.rims_size if t.has_separate_rims else "—"
+        tpms = t.tpms_sensors if t.has_separate_rims else "—"
+        total_inv = (t.total_price or 0.0) + (t.rims_price or 0.0 if t.has_separate_rims else 0.0)
+
         ws4.cell(row=r_idx, column=1, value=t.name).font = bold_font
         ws4.cell(row=r_idx, column=2, value=season_str).font = regular_font
         ws4.cell(row=r_idx, column=3, value=t.size or "—").font = regular_font
         ws4.cell(row=r_idx, column=4, value=t.brand_model or "—").font = regular_font
-        ws4.cell(row=r_idx, column=5, value=t.current_km).font = regular_font
-        ws4.cell(row=r_idx, column=6, value=f"{t.tread_depth_mm} мм").font = bold_font
-        ws4.cell(row=r_idx, column=7, value=t.storage_location or "—").font = regular_font
-        ws4.cell(row=r_idx, column=8, value=status_str).font = bold_font
-        ws4.cell(row=r_idx, column=9, value=t.total_price).font = regular_font
-        for c in range(1, 10):
+        ws4.cell(row=r_idx, column=5, value=p_date).font = regular_font
+        ws4.cell(row=r_idx, column=6, value=t.dot_code or "—").font = regular_font
+        ws4.cell(row=r_idx, column=7, value=rims_title or "—").font = regular_font
+        ws4.cell(row=r_idx, column=8, value=rims_size or "—").font = regular_font
+        ws4.cell(row=r_idx, column=9, value=r_pdate).font = regular_font
+        ws4.cell(row=r_idx, column=10, value=tpms or "—").font = regular_font
+        ws4.cell(row=r_idx, column=11, value=t.current_km).font = regular_font
+        ws4.cell(row=r_idx, column=12, value=f"{t.tread_depth_mm} мм").font = bold_font
+        ws4.cell(row=r_idx, column=13, value=t.storage_location or "—").font = regular_font
+        ws4.cell(row=r_idx, column=14, value=status_str).font = bold_font
+        ws4.cell(row=r_idx, column=15, value=t.total_price).font = regular_font
+        ws4.cell(row=r_idx, column=16, value=t.rims_price if t.has_separate_rims else 0.0).font = regular_font
+        ws4.cell(row=r_idx, column=17, value=total_inv).font = bold_font
+
+        for c in range(1, 18):
             ws4.cell(row=r_idx, column=c).border = thin_border
         r_idx += 1
 

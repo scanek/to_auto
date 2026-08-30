@@ -18,6 +18,14 @@ class TyreSet(Base):
     is_active = Column(Boolean, default=False) # Установлен ли сейчас на авто
     install_date = Column(DateTime, nullable=True)
     install_mileage = Column(Float, nullable=True)
+    purchase_date = Column(DateTime, nullable=True) # Дата покупки шин
+    dot_code = Column(String(50), nullable=True) # Год/неделя производства резины (DOT)
+    has_separate_rims = Column(Boolean, default=False) # На отдельных дисках
+    rims_brand_model = Column(String(100), nullable=True) # Модель дисков
+    rims_size = Column(String(50), nullable=True) # Параметры дисков (19x7.5J 5x114.3 ET45)
+    rims_purchase_date = Column(DateTime, nullable=True) # Дата покупки дисков
+    rims_price = Column(Float, default=0.0) # Стоимость дисков
+    tpms_sensors = Column(String(100), nullable=True) # Датчики давления TPMS
     quantity = Column(Float, default=4.0)
     price_per_unit = Column(Float, default=0.0)
     total_price = Column(Float, default=0.0)

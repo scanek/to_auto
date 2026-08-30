@@ -1079,6 +1079,16 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                             {t.brand_model} {t.size && <span className="font-mono text-slate-400">({t.size})</span>}
                           </div>
                         )}
+                        {(t.purchase_date || t.dot_code) && (
+                          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 flex flex-wrap items-center gap-1.5 font-medium">
+                            {t.purchase_date && (
+                              <span>📅 Куплены: {new Date(t.purchase_date).toLocaleDateString('ru-RU')}</span>
+                            )}
+                            {t.dot_code && (
+                              <span className="font-mono text-slate-400">• DOT {t.dot_code}</span>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       {isOwner && (
@@ -1098,6 +1108,32 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                         </div>
                       )}
                     </div>
+
+                    {/* Wheel Rims Info (if set) */}
+                    {t.has_separate_rims && (
+                      <div className="bg-slate-100 dark:bg-dark-900/60 p-2 sm:p-2.5 rounded-xl border border-slate-200 dark:border-dark-750 text-xs space-y-1">
+                        <div className="flex items-center justify-between text-slate-800 dark:text-slate-200 font-semibold text-[11px]">
+                          <span className="flex items-center gap-1 truncate mr-2">
+                            <CircleDot className="w-3 h-3 text-amber-500 flex-shrink-0" />
+                            Диски: {t.rims_brand_model || 'Отдельные диски'}
+                            {t.rims_size && <span className="font-mono text-slate-500 font-normal"> ({t.rims_size})</span>}
+                          </span>
+                          {t.rims_price > 0 && (
+                            <span className="font-mono font-bold text-amber-600 dark:text-amber-400 flex-shrink-0">
+                              {t.rims_price.toLocaleString('ru-RU')} {vehicle.currency}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 text-[10.5px] text-slate-500 dark:text-slate-400">
+                          {t.rims_purchase_date && (
+                            <span>📅 Покупка: {new Date(t.rims_purchase_date).toLocaleDateString('ru-RU')}</span>
+                          )}
+                          {t.tpms_sensors && (
+                            <span className="text-cyan-600 dark:text-cyan-400 font-medium">📡 {t.tpms_sensors}</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     <div className="grid grid-cols-2 gap-2 bg-slate-50 dark:bg-dark-900/80 p-2.5 sm:p-3 rounded-xl border border-slate-200 dark:border-dark-750 text-xs">
                       <div>
@@ -1121,9 +1157,9 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                     <div className="flex items-center justify-between pt-2.5 border-t border-slate-200 dark:border-dark-750/70 text-xs">
                       <div className="text-slate-500 dark:text-slate-400 truncate mr-2">
                         {t.storage_location && <span>📍 {t.storage_location}</span>}
-                        {t.total_price > 0 && (
-                          <span className="block font-mono text-brand-600 dark:text-brand-400 font-bold text-[11px]">
-                            {t.total_price.toLocaleString('ru-RU')} {vehicle.currency}
+                        {(t.total_price > 0 || (t.rims_price && t.rims_price > 0)) && (
+                          <span className="block font-mono text-brand-600 dark:text-brand-400 font-bold text-[11px]" title={`Шины: ${t.total_price || 0} ${vehicle.currency}${t.rims_price ? ` + Диски: ${t.rims_price} ${vehicle.currency}` : ''}`}>
+                            Итого: {(t.total_price + (t.rims_price || 0)).toLocaleString('ru-RU')} {vehicle.currency}
                           </span>
                         )}
                       </div>

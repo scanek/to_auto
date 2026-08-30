@@ -160,6 +160,14 @@ export interface TyreSet {
   is_active: boolean;
   install_date?: string;
   install_mileage?: number | null;
+  purchase_date?: string;
+  dot_code?: string;
+  has_separate_rims?: boolean;
+  rims_brand_model?: string;
+  rims_size?: string;
+  rims_purchase_date?: string;
+  rims_price?: number;
+  tpms_sensors?: string;
   quantity: number;
   price_per_unit: number;
   total_price: number;

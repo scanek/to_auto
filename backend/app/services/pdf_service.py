@@ -86,7 +86,19 @@ def generate_service_booklet_html(
                 if t.is_active
                 else '<span class="badge" style="background:#edf2f7; color:#718096;">На хранении</span>'
             )
-            active_class = " active" if t.is_active else ""
+            purchase_str = ""
+            if t.purchase_date:
+                t_pdate = t.purchase_date.strftime("%d.%m.%Y") if hasattr(t.purchase_date, "strftime") else str(t.purchase_date)[:10]
+                dot_str = f" [DOT {t.dot_code}]" if t.dot_code else ""
+                purchase_str = f'<div>Куплены: <strong>{t_pdate}{dot_str}</strong></div>'
+
+            rims_str = ""
+            if t.has_separate_rims:
+                r_model = t.rims_brand_model or "Отдельные диски"
+                r_size = f" ({t.rims_size})" if t.rims_size else ""
+                r_date = f", куплены {t.rims_purchase_date.strftime('%d.%m.%Y')}" if (t.rims_purchase_date and hasattr(t.rims_purchase_date, "strftime")) else ""
+                r_tpms = f", {t.tpms_sensors}" if t.tpms_sensors else ""
+                rims_str = f'<div style="grid-column: span 2; margin-top: 3px; color: #b45309;">🔘 Диски: <strong>{r_model}{r_size}</strong>{r_date}{r_tpms}</div>'
 
             tyre_cards += f"""
             <div class="tyre-card{active_class}">
@@ -100,7 +112,9 @@ def generate_service_booklet_html(
                 <div class="tyre-details">
                     <div>Пробег на комплекте: <strong>{int(t.current_km):,} км</strong></div>
                     <div>Остаток протектора: <strong>{t.tread_depth_mm} мм</strong></div>
-                    {f'<div style="grid-column: span 2;">Место хранения: <em>{t.storage_location}</em></div>' if t.storage_location else ''}
+                    {purchase_str}
+                    {f'<div>Место хранения: <em>{t.storage_location}</em></div>' if t.storage_location else ''}
+                    {rims_str}
                 </div>
             </div>
             """

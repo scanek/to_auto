@@ -69,6 +69,16 @@ async def auto_migrate_sqlite(conn):
             ("mileage", "FLOAT"),
             ("engine_hours", "FLOAT"),
             ("is_active", "BOOLEAN DEFAULT 1"),
+        ],
+        "tyre_sets": [
+            ("purchase_date", "DATETIME"),
+            ("dot_code", "VARCHAR(50)"),
+            ("has_separate_rims", "BOOLEAN DEFAULT 0"),
+            ("rims_brand_model", "VARCHAR(100)"),
+            ("rims_size", "VARCHAR(50)"),
+            ("rims_purchase_date", "DATETIME"),
+            ("rims_price", "FLOAT DEFAULT 0.0"),
+            ("tpms_sensors", "VARCHAR(100)"),
         ]
     }
 
