@@ -86,6 +86,8 @@ def generate_service_booklet_html(
                 if t.is_active
                 else '<span class="badge" style="background:#edf2f7; color:#718096;">На хранении</span>'
             )
+            active_class = " active" if t.is_active else ""
+
             purchase_str = ""
             if t.purchase_date:
                 t_pdate = t.purchase_date.strftime("%d.%m.%Y") if hasattr(t.purchase_date, "strftime") else str(t.purchase_date)[:10]
@@ -110,8 +112,8 @@ def generate_service_booklet_html(
                     {t.brand_model or ''} {f'({t.size})' if t.size else ''}
                 </div>
                 <div class="tyre-details">
-                    <div>Пробег на комплекте: <strong>{int(t.current_km):,} км</strong></div>
-                    <div>Остаток протектора: <strong>{t.tread_depth_mm} мм</strong></div>
+                    <div>Пробег на комплекте: <strong>{int(t.current_km or 0):,} км</strong></div>
+                    <div>Остаток протектора: <strong>{t.tread_depth_mm or 0} мм</strong></div>
                     {purchase_str}
                     {f'<div>Место хранения: <em>{t.storage_location}</em></div>' if t.storage_location else ''}
                     {rims_str}
@@ -129,7 +131,7 @@ def generate_service_booklet_html(
     purchase_info = "—"
     if vehicle.purchase_date:
         p_date = vehicle.purchase_date.strftime("%d.%m.%Y") if hasattr(vehicle.purchase_date, "strftime") else str(vehicle.purchase_date)[:10]
-        p_odo = f" (с {int(vehicle.starting_odometer):,} {vehicle.distance_unit})" if vehicle.starting_odometer is not None else ""
+        p_odo = f" (с {int(vehicle.starting_odometer or 0):,} {vehicle.distance_unit})" if vehicle.starting_odometer is not None else ""
         purchase_info = f"{p_date}{p_odo}".replace(",", " ")
     elif vehicle.starting_odometer:
         purchase_info = f"С {int(vehicle.starting_odometer):,} {vehicle.distance_unit}".replace(",", " ")
