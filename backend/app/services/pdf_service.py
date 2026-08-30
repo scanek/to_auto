@@ -40,8 +40,10 @@ def generate_service_booklet_html(
                 store_info = f" • {it.store}" if it.store else ""
                 art_info = f" [арт: {it.part_number}]" if it.part_number else ""
                 brand_info = f" ({it.brand})" if it.brand else ""
+                unit_str = it.unit or "шт"
+                price_str = f"{it.quantity} {unit_str} × {it.unit_price:,.0f} {vehicle.currency}".replace(",", " ") if (it.quantity and it.quantity > 1 and it.unit_price) else f"{it.total_price:,.0f} {vehicle.currency}".replace(",", " ")
                 items_list.append(
-                    f"• <strong>{it.name}</strong>{brand_info}{art_info}{store_info} — {it.quantity} шт. × {it.unit_price:,.0f} {vehicle.currency}".replace(",", " ")
+                    f"• <strong>{it.name}</strong>{brand_info}{art_info}{store_info} — {price_str}"
                 )
             items_html = f'<div class="items-list">{"<br>".join(items_list)}</div>'
 
@@ -109,6 +111,14 @@ def generate_service_booklet_html(
             {tyre_cards}
         </div>
         """
+
+    purchase_info = "—"
+    if vehicle.purchase_date:
+        p_date = vehicle.purchase_date.strftime("%d.%m.%Y") if hasattr(vehicle.purchase_date, "strftime") else str(vehicle.purchase_date)[:10]
+        p_odo = f" (с {int(vehicle.starting_odometer):,} {vehicle.distance_unit})" if vehicle.starting_odometer is not None else ""
+        purchase_info = f"{p_date}{p_odo}".replace(",", " ")
+    elif vehicle.starting_odometer:
+        purchase_info = f"С {int(vehicle.starting_odometer):,} {vehicle.distance_unit}".replace(",", " ")
 
     html = f"""<!DOCTYPE html>
 <html lang="ru">
@@ -328,6 +338,10 @@ def generate_service_booklet_html(
             <span class="value">{vehicle.vin or 'Не указан'}</span>
         </div>
         <div class="item">
+            <span class="label">Момент покупки / ввода</span>
+            <span class="value">{purchase_info}</span>
+        </div>
+        <div class="item">
             <span class="label">Текущий пробег</span>
             <span class="value">{int(vehicle.current_odometer):,} {vehicle.distance_unit}</span>
         </div>
@@ -335,7 +349,7 @@ def generate_service_booklet_html(
             <span class="label">Двигатель / Моточасы</span>
             <span class="value">{vehicle.engine or '—'}{f' • {int(vehicle.current_engine_hours)} м/ч' if vehicle.current_engine_hours else ''}</span>
         </div>
-        <div class="item">
+        <div class="item" style="grid-column: span 3;">
             <span class="label">Спецификация масла</span>
             <span class="value">{vehicle.oil_spec or '—'}</span>
         </div>

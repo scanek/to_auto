@@ -35,10 +35,16 @@ def generate_vehicle_excel(vehicle, service_records, fuel_logs, reminders, tyres
     ws1["A1"].font = title_font
     ws1["A1"].alignment = Alignment(vertical="center")
     
+    purchase_date_str = vehicle.purchase_date.strftime("%d.%m.%Y") if getattr(vehicle, "purchase_date", None) else "—"
+    starting_odo_str = f"{vehicle.starting_odometer:,.0f} {vehicle.distance_unit}".replace(",", " ") if getattr(vehicle, "starting_odometer", None) is not None else "0 " + vehicle.distance_unit
+
     veh_info = [
         ("Марка и модель", f"{vehicle.make} {vehicle.model}"),
         ("Год выпуска", vehicle.year or "—"),
         ("Гос. номер", vehicle.license_plate or "—"),
+        ("VIN номер", vehicle.vin or "—"),
+        ("Дата покупки / регистрации", purchase_date_str),
+        ("Пробег при покупке", starting_odo_str),
         ("Двигатель / КПП", vehicle.engine or "—"),
         ("Спецификация масла", vehicle.oil_spec or "—"),
         ("Текущий пробег", f"{vehicle.current_odometer:,.0f} {vehicle.distance_unit}".replace(",", " ")),
