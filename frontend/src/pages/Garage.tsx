@@ -197,8 +197,8 @@ export const Garage: React.FC<GarageProps> = ({
         </div>
 
         {/* Filter Tabs & Hide Shared Controls */}
-        {allSharedVehicles.length > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-2.5">
+        {vehicles.length > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-2.5 pt-1">
             <div className="flex flex-wrap items-center gap-1.5 bg-slate-200/60 dark:bg-dark-800 p-1 rounded-xl text-xs font-bold">
               <button
                 onClick={() => setFilterTab('all')}
@@ -238,8 +238,8 @@ export const Garage: React.FC<GarageProps> = ({
                 onClick={handleToggleHideAllShared}
                 className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border shadow-sm ${
                   hideAllShared
-                    ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30'
-                    : 'bg-white dark:bg-dark-850 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-dark-750 hover:bg-slate-50 dark:hover:bg-dark-800'
+                    ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/40 hover:bg-amber-500/25'
+                    : 'bg-white dark:bg-dark-850 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-dark-750 hover:bg-slate-50 dark:hover:bg-dark-800'
                 }`}
                 title={
                   hideAllShared
