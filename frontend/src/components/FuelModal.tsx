@@ -108,27 +108,27 @@ export const FuelModal: React.FC<FuelModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-dark-850 border border-dark-750 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-dark-750">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
+      <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl transition-colors">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-dark-750">
           <div className="flex items-center space-x-2">
-            <Fuel className="w-5 h-5 text-brand-400" />
-            <h2 className="text-base font-bold text-white">
+            <Fuel className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">
               {log ? 'Редактировать заправку' : 'Добавить заправку'}
             </h2>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-dark-800 transition-colors"
+            className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-dark-800 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 max-h-[82vh] overflow-y-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Дата заправки *
               </label>
               <input
@@ -136,11 +136,11 @@ export const FuelModal: React.FC<FuelModalProps> = ({
                 required
                 value={formData.date}
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                className="w-full bg-dark-900 border border-dark-750 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
+                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-medium"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Текущий одометр ({vehicle.distance_unit}) *
               </label>
               <input
@@ -151,14 +151,14 @@ export const FuelModal: React.FC<FuelModalProps> = ({
                 onChange={(e) =>
                   setFormData({ ...formData, odometer: parseFloat(e.target.value) || 0 })
                 }
-                className="w-full bg-dark-900 border border-dark-750 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500 font-mono"
+                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-mono font-semibold"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3 bg-dark-900 p-3.5 rounded-xl border border-dark-750">
+          <div className="grid grid-cols-3 gap-2.5 sm:gap-3 bg-slate-50 dark:bg-dark-900/80 p-3 sm:p-3.5 rounded-2xl border border-slate-200 dark:border-dark-750">
             <div>
-              <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+              <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
                 Объем ({vehicle.fuel_unit}) *
               </label>
               <input
@@ -168,11 +168,11 @@ export const FuelModal: React.FC<FuelModalProps> = ({
                 required
                 value={formData.fuel_amount}
                 onChange={(e) => handleAmountChange(parseFloat(e.target.value) || 0)}
-                className="w-full bg-dark-850 border border-dark-750 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-brand-500 font-mono"
+                className="w-full bg-white dark:bg-dark-850 border border-slate-300 dark:border-dark-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-mono font-semibold"
               />
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+              <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
                 Цена за {vehicle.fuel_unit}
               </label>
               <input
@@ -181,11 +181,11 @@ export const FuelModal: React.FC<FuelModalProps> = ({
                 min="0"
                 value={formData.unit_price}
                 onChange={(e) => handleUnitPriceChange(parseFloat(e.target.value) || 0)}
-                className="w-full bg-dark-850 border border-dark-750 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-brand-500 font-mono"
+                className="w-full bg-white dark:bg-dark-850 border border-slate-300 dark:border-dark-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-mono font-semibold"
               />
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-brand-400 mb-1">
+              <label className="block text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 mb-1">
                 Сумма ({vehicle.currency}) *
               </label>
               <input
@@ -195,14 +195,14 @@ export const FuelModal: React.FC<FuelModalProps> = ({
                 required
                 value={formData.total_cost}
                 onChange={(e) => handleTotalCostChange(parseFloat(e.target.value) || 0)}
-                className="w-full bg-dark-850 border border-brand-500/50 rounded-lg px-2.5 py-1.5 text-xs text-brand-400 font-bold focus:outline-none focus:border-brand-500 font-mono"
+                className="w-full bg-white dark:bg-dark-850 border border-emerald-500/50 rounded-xl px-2.5 py-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-bold focus:outline-none focus:border-emerald-500 font-mono"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Марка топлива
               </label>
               <input
@@ -210,11 +210,11 @@ export const FuelModal: React.FC<FuelModalProps> = ({
                 placeholder="АИ-95, АИ-98, ДТ, 100..."
                 value={formData.fuel_grade}
                 onChange={(e) => setFormData({ ...formData, fuel_grade: e.target.value })}
-                className="w-full bg-dark-900 border border-dark-750 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
+                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-medium"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 АЗС / Сеть
               </label>
               <input
@@ -222,35 +222,35 @@ export const FuelModal: React.FC<FuelModalProps> = ({
                 placeholder="Лукойл, Газпромнефть, Teboil..."
                 value={formData.gas_station}
                 onChange={(e) => setFormData({ ...formData, gas_station: e.target.value })}
-                className="w-full bg-dark-900 border border-dark-750 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
+                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
               />
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-dark-900 rounded-xl border border-dark-750">
-            <label className="flex items-center space-x-2 text-xs font-medium text-slate-200 cursor-pointer">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-slate-50 dark:bg-dark-900 rounded-xl border border-slate-200 dark:border-dark-750">
+            <label className="flex items-center space-x-2 text-xs font-semibold text-slate-800 dark:text-slate-200 cursor-pointer">
               <input
                 type="checkbox"
                 checked={formData.is_full_tank}
                 onChange={(e) => setFormData({ ...formData, is_full_tank: e.target.checked })}
-                className="rounded bg-dark-800 border-dark-700 text-brand-500 focus:ring-0 w-4 h-4"
+                className="rounded bg-white dark:bg-dark-800 border-slate-300 dark:border-dark-700 text-brand-500 focus:ring-0 w-4 h-4"
               />
               <span>Полный бак (для точного расчета л/100км)</span>
             </label>
 
-            <label className="flex items-center space-x-2 text-xs font-medium text-slate-400 cursor-pointer">
+            <label className="flex items-center space-x-2 text-xs font-semibold text-slate-500 dark:text-slate-400 cursor-pointer">
               <input
                 type="checkbox"
                 checked={formData.is_missed}
                 onChange={(e) => setFormData({ ...formData, is_missed: e.target.checked })}
-                className="rounded bg-dark-800 border-dark-700 text-brand-500 focus:ring-0 w-4 h-4"
+                className="rounded bg-white dark:bg-dark-800 border-slate-300 dark:border-dark-700 text-brand-500 focus:ring-0 w-4 h-4"
               />
               <span>Пропустил прошлую</span>
             </label>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
               Заметки
             </label>
             <input
@@ -258,22 +258,22 @@ export const FuelModal: React.FC<FuelModalProps> = ({
               placeholder="Трасса / Город, кондиционер..."
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              className="w-full bg-dark-900 border border-dark-750 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
+              className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
             />
           </div>
 
-          <div className="pt-3 border-t border-dark-750 flex items-center justify-end space-x-3">
+          <div className="pt-3 border-t border-slate-200 dark:border-dark-750 flex items-center justify-end space-x-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-300 hover:bg-dark-800 transition-colors"
+              className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-dark-800 transition-colors"
             >
               Отмена
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2 rounded-lg text-xs font-semibold bg-brand-500 hover:bg-brand-600 active:scale-95 text-white transition-all shadow-md shadow-brand-500/20 disabled:opacity-50"
+              className="px-5 py-2.5 rounded-xl text-xs font-bold bg-brand-500 hover:bg-brand-600 active:scale-95 text-white transition-all shadow-md shadow-brand-500/20 disabled:opacity-50"
             >
               {loading ? 'Сохранение...' : log ? 'Сохранить изменения' : 'Записать заправку'}
             </button>
