@@ -336,66 +336,33 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
           </div>
 
           {/* Quick Actions Buttons */}
-          <div className="grid grid-cols-3 sm:flex sm:flex-wrap items-center gap-1.5 sm:gap-2">
-            {isOwner && (
-              <>
-                <button
-                  onClick={() => onOpenServiceModal('service')}
-                  className="flex items-center justify-center space-x-1 bg-brand-500 hover:bg-brand-600 active:scale-95 text-white px-2.5 sm:px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-brand-500/20"
-                >
-                  <Plus className="w-4 h-4 flex-shrink-0" />
-                  <span>Запись ТО</span>
-                </button>
+          {isOwner && (
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <button
+                onClick={() => onOpenServiceModal('service')}
+                className="flex items-center justify-center space-x-1 bg-brand-500 hover:bg-brand-600 active:scale-95 text-white px-2.5 sm:px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-brand-500/20"
+              >
+                <Plus className="w-4 h-4 flex-shrink-0" />
+                <span>Запись ТО</span>
+              </button>
 
-                <button
-                  onClick={() => onOpenFuelModal()}
-                  className="flex items-center justify-center space-x-1 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-2.5 sm:px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-600/20"
-                >
-                  <Fuel className="w-4 h-4 flex-shrink-0" />
-                  <span>Заправка</span>
-                </button>
+              <button
+                onClick={() => onOpenFuelModal()}
+                className="flex items-center justify-center space-x-1 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-2.5 sm:px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-600/20"
+              >
+                <Fuel className="w-4 h-4 flex-shrink-0" />
+                <span>Заправка</span>
+              </button>
 
-                <button
-                  onClick={() => onOpenReminderModal()}
-                  className="flex items-center justify-center space-x-1 bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-200 px-2.5 sm:px-3.5 py-2 rounded-xl text-xs font-semibold border border-slate-200 dark:border-dark-700 transition-all"
-                >
-                  <CalendarClock className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                  <span>Регламент</span>
-                </button>
-              </>
-            )}
-
-            <a
-              href={`/api/v1/export/excel/${vehicle.id}`}
-              download
-              className="flex items-center justify-center space-x-1 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 px-2.5 sm:px-3.5 py-2 rounded-xl text-xs font-semibold border border-emerald-300 dark:border-emerald-700/60 transition-all"
-              title="Скачать в Excel (.xlsx)"
-            >
-              <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-              <span>Excel</span>
-            </a>
-
-            <a
-              href={`/api/v1/export/service-booklet/${vehicle.id}`}
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center justify-center space-x-1 bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-200 px-2.5 sm:px-3.5 py-2 rounded-xl text-xs font-semibold border border-slate-200 dark:border-dark-750 transition-all"
-              title="Открыть и распечатать сервисную книжку"
-            >
-              <Printer className="w-4 h-4 text-brand-500 flex-shrink-0" />
-              <span>Книжка PDF</span>
-            </a>
-
-            <a
-              href={`/api/v1/backup/export/${vehicle.id}`}
-              download
-              className="flex items-center justify-center space-x-1 bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-200 px-2.5 sm:px-3.5 py-2 rounded-xl text-xs font-semibold border border-slate-200 dark:border-dark-750 transition-all"
-              title="Скачать полную резервную копию автомобиля в JSON"
-            >
-              <FileJson className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-              <span>Бэкап JSON</span>
-            </a>
-          </div>
+              <button
+                onClick={() => onOpenReminderModal()}
+                className="flex items-center justify-center space-x-1 bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-200 px-2.5 sm:px-3.5 py-2 rounded-xl text-xs font-semibold border border-slate-200 dark:border-dark-700 transition-all"
+              >
+                <CalendarClock className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                <span>Регламент</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Read-only Banner for foreign public cars */}
