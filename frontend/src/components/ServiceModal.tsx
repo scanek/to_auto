@@ -147,21 +147,19 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
   };
 
   const handleAddItem = (preset?: typeof QUICK_PART_PRESETS[0]) => {
-    const newItems = [
-      ...items,
-      {
-        name: preset ? preset.name : '',
-        brand: preset ? preset.brand : '',
-        part_number: '',
-        store: '',
-        url: '',
-        category: 'part',
-        unit: preset ? preset.unit : 'шт',
-        quantity: preset ? preset.quantity : 1,
-        unit_price: 0,
-        total_price: 0,
-      },
-    ];
+    const newItem: ServiceItem = {
+      name: preset ? preset.name : '',
+      brand: preset ? preset.brand : '',
+      part_number: '',
+      store: '',
+      url: '',
+      category: 'part',
+      unit: preset ? preset.unit : 'шт',
+      quantity: preset ? preset.quantity : 1,
+      unit_price: 0,
+      total_price: 0,
+    };
+    const newItems = [newItem, ...items];
     updateItemsAndCosts(newItems);
   };
 
