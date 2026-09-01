@@ -25,8 +25,9 @@ def _safe_json_parse(resp: httpx.Response, endpoint_name: str) -> dict:
         raise ValueError(f"Ошибка ответа StarLine ({endpoint_name}): {clean_text}")
 
 def _find_numeric_metric(d: Any, target_keys: tuple[str, ...], min_val: float = 0.0) -> Optional[float]:
-    """Recursively searches for numeric telemetry metrics in nested StarLine JSON payloads."""
+    """Recursively searches for numeric telemetry metrics in nested StarLine JSON payloads and parameter arrays."""
     if isinstance(d, dict):
+        # 1. Direct key match
         for k, v in d.items():
             if k.lower() in target_keys and v is not None:
                 try:
@@ -35,14 +36,28 @@ def _find_numeric_metric(d: Any, target_keys: tuple[str, ...], min_val: float = 
                         return val
                 except (ValueError, TypeError):
                     pass
+            # Check parameter objects e.g. {"type": "mileage", "val": 26658} or {"name": "mileage", "value": 26658}
+            if k.lower() in ("type", "name", "param", "key", "id") and str(v).lower() in target_keys:
+                for val_key in ("val", "value", "v", "data", "num"):
+                    if val_key in d and d[val_key] is not None:
+                        try:
+                            val = float(d[val_key])
+                            if val >= min_val:
+                                return val
+                        except (ValueError, TypeError):
+                            pass
+
+        for k, v in d.items():
             found = _find_numeric_metric(v, target_keys, min_val)
             if found is not None:
                 return found
+
     elif isinstance(d, list):
         for item in d:
             found = _find_numeric_metric(item, target_keys, min_val)
             if found is not None:
                 return found
+
     return None
 
 class StarLineService:
@@ -218,7 +233,7 @@ class StarLineService:
     @staticmethod
     async def fetch_device_telemetry(user_id: str, device_id: str, token: str) -> Dict[str, Any]:
         """
-        Fetches live OBD / CAN telemetry state using deep recursive dictionary search.
+        Fetches live OBD / CAN telemetry state using deep recursive dictionary search across ALL StarLine endpoints.
         """
         headers = {
             "Cookie": f"slnet={token.strip()}; slid_token={token.strip()}",
@@ -227,6 +242,10 @@ class StarLineService:
         async with httpx.AsyncClient(timeout=15.0) as client:
             endpoints = [
                 f"{STARLINE_DEV_URL}/json/v2/user/{user_id}/device/{device_id}/state",
+                f"{STARLINE_DEV_URL}/json/v1/user/{user_id}/device/{device_id}/obd",
+                f"{STARLINE_DEV_URL}/json/v2/user/{user_id}/device/{device_id}/obd",
+                f"{STARLINE_DEV_URL}/json/v1/device/{device_id}/obd",
+                f"{STARLINE_DEV_URL}/json/v1/device/{device_id}/params",
                 f"{STARLINE_DEV_URL}/json/v1/user/{user_id}/user_info",
                 f"{STARLINE_DEV_URL}/json/v2/user/{user_id}/user_info",
                 f"{STARLINE_DEV_URL}/json/v1/device/{device_id}",
@@ -238,42 +257,59 @@ class StarLineService:
                 try:
                     resp = await client.get(url, headers=headers)
                     if resp.status_code == 200 and resp.text and resp.text.strip():
-                        combined_payloads.append(resp.json())
+                        data = resp.json()
+                        if isinstance(data, (dict, list)):
+                            combined_payloads.append(data)
                 except Exception:
                     pass
 
-            # Deep search across all collected payloads
+            # 1. Mileage / Odometer deep search
+            mileage_keys = (
+                "mileage", "odometer", "obd_mileage", "rfull", "total_mileage", 
+                "car_mileage", "can_mileage", "odo", "run", "distance", "km"
+            )
             mileage = None
             for p in combined_payloads:
-                mileage = _find_numeric_metric(p, ("mileage", "odometer", "obd_mileage", "rfull"), min_val=1.0)
+                mileage = _find_numeric_metric(p, mileage_keys, min_val=1.0)
                 if mileage is not None:
                     break
 
+            # 2. Engine Hours deep search
+            hours_keys = (
+                "engine_hours", "hours", "motohours", "moto_hours", "obd_engine_hours",
+                "r_engine", "engine_work_time", "work_time_hours"
+            )
             engine_hours = None
             for p in combined_payloads:
-                engine_hours = _find_numeric_metric(p, ("engine_hours", "hours", "motohours", "obd_engine_hours"), min_val=0.1)
+                engine_hours = _find_numeric_metric(p, hours_keys, min_val=0.1)
                 if engine_hours is None:
-                    raw_sec = _find_numeric_metric(p, ("engine_time", "engine_time_sec", "engine_work_time"), min_val=60.0)
+                    raw_sec = _find_numeric_metric(p, ("engine_time", "engine_time_sec", "work_time", "ign_time"), min_val=60.0)
                     if raw_sec:
                         engine_hours = round(raw_sec / 3600.0, 1)
                 if engine_hours is not None:
                     break
 
+            # 3. Battery Voltage
+            bat_keys = ("battery", "battery_val", "voltage", "akb", "bat_volt", "v_bat")
             battery = None
             for p in combined_payloads:
-                battery = _find_numeric_metric(p, ("battery", "battery_val", "voltage", "akb"), min_val=5.0)
+                battery = _find_numeric_metric(p, bat_keys, min_val=5.0)
                 if battery is not None:
                     break
 
+            # 4. Fuel %
+            fuel_keys = ("fuel", "fuel_lvl", "fuel_percent", "gas_level", "fuel_litres", "fuel_val")
             fuel_percent = None
             for p in combined_payloads:
-                fuel_percent = _find_numeric_metric(p, ("fuel", "fuel_lvl", "fuel_percent", "gas_level"), min_val=0.0)
+                fuel_percent = _find_numeric_metric(p, fuel_keys, min_val=0.0)
                 if fuel_percent is not None:
                     break
 
+            # 5. Engine Temperature
+            temp_keys = ("ctemp", "engine_temp", "t_engine", "temp_engine", "temp_eng")
             engine_temp = None
             for p in combined_payloads:
-                engine_temp = _find_numeric_metric(p, ("ctemp", "engine_temp", "t_engine", "temp_engine"), min_val=-40.0)
+                engine_temp = _find_numeric_metric(p, temp_keys, min_val=-40.0)
                 if engine_temp is not None:
                     break
 
@@ -318,6 +354,7 @@ class StarLineService:
 
         if telemetry.get("engine_temp") is not None:
             vehicle.starline_engine_temp = telemetry["engine_temp"]
+            updated_fields.append(f"ДВС: {int(telemetry['engine_temp'])}°C")
 
         vehicle.starline_last_sync = now
         await db.commit()
@@ -331,5 +368,5 @@ class StarLineService:
             "fuel_percent": vehicle.starline_fuel_percent,
             "engine_temp": vehicle.starline_engine_temp,
             "last_sync": now.isoformat(),
-            "updated_summary": ", ".join(updated_fields) if updated_fields else "Телеметрия обновлена (без изменения одометра)",
+            "updated_summary": ", ".join(updated_fields) if updated_fields else "Телеметрия обновлена",
         }
