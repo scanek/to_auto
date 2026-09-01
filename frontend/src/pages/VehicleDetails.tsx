@@ -112,12 +112,17 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   const [isSyncingStarLine, setIsSyncingStarLine] = useState(false);
   const [recordsSearchQuery, setRecordsSearchQuery] = useState('');
 
-    const handleSyncStarLine = async () => {
+  const handleSyncStarLine = async () => {
     if (isSyncingStarLine) return;
     setIsSyncingStarLine(true);
     try {
       const res = await api.syncTelematics(vehicle.id);
-      // Telematics synced
+      if (res.data?.odometer) {
+        setNewOdometerVal(res.data.odometer);
+      }
+      if (res.data?.engine_hours) {
+        setNewHoursVal(res.data.engine_hours);
+      }
       await onRefreshVehicle();
       await loadData();
     } catch (err: any) {

@@ -24,15 +24,32 @@ def _safe_json_parse(resp: httpx.Response, endpoint_name: str) -> dict:
         clean_text = text[:150].replace("\n", " ").replace("\r", "")
         raise ValueError(f"Ошибка ответа StarLine ({endpoint_name}): {clean_text}")
 
+def _find_numeric_metric(d: Any, target_keys: tuple[str, ...], min_val: float = 0.0) -> Optional[float]:
+    """Recursively searches for numeric telemetry metrics in nested StarLine JSON payloads."""
+    if isinstance(d, dict):
+        for k, v in d.items():
+            if k.lower() in target_keys and v is not None:
+                try:
+                    val = float(v)
+                    if val >= min_val:
+                        return val
+                except (ValueError, TypeError):
+                    pass
+            found = _find_numeric_metric(v, target_keys, min_val)
+            if found is not None:
+                return found
+    elif isinstance(d, list):
+        for item in d:
+            found = _find_numeric_metric(item, target_keys, min_val)
+            if found is not None:
+                return found
+    return None
+
 class StarLineService:
     @staticmethod
     async def get_app_token(app_id: str = DEFAULT_STARLINE_APP_ID, secret: str = DEFAULT_STARLINE_SECRET) -> str:
-        """
-        Performs StarLine ID v3 Application handshake (getCode -> getToken).
-        """
         async with httpx.AsyncClient(timeout=15.0) as client:
             sec_md5 = hashlib.md5(secret.strip().encode('utf-8')).hexdigest()
-            # Step 1: getCode
             code_url = f"{STARLINE_ID_URL}/application/getCode?appId={app_id.strip()}&secret={sec_md5}"
             code_res = await client.get(code_url)
             code_data = _safe_json_parse(code_res, "getCode")
@@ -43,7 +60,6 @@ class StarLineService:
             
             code = code_data["desc"]["code"]
 
-            # Step 2: getToken
             combined_hash = hashlib.md5((secret.strip() + code).encode('utf-8')).hexdigest()
             token_url = f"{STARLINE_ID_URL}/application/getToken?appId={app_id.strip()}&secret={combined_hash}"
             token_res = await client.get(token_url)
@@ -64,10 +80,6 @@ class StarLineService:
         secret: str = DEFAULT_STARLINE_SECRET,
         sms_code: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """
-        Authenticates user with StarLine using official StarLine ID v3 protocol.
-        """
-        # 1. Direct token provided
         if app_code and not password:
             async with httpx.AsyncClient(timeout=15.0) as client:
                 res = await client.get(f"{STARLINE_DEV_URL}/json/v2/user_info", headers={"Cookie": f"slnet={app_code.strip()}"})
@@ -79,10 +91,8 @@ class StarLineService:
                     "user_info": data,
                 }
 
-        # 2. Get Application Token
         app_token = await StarLineService.get_app_token(app_id=app_id, secret=secret)
 
-        # 3. User Login via id.starline.ru
         async with httpx.AsyncClient(timeout=15.0) as client:
             pass_sha1 = hashlib.sha1((password or "").strip().encode('utf-8')).hexdigest()
             login_data = {
@@ -111,7 +121,6 @@ class StarLineService:
             if not user_slid_token:
                 raise ValueError("Не получен токен пользователя от StarLine ID")
 
-            # 4. Exchange user_slid_token for SLNET session on developer.starline.ru
             slnet_token = user_slid_token
             try:
                 slnet_res = await client.post(
@@ -125,13 +134,11 @@ class StarLineService:
                         slnet_token = slnet_data.get("token")
                     if slnet_data.get("user_id"):
                         user_id = str(slnet_data.get("user_id"))
-                    # If devices returned directly in auth.slid
                     if "devices" in slnet_data:
                         login_json["desc"]["devices"] = slnet_data["devices"]
-            except Exception as e:
+            except Exception:
                 pass
 
-            # Extract cookies if any
             for c_name, c_val in client.cookies.items():
                 if c_name == "slnet" and c_val:
                     slnet_token = c_val
@@ -144,9 +151,6 @@ class StarLineService:
 
     @staticmethod
     async def get_user_devices(user_id: str, token: str) -> List[Dict[str, Any]]:
-        """
-        Retrieves list of all vehicles / devices attached to the user's StarLine account.
-        """
         headers = {
             "Cookie": f"slnet={token.strip()}; slid_token={token.strip()}",
             "User-Agent": "AutoTracker/2.5.0",
@@ -164,15 +168,12 @@ class StarLineService:
                 f"{STARLINE_DEV_URL}/json/v2/devices",
             ])
 
-            last_err = None
             devices_raw = []
-
             for url in endpoints_to_try:
                 try:
                     resp = await client.get(url, headers=headers)
                     if resp.status_code == 200 and resp.text and resp.text.strip():
                         data = resp.json()
-                        # Check if devices in data
                         if "devices" in data:
                             devices_raw = data["devices"]
                             break
@@ -182,8 +183,8 @@ class StarLineService:
                         elif isinstance(data, list):
                             devices_raw = data
                             break
-                except Exception as e:
-                    last_err = e
+                except Exception:
+                    pass
 
             devices = []
             for d in devices_raw:
@@ -201,7 +202,6 @@ class StarLineService:
                     "active": bool(d.get("active", True)),
                 })
             
-            # If no devices parsed from API list, but we have user_id, add standard device entry
             if not devices and user_id:
                 devices.append({
                     "device_id": user_id,
@@ -218,8 +218,7 @@ class StarLineService:
     @staticmethod
     async def fetch_device_telemetry(user_id: str, device_id: str, token: str) -> Dict[str, Any]:
         """
-        Fetches live OBD / CAN telemetry state for a specific StarLine device.
-        Extracts: mileage (km), engine_hours (hours), battery (V), fuel (%), engine_temp (°C).
+        Fetches live OBD / CAN telemetry state using deep recursive dictionary search.
         """
         headers = {
             "Cookie": f"slnet={token.strip()}; slid_token={token.strip()}",
@@ -228,63 +227,55 @@ class StarLineService:
         async with httpx.AsyncClient(timeout=15.0) as client:
             endpoints = [
                 f"{STARLINE_DEV_URL}/json/v2/user/{user_id}/device/{device_id}/state",
+                f"{STARLINE_DEV_URL}/json/v1/user/{user_id}/user_info",
+                f"{STARLINE_DEV_URL}/json/v2/user/{user_id}/user_info",
                 f"{STARLINE_DEV_URL}/json/v1/device/{device_id}",
                 f"{STARLINE_DEV_URL}/json/v2/device/{device_id}/state",
             ]
 
-            state = {}
+            combined_payloads = []
             for url in endpoints:
                 try:
                     resp = await client.get(url, headers=headers)
                     if resp.status_code == 200 and resp.text and resp.text.strip():
-                        data = resp.json()
-                        state = data.get("state", data)
-                        if state:
-                            break
+                        combined_payloads.append(resp.json())
                 except Exception:
                     pass
 
-            obd = state.get("obd", {})
-            common = state.get("common", {})
-
-            # 1. Mileage / Odometer
+            # Deep search across all collected payloads
             mileage = None
-            if "mileage" in obd and obd["mileage"] is not None:
-                mileage = float(obd["mileage"])
-            elif "mileage" in state and state["mileage"] is not None:
-                mileage = float(state["mileage"])
-            elif "mileage" in common and common["mileage"] is not None:
-                mileage = float(common["mileage"])
+            for p in combined_payloads:
+                mileage = _find_numeric_metric(p, ("mileage", "odometer", "obd_mileage", "rfull"), min_val=1.0)
+                if mileage is not None:
+                    break
 
-            # 2. Engine Hours
             engine_hours = None
-            if "engine_hours" in obd and obd["engine_hours"] is not None:
-                engine_hours = float(obd["engine_hours"])
-            elif "engine_hours" in state and state["engine_hours"] is not None:
-                engine_hours = float(state["engine_hours"])
-            elif "engine_time" in state and state["engine_time"] is not None:
-                engine_hours = round(float(state["engine_time"]) / 3600.0, 1)
+            for p in combined_payloads:
+                engine_hours = _find_numeric_metric(p, ("engine_hours", "hours", "motohours", "obd_engine_hours"), min_val=0.1)
+                if engine_hours is None:
+                    raw_sec = _find_numeric_metric(p, ("engine_time", "engine_time_sec", "engine_work_time"), min_val=60.0)
+                    if raw_sec:
+                        engine_hours = round(raw_sec / 3600.0, 1)
+                if engine_hours is not None:
+                    break
 
-            # 3. Battery Voltage
             battery = None
-            if "battery" in common and common["battery"] is not None:
-                battery = float(common["battery"])
-            elif "battery" in state and state["battery"] is not None:
-                battery = float(state["battery"])
+            for p in combined_payloads:
+                battery = _find_numeric_metric(p, ("battery", "battery_val", "voltage", "akb"), min_val=5.0)
+                if battery is not None:
+                    break
 
-            # 4. Fuel %
             fuel_percent = None
-            if "fuel" in obd and obd["fuel"] is not None:
-                fuel_percent = float(obd["fuel"])
-            elif "fuel" in state and state["fuel"] is not None:
-                fuel_percent = float(state["fuel"])
+            for p in combined_payloads:
+                fuel_percent = _find_numeric_metric(p, ("fuel", "fuel_lvl", "fuel_percent", "gas_level"), min_val=0.0)
+                if fuel_percent is not None:
+                    break
 
-            # 5. Engine Temperature
             engine_temp = None
-            if "ctemp" in state and state["ctemp"] is not None:
-                engine_temp = float(state["ctemp"])
-            elif "engine_temp" in state and state["engine_temp"] is not None:
-                engine_temp = float(state["engine_temp"])
+            for p in combined_payloads:
+                engine_temp = _find_numeric_metric(p, ("ctemp", "engine_temp", "t_engine", "temp_engine"), min_val=-40.0)
+                if engine_temp is not None:
+                    break
 
             return {
                 "mileage": mileage,
@@ -292,14 +283,11 @@ class StarLineService:
                 "battery": battery,
                 "fuel_percent": fuel_percent,
                 "engine_temp": engine_temp,
-                "raw_state": state,
+                "payloads_count": len(combined_payloads),
             }
 
     @staticmethod
     async def sync_vehicle_with_starline(db: AsyncSession, vehicle: Vehicle) -> Dict[str, Any]:
-        """
-        Executes live sync between StarLine S96 and the vehicle record in database.
-        """
         if not vehicle.starline_user_id or not vehicle.starline_device_id or not vehicle.starline_token:
             raise ValueError("У автомобиля не настроена телематика StarLine")
 
@@ -322,8 +310,12 @@ class StarLineService:
 
         if telemetry.get("battery") is not None:
             vehicle.starline_battery = telemetry["battery"]
+            updated_fields.append(f"АКБ: {telemetry['battery']:.1f}В")
+
         if telemetry.get("fuel_percent") is not None:
             vehicle.starline_fuel_percent = telemetry["fuel_percent"]
+            updated_fields.append(f"бак: {int(telemetry['fuel_percent'])}%")
+
         if telemetry.get("engine_temp") is not None:
             vehicle.starline_engine_temp = telemetry["engine_temp"]
 
@@ -339,5 +331,5 @@ class StarLineService:
             "fuel_percent": vehicle.starline_fuel_percent,
             "engine_temp": vehicle.starline_engine_temp,
             "last_sync": now.isoformat(),
-            "updated_summary": ", ".join(updated_fields) if updated_fields else "Телеметрия обновлена",
+            "updated_summary": ", ".join(updated_fields) if updated_fields else "Телеметрия обновлена (без изменения одометра)",
         }
