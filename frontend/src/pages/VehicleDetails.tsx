@@ -310,7 +310,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
             <span className="font-bold text-slate-900 dark:text-white">{data.name}</span>
           </div>
           <div className="font-mono text-sm font-extrabold text-brand-600 dark:text-brand-400">
-            {Number(data.value).toLocaleString('ru-RU')} {vehicle.currency}
+            {Number(data.value).toLocaleString('ru-RU')} {vehicle.currency || '₽'}
           </div>
           <div className="text-[11px] text-slate-500 dark:text-slate-400">
             Доля: <strong className="text-slate-800 dark:text-slate-200">{data.payload.percentage}%</strong>
@@ -339,7 +339,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                   <span>{entry.name}:</span>
                 </span>
                 <span className="font-mono font-bold text-slate-900 dark:text-white">
-                  {Number(entry.value).toLocaleString('ru-RU')} {vehicle.currency}
+                  {Number(entry.value).toLocaleString('ru-RU')} {vehicle.currency || '₽'}
                 </span>
               </div>
             );
@@ -347,7 +347,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
           <div className="pt-1.5 border-t border-slate-100 dark:border-dark-750 flex items-center justify-between font-bold text-xs">
             <span className="text-slate-700 dark:text-slate-300">Итого:</span>
             <span className="text-brand-600 dark:text-brand-400 font-mono">
-              {totalMonth.toLocaleString('ru-RU')} {vehicle.currency}
+              {totalMonth.toLocaleString('ru-RU')} {vehicle.currency || '₽'}
             </span>
           </div>
         </div>
@@ -403,7 +403,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                   </span>
                 )}
                 {vehicle.purchase_date && (
-                  <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-blue-50 dark:bg-dark-900 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60" title={`Куплен: ${new Date(vehicle.purchase_date).toLocaleDateString('ru-RU')}${vehicle.starting_odometer ? ` (с пробегом ${vehicle.starting_odometer} ${vehicle.distance_unit})` : ''}`}>
+                  <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-blue-50 dark:bg-dark-900 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60" title={`Куплен: ${new Date(vehicle.purchase_date).toLocaleDateString('ru-RU')}${vehicle.starting_odometer ? ` (с пробегом ${vehicle.starting_odometer} ${vehicle.distance_unit || 'км'})` : ''}`}>
                     📅 Куплен: {new Date(vehicle.purchase_date).toLocaleDateString('ru-RU')}
                   </span>
                 )}
@@ -536,7 +536,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                   <Disc className="w-3 h-3 text-sky-500" />
                 </div>
                 <div className="text-sm sm:text-base font-black text-slate-900 dark:text-white font-mono mt-1">
-                  {Math.round(vehicle.current_odometer).toLocaleString('ru-RU')} <span className="text-xs font-semibold text-slate-500">{vehicle.distance_unit}</span>
+                  {Math.round(vehicle.current_odometer).toLocaleString('ru-RU')} <span className="text-xs font-semibold text-slate-500">{vehicle.distance_unit || 'км'}</span>
                 </div>
               </div>
 
@@ -658,7 +658,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 className={`flex items-center space-x-1.5 ${isOwner ? 'cursor-pointer group' : ''}`}
               >
                 <span className={`text-sm sm:text-base font-extrabold text-slate-900 dark:text-white font-mono ${isOwner ? 'group-hover:text-brand-500 transition-colors' : ''}`}>
-                  {Math.round(vehicle.current_odometer).toLocaleString('ru-RU')} {vehicle.distance_unit}
+                  {Math.round(vehicle.current_odometer).toLocaleString('ru-RU')} {vehicle.distance_unit || 'км'}
                 </span>
                 {isOwner && (
                   <Edit2 className="w-3 h-3 text-slate-400 group-hover:text-brand-500 flex-shrink-0" />
@@ -718,7 +718,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               Все расходы
             </span>
             <span className="text-sm sm:text-base font-extrabold text-brand-600 dark:text-brand-400 font-mono">
-              {Math.round(analytics?.total_spend || 0).toLocaleString('ru-RU')} {vehicle.currency}
+              {Math.round(analytics?.total_spend || 0).toLocaleString('ru-RU')} {vehicle.currency || '₽'}
             </span>
           </div>
 
@@ -728,7 +728,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
             </span>
             <span className="text-sm sm:text-base font-extrabold text-amber-600 dark:text-amber-400 font-mono">
               {analytics?.cost_per_distance_unit
-                ? `${analytics.cost_per_distance_unit} ${vehicle.currency}/км`
+                ? `${analytics.cost_per_distance_unit} ${vehicle.currency || '₽'}/${vehicle.distance_unit || 'км'}`
                 : '—'}
             </span>
           </div>
@@ -1001,7 +1001,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                           </div>
                           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400 mt-1 font-mono">
                             <span>📅 {new Date(rec.date).toLocaleDateString('ru-RU')}</span>
-                            <span>🛣️ {Math.round(rec.odometer).toLocaleString('ru-RU')} {vehicle.distance_unit}</span>
+                            <span>🛣️ {Math.round(rec.odometer).toLocaleString('ru-RU')} {vehicle.distance_unit || 'км'}</span>
                             {rec.engine_hours && (
                               <span>⏱️ {rec.engine_hours} м/ч</span>
                             )}
@@ -1015,7 +1015,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                       <div className="flex items-center justify-between sm:justify-end space-x-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-dark-750">
                         <div className="text-left sm:text-right">
                           <div className="text-base font-extrabold text-brand-600 dark:text-brand-400 font-mono">
-                            {rec.total_cost.toLocaleString('ru-RU')} {vehicle.currency}
+                            {rec.total_cost.toLocaleString('ru-RU')} {vehicle.currency || '₽'}
                           </div>
                           {(rec.cost_parts > 0 || rec.cost_labor > 0) && (
                             <div className="text-[10px] text-slate-400">
@@ -1090,7 +1090,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                               </div>
                               <div className="flex flex-col items-end flex-shrink-0 font-mono text-right pl-2">
                                 <span className="text-slate-900 dark:text-slate-200 whitespace-nowrap text-[11px] font-bold">
-                                  {Math.round(it.total_price || 0).toLocaleString('ru-RU')} {vehicle.currency}
+                                  {Math.round(it.total_price || 0).toLocaleString('ru-RU')} {vehicle.currency || '₽'}
                                 </span>
                                 {it.quantity > 1 && it.unit_price > 0 && (
                                   <span className="text-[9px] text-slate-400 dark:text-slate-500 whitespace-nowrap">
@@ -1200,7 +1200,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
 
                           <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                             Интервал:{' '}
-                            {rem.interval_distance ? `${rem.interval_distance.toLocaleString('ru-RU')} ${vehicle.distance_unit}` : ''}
+                            {rem.interval_distance ? `${rem.interval_distance.toLocaleString('ru-RU')} ${vehicle.distance_unit || 'км'}` : ''}
                             {rem.interval_distance && rem.interval_hours ? ' / ' : ''}
                             {rem.interval_hours ? `${rem.interval_hours} м/ч` : ''}
                             {(rem.interval_distance || rem.interval_hours) && rem.interval_months ? ' / ' : ''}
@@ -1244,7 +1244,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                                   rem.remaining_distance <= 0 ? 'text-rose-500' : 'text-slate-800 dark:text-slate-200'
                                 }`}
                               >
-                                {Math.round(rem.remaining_distance).toLocaleString('ru-RU')} {vehicle.distance_unit}
+                                {Math.round(rem.remaining_distance).toLocaleString('ru-RU')} {vehicle.distance_unit || 'км'}
                               </span>
                             )}
                             {rem.remaining_distance !== null && rem.remaining_hours !== null && ' / '}
@@ -1277,7 +1277,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                       {/* Last done baseline, Calendar and Mark Done button */}
                       <div className="flex items-center justify-between pt-2.5 border-t border-slate-200 dark:border-dark-750/70 text-xs">
                         <div className="text-[11px] text-slate-500 truncate mr-2">
-                          Было: {Math.round(rem.last_service_odometer).toLocaleString('ru-RU')} {vehicle.distance_unit}
+                          Было: {Math.round(rem.last_service_odometer).toLocaleString('ru-RU')} {vehicle.distance_unit || 'км'}
                           {rem.last_service_hours ? ` (${rem.last_service_hours} м/ч)` : ''}
                         </div>
 
@@ -1457,7 +1457,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                           </span>
                           {t.rims_price > 0 && (
                             <span className="font-mono font-bold text-amber-600 dark:text-amber-400 flex-shrink-0">
-                              {t.rims_price.toLocaleString('ru-RU')} {vehicle.currency}
+                              {t.rims_price.toLocaleString('ru-RU')} {vehicle.currency || '₽'}
                             </span>
                           )}
                         </div>
@@ -1495,8 +1495,8 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                       <div className="text-slate-500 dark:text-slate-400 truncate mr-2">
                         {t.storage_location && <span>📍 {t.storage_location}</span>}
                         {(t.total_price > 0 || (t.rims_price && t.rims_price > 0)) && (
-                          <span className="block font-mono text-brand-600 dark:text-brand-400 font-bold text-[11px]" title={`Шины: ${t.total_price || 0} ${vehicle.currency}${t.rims_price ? ` + Диски: ${t.rims_price} ${vehicle.currency}` : ''}`}>
-                            Итого: {(t.total_price + (t.rims_price || 0)).toLocaleString('ru-RU')} {vehicle.currency}
+                          <span className="block font-mono text-brand-600 dark:text-brand-400 font-bold text-[11px]" title={`Шины: ${t.total_price || 0} ${vehicle.currency || '₽'}${t.rims_price ? ` + Диски: ${t.rims_price} ${vehicle.currency || '₽'}` : ''}`}>
+                            Итого: {(t.total_price + (t.rims_price || 0)).toLocaleString('ru-RU')} {vehicle.currency || '₽'}
                           </span>
                         )}
                       </div>
@@ -1596,13 +1596,13 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                             {new Date(f.date).toLocaleDateString('ru-RU')}
                           </td>
                           <td className="p-3 font-mono whitespace-nowrap">
-                            {Math.round(f.odometer).toLocaleString('ru-RU')} {vehicle.distance_unit}
+                            {Math.round(f.odometer).toLocaleString('ru-RU')} {vehicle.distance_unit || 'км'}
                           </td>
                           <td className="p-3 font-mono whitespace-nowrap">
                             {f.fuel_amount} {vehicle.fuel_unit}
                           </td>
                           <td className="p-3 font-mono text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                            {f.unit_price} {vehicle.currency}
+                            {f.unit_price} {vehicle.currency || '₽'}
                           </td>
                           <td className="p-3 font-mono font-bold whitespace-nowrap">
                             {f.consumption ? (
@@ -1614,7 +1614,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                             )}
                           </td>
                           <td className="p-3 font-mono font-extrabold text-brand-600 dark:text-brand-400 whitespace-nowrap">
-                            {f.total_cost.toLocaleString('ru-RU')} {vehicle.currency}
+                            {f.total_cost.toLocaleString('ru-RU')} {vehicle.currency || '₽'}
                           </td>
                           <td className="p-3 text-slate-500 dark:text-slate-400 truncate max-w-[140px]">
                             {f.gas_station || f.fuel_grade ? (
@@ -1662,7 +1662,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                   ⛽ Топливо / 1 км
                 </span>
                 <div className="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400 font-mono mt-0.5">
-                  {analytics.fuel_cost_per_distance ? `${analytics.fuel_cost_per_distance} ${vehicle.currency}/км` : '—'}
+                  {analytics.fuel_cost_per_distance ? `${analytics.fuel_cost_per_distance} ${vehicle.currency || '₽'}/км` : '—'}
                 </div>
                 <span className="text-[11px] text-emerald-600/80 dark:text-emerald-400/80 block mt-0.5">
                   Только прямые затраты на топливо
@@ -1674,7 +1674,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                   🔧 ТО и запчасти / 1 км
                 </span>
                 <div className="text-base sm:text-lg font-black text-brand-600 dark:text-brand-400 font-mono mt-0.5">
-                  {analytics.service_cost_per_distance ? `${analytics.service_cost_per_distance} ${vehicle.currency}/км` : '—'}
+                  {analytics.service_cost_per_distance ? `${analytics.service_cost_per_distance} ${vehicle.currency || '₽'}/км` : '—'}
                 </div>
                 <span className="text-[11px] text-brand-600/80 dark:text-brand-400/80 block mt-0.5">
                   Обслуживание, расходники и ремонты
@@ -1686,7 +1686,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                   💰 Полная себестоимость / 1 км
                 </span>
                 <div className="text-base sm:text-lg font-black text-amber-600 dark:text-amber-400 font-mono mt-0.5">
-                  {analytics.cost_per_distance_unit ? `${analytics.cost_per_distance_unit} ${vehicle.currency}/км` : '—'}
+                  {analytics.cost_per_distance_unit ? `${analytics.cost_per_distance_unit} ${vehicle.currency || '₽'}/${vehicle.distance_unit || 'км'}` : '—'}
                 </div>
                 <span className="text-[11px] text-amber-700/80 dark:text-amber-400/80 block mt-0.5">
                   Все расходы: топливо, ТО, шины, страховки
@@ -1701,7 +1701,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 </span>
                 <div className="text-base sm:text-lg font-extrabold text-brand-600 dark:text-brand-400 mt-1 font-mono">
                   {(analytics.total_service_spend + analytics.total_repair_spend).toLocaleString('ru-RU')}{' '}
-                  <span className="text-xs font-sans text-slate-400">{vehicle.currency}</span>
+                  <span className="text-xs font-sans text-slate-400">{vehicle.currency || '₽'}</span>
                 </div>
               </div>
 
@@ -1711,7 +1711,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 </span>
                 <div className="text-base sm:text-lg font-extrabold text-emerald-600 dark:text-emerald-400 mt-1 font-mono">
                   {analytics.total_fuel_spend.toLocaleString('ru-RU')}{' '}
-                  <span className="text-xs font-sans text-slate-400">{vehicle.currency}</span>
+                  <span className="text-xs font-sans text-slate-400">{vehicle.currency || '₽'}</span>
                 </div>
               </div>
 
@@ -1721,7 +1721,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 </span>
                 <div className="text-base sm:text-lg font-extrabold text-amber-600 dark:text-amber-400 mt-1 font-mono">
                   {analytics.total_upgrade_spend.toLocaleString('ru-RU')}{' '}
-                  <span className="text-xs font-sans text-slate-400">{vehicle.currency}</span>
+                  <span className="text-xs font-sans text-slate-400">{vehicle.currency || '₽'}</span>
                 </div>
               </div>
 
@@ -1731,7 +1731,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 </span>
                 <div className="text-base sm:text-lg font-extrabold text-cyan-600 dark:text-cyan-400 mt-1 font-mono">
                   {analytics.total_tyre_spend.toLocaleString('ru-RU')}{' '}
-                  <span className="text-xs font-sans text-slate-400">{vehicle.currency}</span>
+                  <span className="text-xs font-sans text-slate-400">{vehicle.currency || '₽'}</span>
                 </div>
               </div>
 
@@ -1741,7 +1741,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 </span>
                 <div className="text-base sm:text-lg font-extrabold text-purple-600 dark:text-purple-400 mt-1 font-mono">
                   {analytics.total_document_spend.toLocaleString('ru-RU')}{' '}
-                  <span className="text-xs font-sans text-slate-400">{vehicle.currency}</span>
+                  <span className="text-xs font-sans text-slate-400">{vehicle.currency || '₽'}</span>
                 </div>
               </div>
             </div>
@@ -1918,7 +1918,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                     <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-200 dark:border-dark-750/60">
                       {doc.price > 0 && (
                         <span className="font-mono text-brand-600 dark:text-brand-400 font-bold">
-                          {doc.price.toLocaleString('ru-RU')} {vehicle.currency}
+                          {doc.price.toLocaleString('ru-RU')} {vehicle.currency || '₽'}
                         </span>
                       )}
                       {doc.notes && (
