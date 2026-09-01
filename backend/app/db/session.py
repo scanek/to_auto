@@ -51,6 +51,7 @@ async def auto_migrate_sqlite(conn):
             ("starline_engine_temp", "FLOAT"),
                 ("starline_balance", "FLOAT"),
                 ("starline_is_armed", "BOOLEAN"),
+                ("fuel_tank_capacity", "FLOAT DEFAULT 55.0"),
             ("telematics_auto_sync", "BOOLEAN DEFAULT 0"),
             ("telematics_webhook_key", "VARCHAR(100)"),
         ],

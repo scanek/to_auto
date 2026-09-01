@@ -19,6 +19,7 @@ class VehicleBase(BaseModel):
     oil_spec: Optional[str] = None
     distance_unit: str = "km"
     fuel_unit: str = "L"
+    fuel_tank_capacity: Optional[float] = 55.0
     photo_url: Optional[str] = None
     notes: Optional[str] = None
 
@@ -54,6 +55,7 @@ class VehicleUpdate(BaseModel):
     oil_spec: Optional[str] = None
     distance_unit: Optional[str] = None
     fuel_unit: Optional[str] = None
+    fuel_tank_capacity: Optional[float] = None
     currency: Optional[str] = None
     photo_url: Optional[str] = None
     notes: Optional[str] = None

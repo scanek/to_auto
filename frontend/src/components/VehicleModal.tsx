@@ -33,6 +33,7 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
         track_engine_hours: true,
     distance_unit: 'km',
     fuel_unit: 'L',
+        fuel_tank_capacity: 55,
     currency: 'RUB',
     photo_url: '',
     notes: '',
@@ -60,6 +61,7 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
         track_engine_hours: vehicle.track_engine_hours ?? true,
         distance_unit: vehicle.distance_unit || 'km',
         fuel_unit: vehicle.fuel_unit || 'L',
+        fuel_tank_capacity: vehicle.fuel_tank_capacity ?? 55,
         currency: vehicle.currency || 'RUB',
         photo_url: vehicle.photo_url || '',
         notes: vehicle.notes || '',
@@ -83,6 +85,7 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
         track_engine_hours: true,
         distance_unit: 'km',
         fuel_unit: 'L',
+        fuel_tank_capacity: 55,
         currency: 'RUB',
         photo_url: '',
         notes: '',
@@ -117,6 +120,7 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
         starting_odometer: parseFloat(String(formData.starting_odometer)) || 0,
         current_odometer: parseFloat(String(formData.current_odometer)) || 0,
         current_engine_hours: parseFloat(String(formData.current_engine_hours)) || 0,
+        fuel_tank_capacity: parseFloat(String(formData.fuel_tank_capacity)) || 55,
       });
       onClose();
     } catch (err) {

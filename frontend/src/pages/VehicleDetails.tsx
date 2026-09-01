@@ -113,6 +113,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [isStarLineModalOpen, setIsStarLineModalOpen] = useState(false);
   const [isSyncingStarLine, setIsSyncingStarLine] = useState(false);
+  const [showFuelInLitres, setShowFuelInLitres] = useState(true);
   const [recordsSearchQuery, setRecordsSearchQuery] = useState('');
 
   const handleSyncStarLine = async () => {
@@ -567,20 +568,50 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 </div>
               </div>
 
-              {/* Fuel Level */}
-              <div className="bg-white/80 dark:bg-dark-800/90 backdrop-blur-md p-2.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm">
+              {/* Fuel Level with Interactive Litres / Percent Toggle */}
+              <div
+                onClick={() => setShowFuelInLitres(!showFuelInLitres)}
+                className="bg-white/80 dark:bg-dark-800/90 backdrop-blur-md p-2.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm cursor-pointer hover:border-sky-500/50 hover:shadow-md transition group select-none"
+                title="Нажмите, чтобы переключить Литры / Проценты"
+              >
                 <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 flex items-center justify-between">
-                  <span>Бак</span>
-                  <Fuel className="w-3 h-3 text-sky-500" />
+                  <span>Бак ({showFuelInLitres ? 'л' : '%'})</span>
+                  <div className="flex items-center space-x-1">
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-600 dark:text-sky-400 font-bold group-hover:bg-sky-500 group-hover:text-white transition">
+                      {showFuelInLitres ? 'в %' : 'в л'}
+                    </span>
+                    <Fuel className="w-3 h-3 text-sky-500" />
+                  </div>
                 </div>
                 <div className="space-y-1 mt-1">
-                  <div className="text-sm sm:text-base font-black text-sky-600 dark:text-sky-400 font-mono">
-                    {vehicle.starline_fuel_percent ? `${vehicle.starline_fuel_percent}%` : '—'}
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-sm sm:text-base font-black text-sky-600 dark:text-sky-400 font-mono">
+                      {vehicle.starline_fuel_percent !== null && vehicle.starline_fuel_percent !== undefined ? (
+                        showFuelInLitres ? (
+                          <>{((vehicle.fuel_tank_capacity || 55) * (vehicle.starline_fuel_percent / 100)).toFixed(1)} <span className="text-xs font-semibold text-slate-500">/{vehicle.fuel_tank_capacity || 55} л</span></>
+                        ) : (
+                          `${Math.round(vehicle.starline_fuel_percent)}%`
+                        )
+                      ) : '—'}
+                    </span>
+                    {vehicle.starline_fuel_percent !== null && vehicle.starline_fuel_percent !== undefined && (
+                      <span className="text-[10px] text-slate-400 font-mono font-bold">
+                        {showFuelInLitres
+                          ? `${Math.round(vehicle.starline_fuel_percent)}%`
+                          : `${((vehicle.fuel_tank_capacity || 55) * (vehicle.starline_fuel_percent / 100)).toFixed(1)} л`}
+                      </span>
+                    )}
                   </div>
                   {vehicle.starline_fuel_percent !== null && vehicle.starline_fuel_percent !== undefined && (
                     <div className="w-full bg-slate-200 dark:bg-dark-700 h-1.5 rounded-full overflow-hidden">
                       <div
-                        className="bg-sky-500 h-full rounded-full transition-all duration-500"
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          vehicle.starline_fuel_percent <= 15
+                            ? 'bg-rose-500 animate-pulse'
+                            : vehicle.starline_fuel_percent <= 30
+                            ? 'bg-amber-500'
+                            : 'bg-sky-500'
+                        }`}
                         style={{ width: `${Math.min(100, Math.max(0, vehicle.starline_fuel_percent))}%` }}
                       />
                     </div>

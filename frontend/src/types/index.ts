@@ -15,6 +15,7 @@ export interface Vehicle {
   oil_spec?: string;
   distance_unit: string;
   fuel_unit: string;
+  fuel_tank_capacity?: number;
   currency: string;
   photo_url?: string;
   notes?: string;
