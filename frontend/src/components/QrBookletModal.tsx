@@ -39,47 +39,112 @@ export const QrBookletModal: React.FC<QrBookletModalProps> = ({
   const [stickerTemplate, setStickerTemplate] = useState<'dealer' | 'compact'>('dealer');
   const [copied, setCopied] = useState(false);
 
-  // 1. Detect latest real oil change from records
+  // Helper to strictly exclude transmission / gearbox / axle / ATF oils
+  const isTransmission = (str: string) => {
+    const s = (str || '').toLowerCase();
+    return (
+      s.includes('кпп') ||
+      s.includes('акпп') ||
+      s.includes('мкпп') ||
+      s.includes('коробк') ||
+      s.includes('трансмис') ||
+      s.includes('вариатор') ||
+      s.includes('cvt') ||
+      s.includes('atf') ||
+      s.includes('редуктор') ||
+      s.includes('раздатк') ||
+      s.includes('мост') ||
+      s.includes('гур') ||
+      s.includes('75w') ||
+      s.includes('80w') ||
+      s.includes('85w')
+    );
+  };
+
+  // Helper to strictly identify MOTOR / ENGINE oil (ДВС)
+  const isMotorOil = (str: string) => {
+    const s = (str || '').toLowerCase();
+    if (isTransmission(s)) return false;
+    return (
+      s.includes('двс') ||
+      s.includes('моторн') ||
+      s.includes('двигател') ||
+      s.includes('то-') ||
+      s.includes('масло') ||
+      s.includes('0w') ||
+      s.includes('5w') ||
+      s.includes('10w')
+    );
+  };
+
+  // 1. Detect latest real ENGINE oil change from records
   const latestOilRecord = useMemo(() => {
     if (!records || records.length === 0) return null;
     const sorted = [...records].sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     );
-    return sorted.find((r) => {
+
+    // Primary search: explicit motor oil or TO records
+    const engineRecord = sorted.find((r) => {
       const t = (r.title || '').toLowerCase();
       const d = (r.description || '').toLowerCase();
-      const hasOilItem = r.items?.some(
-        (it) =>
-          (it.name || '').toLowerCase().includes('масло') ||
-          (it.category || '').toLowerCase() === 'oil' ||
-          (it.category || '').toLowerCase().includes('масл')
+      if (isTransmission(t) || isTransmission(d)) return false;
+
+      const hasMotorOilItem = r.items?.some(
+        (it) => isMotorOil(it.name) || (it.category === 'oil' && !isTransmission(it.name))
       );
-      return t.includes('масло') || t.includes('то-') || t.includes('двс') || d.includes('масло') || hasOilItem;
+
+      return (
+        t.includes('моторн') ||
+        t.includes('двс') ||
+        t.includes('то-') ||
+        (t.includes('масло') && !isTransmission(t)) ||
+        (d.includes('масло') && !isTransmission(d)) ||
+        hasMotorOilItem
+      );
     });
+
+    return engineRecord || null;
   }, [records]);
 
-  // Extract oil item if present in latest record
+  // Extract specifically ENGINE oil item from the latest record
   const latestOilItem = useMemo(() => {
     if (!latestOilRecord?.items) return null;
-    return latestOilRecord.items.find(
-      (it) =>
-        (it.name || '').toLowerCase().includes('масло') ||
-        (it.category || '').toLowerCase() === 'oil' ||
-        (it.category || '').toLowerCase().includes('масл')
+    // Prefer explicit motor oil item
+    return (
+      latestOilRecord.items.find(
+        (it) =>
+          !isTransmission(it.name) &&
+          (it.name.toLowerCase().includes('мотор') ||
+            it.name.toLowerCase().includes('двс') ||
+            it.name.toLowerCase().includes('0w') ||
+            it.name.toLowerCase().includes('5w') ||
+            it.name.toLowerCase().includes('10w') ||
+            it.category === 'oil')
+      ) ||
+      latestOilRecord.items.find((it) => !isTransmission(it.name) && it.name.toLowerCase().includes('масло')) ||
+      null
     );
   }, [latestOilRecord]);
 
-  // 2. Detect oil reminder plan
+  // 2. Detect ENGINE oil reminder plan (strictly exclude transmission/gearbox)
   const oilReminder = useMemo(() => {
-    return (
-      reminders.find(
-        (r) =>
-          (r.title || '').toLowerCase().includes('масло') ||
-          (r.title || '').toLowerCase().includes('то-') ||
-          (r.title || '').toLowerCase().includes('двс') ||
-          r.category === 'oil'
-      ) || reminders[0]
-    );
+    // 1st priority: explicit motor oil / DVS
+    const explicitEngine = reminders.find((r) => {
+      const t = (r.title || '').toLowerCase();
+      return !isTransmission(t) && (t.includes('моторн') || t.includes('двс') || t.includes('двигател'));
+    });
+    if (explicitEngine) return explicitEngine;
+
+    // 2nd priority: general oil or TO-1/TO-2 without transmission keywords
+    const generalEngine = reminders.find((r) => {
+      const t = (r.title || '').toLowerCase();
+      return !isTransmission(t) && (t.includes('масло') || t.includes('то-') || r.category === 'oil');
+    });
+    if (generalEngine) return generalEngine;
+
+    // Fallback: any reminder that is NOT transmission
+    return reminders.find((r) => !isTransmission(r.title || '')) || reminders[0];
   }, [reminders]);
 
   // Interval parameters
