@@ -40,6 +40,7 @@ class VehicleBase(BaseModel):
     starline_gps_lat: Optional[float] = None
     starline_gps_lon: Optional[float] = None
     starline_gps_type: Optional[str] = "gps"
+    starline_is_spoofed: Optional[bool] = False
     telematics_webhook_key: Optional[str] = None
     telematics_auto_sync: bool = False
 

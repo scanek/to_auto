@@ -47,6 +47,7 @@ export interface Vehicle {
   starline_gps_lat?: number;
   starline_gps_lon?: number;
   starline_gps_type?: 'gps' | 'lbs';
+  starline_is_spoofed?: boolean;
   telematics_auto_sync?: boolean;
   telematics_webhook_key?: string;
 

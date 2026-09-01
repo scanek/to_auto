@@ -49,6 +49,7 @@ class Vehicle(Base):
     starline_gps_lat = Column(Float, nullable=True) # GPS/LBS широта
     starline_gps_lon = Column(Float, nullable=True) # GPS/LBS долгота
     starline_gps_type = Column(String(20), default="gps") # 'gps' или 'lbs' (сотовые вышки)
+    starline_is_spoofed = Column(Boolean, default=False) # Обнаружена подмена/глушение GPS
     telematics_auto_sync = Column(Boolean, default=False)
     telematics_webhook_key = Column(String(100), nullable=True, unique=True, index=True)
     

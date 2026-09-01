@@ -1,4 +1,5 @@
 import os
+import math
 import httpx
 import hashlib
 import json
@@ -66,6 +67,15 @@ def _find_numeric_in_flat(flat: Dict[str, Any], substrings: tuple[str, ...], min
                 except (ValueError, TypeError):
                     pass
     return None
+
+def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Calculates great-circle distance between two GPS coordinates in kilometers."""
+    R = 6371.0
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = math.sin(dlat / 2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
 
 class StarLineService:
     @staticmethod
@@ -376,32 +386,68 @@ class StarLineService:
             if gsm_level is not None:
                 gsm_level = int(gsm_level)
 
-            # 13. GPS / LBS Latitude & Longitude (supports GSM base stations when GPS is jammed)
-            gps_lat_keys = (
-                "devices[0].position.y", "position.y", "car_state.y", "y", "lat", "latitude",
-                "devices[0].lat", "devices[0].geo.lat", "geo.lat", "devices[0].point.y", "point.y",
-                "devices[0].state.position.y", "state.position.y", "devices[0].state.y",
-                "devices[0].lbs.lat", "devices[0].lbs.y", "lbs.lat", "lbs.y"
+            # 13. GPS vs LBS Anti-Spoofing Cross-Validation Engine
+            # Extract pure LBS (cellular base station) coordinates
+            lbs_lat_keys = (
+                "devices[0].lbs.lat", "devices[0].lbs.y", "lbs.lat", "lbs.y",
+                "devices[0].lbs_lat", "position.lbs_lat", "position.lbs_y"
             )
-            gps_lon_keys = (
-                "devices[0].position.x", "position.x", "car_state.x", "x", "lon", "lng", "longitude",
-                "devices[0].lon", "devices[0].lng", "devices[0].geo.lon", "geo.lon", "devices[0].point.x", "point.x",
-                "devices[0].state.position.x", "state.position.x", "devices[0].state.x",
-                "devices[0].lbs.lon", "devices[0].lbs.lng", "devices[0].lbs.x", "lbs.lon", "lbs.x"
+            lbs_lon_keys = (
+                "devices[0].lbs.lon", "devices[0].lbs.lng", "devices[0].lbs.x", "lbs.lon", "lbs.lng", "lbs.x",
+                "devices[0].lbs_lon", "position.lbs_lon", "position.lbs_lng"
             )
-            gps_lat = _find_numeric_in_flat(all_flat, gps_lat_keys, min_val=-90.0, max_val=90.0)
-            gps_lon = _find_numeric_in_flat(all_flat, gps_lon_keys, min_val=-180.0, max_val=180.0)
+            lbs_lat = _find_numeric_in_flat(all_flat, lbs_lat_keys, min_val=-90.0, max_val=90.0)
+            lbs_lon = _find_numeric_in_flat(all_flat, lbs_lon_keys, min_val=-180.0, max_val=180.0)
 
-            # Check if source is LBS (Cellular base station) or Satellite GPS
-            gps_type = "gps"
-            sat_qty = _find_numeric_in_flat(all_flat, ("devices[0].position.sat_qty", "position.sat_qty", "sat_qty", "devices[0].sat_qty", "gps_lvl"), min_val=0.0, max_val=50.0)
-            is_lbs = False
+            # Check if primary position has lbs flag set
+            is_pos_lbs = False
             for lbs_k in ("devices[0].position.lbs", "position.lbs", "lbs", "devices[0].lbs"):
                 if lbs_k in all_flat and all_flat[lbs_k]:
-                    is_lbs = True
+                    is_pos_lbs = True
                     break
-            if is_lbs or (sat_qty is not None and sat_qty == 0):
-                gps_type = "lbs"
+
+            # Extract raw GPS coordinates from satellite fix
+            gps_raw_lat = _find_numeric_in_flat(all_flat, ("devices[0].position.y", "position.y", "car_state.y", "state.position.y", "y", "lat"), min_val=-90.0, max_val=90.0)
+            gps_raw_lon = _find_numeric_in_flat(all_flat, ("devices[0].position.x", "position.x", "car_state.x", "state.position.x", "x", "lon", "lng"), min_val=-180.0, max_val=180.0)
+
+            sat_qty = _find_numeric_in_flat(all_flat, ("devices[0].position.sat_qty", "position.sat_qty", "sat_qty", "devices[0].sat_qty", "gps_lvl"), min_val=0.0, max_val=50.0)
+
+            if is_pos_lbs:
+                if lbs_lat is None:
+                    lbs_lat = gps_raw_lat
+                if lbs_lon is None:
+                    lbs_lon = gps_raw_lon
+
+            final_gps_lat = None
+            final_gps_lon = None
+            final_gps_type = "gps"
+            is_spoofed = False
+
+            # Anti-spoof cross check
+            if lbs_lat is not None and lbs_lon is not None and gps_raw_lat is not None and gps_raw_lon is not None and not is_pos_lbs:
+                dist_km = _haversine_km(gps_raw_lat, gps_raw_lon, lbs_lat, lbs_lon)
+                # If GPS shows location > 8 km away from the actual GSM cellular tower serving the SIM card,
+                # it is spoofed / jammed by electronic warfare or false satellite signals!
+                if dist_km > 8.0:
+                    is_spoofed = True
+                    final_gps_lat = lbs_lat
+                    final_gps_lon = lbs_lon
+                    final_gps_type = "lbs"
+                else:
+                    is_spoofed = False
+                    final_gps_lat = gps_raw_lat
+                    final_gps_lon = gps_raw_lon
+                    final_gps_type = "gps"
+            elif lbs_lat is not None and lbs_lon is not None:
+                final_gps_lat = lbs_lat
+                final_gps_lon = lbs_lon
+                final_gps_type = "lbs"
+                is_spoofed = False
+            elif gps_raw_lat is not None and gps_raw_lon is not None:
+                final_gps_lat = gps_raw_lat
+                final_gps_lon = gps_raw_lon
+                final_gps_type = "gps" if (sat_qty is None or sat_qty > 0) else "lbs"
+                is_spoofed = False
 
             return {
                 "mileage": mileage,
@@ -416,9 +462,10 @@ class StarLineService:
                 "is_handbrake": is_handbrake,
                 "is_doors_closed": is_doors_closed,
                 "gsm_level": gsm_level,
-                "gps_lat": gps_lat,
-                "gps_lon": gps_lon,
-                "gps_type": gps_type,
+                "gps_lat": final_gps_lat,
+                "gps_lon": final_gps_lon,
+                "gps_type": final_gps_type,
+                "is_spoofed": is_spoofed,
             }
 
     @staticmethod
@@ -481,6 +528,7 @@ class StarLineService:
             vehicle.starline_gps_lat = telemetry["gps_lat"]
             vehicle.starline_gps_lon = telemetry["gps_lon"]
             vehicle.starline_gps_type = telemetry.get("gps_type", "gps")
+            vehicle.starline_is_spoofed = telemetry.get("is_spoofed", False)
 
         vehicle.starline_last_sync = now
         await db.commit()

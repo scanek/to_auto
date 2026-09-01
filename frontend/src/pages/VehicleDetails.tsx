@@ -798,22 +798,36 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                     <MapPin className="w-4 h-4" />
                   </div>
                   <div>
-                    <div className="flex items-center space-x-1.5">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       <span className="font-bold text-slate-900 dark:text-white">Местоположение автомобиля:</span>
-                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                        vehicle.starline_gps_type === 'lbs'
-                          ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
-                          : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
-                      }`}>
-                        {vehicle.starline_gps_type === 'lbs' ? '📶 По сотовым вышкам (LBS)' : '🛰️ Спутники (GPS)'}
-                      </span>
+                      {vehicle.starline_is_spoofed ? (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30 flex items-center space-x-1" title="Спутники GPS передают ложные координаты (глушение). Сервер автоматически применил координаты сотовой вышки.">
+                          <span>🛡️ Спуфинг GPS устранен (LBS)</span>
+                        </span>
+                      ) : (
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                          vehicle.starline_gps_type === 'lbs'
+                            ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
+                            : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                        }`}>
+                          {vehicle.starline_gps_type === 'lbs' ? '📶 Сотовые вышки (LBS)' : '🛰️ Спутники (GPS)'}
+                        </span>
+                      )}
                     </div>
                     {vehicle.starline_gps_lat && vehicle.starline_gps_lon ? (
-                      <div className="text-slate-500 dark:text-slate-400 font-mono text-[11px] mt-0.5">
-                        {vehicle.starline_gps_lat.toFixed(4)}, {vehicle.starline_gps_lon.toFixed(4)}
-                        {vehicle.starline_gps_type === 'lbs' && (
-                          <span className="text-[10px] text-amber-600 dark:text-amber-400 ml-1.5 font-sans">
+                      <div className="text-slate-500 dark:text-slate-400 font-mono text-[11px] mt-0.5 flex items-center space-x-1">
+                        <span>{vehicle.starline_gps_lat.toFixed(4)}, {vehicle.starline_gps_lon.toFixed(4)}</span>
+                        {vehicle.starline_is_spoofed ? (
+                          <span className="text-[10px] text-rose-600 dark:text-rose-400 font-sans font-medium">
+                            (сверено по вышке сотовой сети)
+                          </span>
+                        ) : vehicle.starline_gps_type === 'lbs' ? (
+                          <span className="text-[10px] text-amber-600 dark:text-amber-400 font-sans font-medium">
                             (сектор вышки GSM)
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-sans font-medium">
+                            (сверено с сотовой сетью)
                           </span>
                         )}
                       </div>
