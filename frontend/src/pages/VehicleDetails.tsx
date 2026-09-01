@@ -853,7 +853,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                         <span>Яндекс.Карты</span>
                       </a>
                       <a
-                        href={`https://2gis.ru/geo/${vehicle.starline_gps_lon},${vehicle.starline_gps_lat}`}
+                        href={`https://2gis.ru/search/${vehicle.starline_gps_lat}%2C${vehicle.starline_gps_lon}`}
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-400 font-bold text-[11px] border border-emerald-500/30 transition"

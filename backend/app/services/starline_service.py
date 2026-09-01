@@ -387,14 +387,16 @@ class StarLineService:
                 gsm_level = int(gsm_level)
 
             # 13. GPS vs LBS Anti-Spoofing Cross-Validation Engine
+            # In StarLine API:
+            # position.x = Latitude (Широта, e.g. 55.3820 N for Vyksa/Moscow)
+            # position.y = Longitude (Долгота, e.g. 42.1725 E for Vyksa, 37.61 E for Moscow)
+            
             # Extract pure LBS (cellular base station) coordinates
             lbs_lat_keys = (
-                "devices[0].lbs.lat", "devices[0].lbs.y", "lbs.lat", "lbs.y",
-                "devices[0].lbs_lat", "position.lbs_lat", "position.lbs_y"
+                "devices[0].lbs.lat", "lbs.lat", "devices[0].lbs.x", "lbs.x", "devices[0].lbs_lat", "position.lbs_lat", "position.lbs_x"
             )
             lbs_lon_keys = (
-                "devices[0].lbs.lon", "devices[0].lbs.lng", "devices[0].lbs.x", "lbs.lon", "lbs.lng", "lbs.x",
-                "devices[0].lbs_lon", "position.lbs_lon", "position.lbs_lng"
+                "devices[0].lbs.lon", "devices[0].lbs.lng", "lbs.lon", "lbs.lng", "devices[0].lbs.y", "lbs.y", "devices[0].lbs_lon", "position.lbs_lon", "position.lbs_y"
             )
             lbs_lat = _find_numeric_in_flat(all_flat, lbs_lat_keys, min_val=-90.0, max_val=90.0)
             lbs_lon = _find_numeric_in_flat(all_flat, lbs_lon_keys, min_val=-180.0, max_val=180.0)
@@ -406,11 +408,24 @@ class StarLineService:
                     is_pos_lbs = True
                     break
 
-            # Extract raw GPS coordinates from satellite fix
-            gps_raw_lat = _find_numeric_in_flat(all_flat, ("devices[0].position.y", "position.y", "car_state.y", "state.position.y", "y", "lat"), min_val=-90.0, max_val=90.0)
-            gps_raw_lon = _find_numeric_in_flat(all_flat, ("devices[0].position.x", "position.x", "car_state.x", "state.position.x", "x", "lon", "lng"), min_val=-180.0, max_val=180.0)
+            # Extract raw GPS coordinates
+            gps_raw_lat = _find_numeric_in_flat(all_flat, ("devices[0].position.x", "position.x", "devices[0].geo.lat", "geo.lat", "lat", "latitude", "car_state.x", "state.position.x", "x"), min_val=-90.0, max_val=90.0)
+            gps_raw_lon = _find_numeric_in_flat(all_flat, ("devices[0].position.y", "position.y", "devices[0].geo.lon", "geo.lon", "lon", "lng", "longitude", "car_state.y", "state.position.y", "y"), min_val=-180.0, max_val=180.0)
 
             sat_qty = _find_numeric_in_flat(all_flat, ("devices[0].position.sat_qty", "position.sat_qty", "sat_qty", "devices[0].sat_qty", "gps_lvl"), min_val=0.0, max_val=50.0)
+
+            # Normalization helper to ensure Lat and Lon are never inverted
+            def _normalize_coords(lat: Optional[float], lon: Optional[float]):
+                if lat is None or lon is None:
+                    return lat, lon
+                # In European Russia & CIS: Latitude is ~45°..70° N, Longitude is ~25°..55° E
+                # If lat is in [35..50] and lon is in [51..70], swap them to correct orientation
+                if 30.0 <= lat <= 52.0 and 52.1 <= lon <= 80.0:
+                    return lon, lat
+                return lat, lon
+
+            gps_raw_lat, gps_raw_lon = _normalize_coords(gps_raw_lat, gps_raw_lon)
+            lbs_lat, lbs_lon = _normalize_coords(lbs_lat, lbs_lon)
 
             if is_pos_lbs:
                 if lbs_lat is None:
