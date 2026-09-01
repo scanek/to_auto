@@ -469,12 +469,12 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
               </div>
               <div>
                 <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center space-x-1.5">
-                  <span>{formData.is_public ? '🌐 Публичный автомобиль' : '🔒 Личный автомобиль'}</span>
+                  <span>{formData.is_public ? '🌐 Публичный автомобиль (показывать на главной)' : '🔒 Личный автомобиль (скрыт)'}</span>
                 </div>
                 <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
                   {formData.is_public
-                    ? 'Виден всем пользователям в гараже в режиме «только чтение»'
-                    : 'Виден исключительно в вашем личном профиле'}
+                    ? 'Автомобиль отображается гостям на главной странице и в общем каталоге в режиме «только чтение»'
+                    : 'Автомобиль виден исключительно вам в вашем личном гараже'}
                 </div>
               </div>
             </div>

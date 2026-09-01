@@ -611,6 +611,24 @@ export function App() {
           />
         </>
       )}
+
+      {/* Global Footer */}
+      <footer className="w-full border-t border-slate-200 dark:border-dark-800 bg-white/60 dark:bg-dark-900/60 backdrop-blur-sm py-4 px-3 sm:px-6 mt-auto text-center transition-colors">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <span>© {new Date().getFullYear()} Бортовой Журнал</span>
+            <span>•</span>
+            <span className="font-semibold text-slate-700 dark:text-slate-300">
+              Разработчик: Александр Щеголев
+            </span>
+          </div>
+          <div className="flex items-center space-x-2 font-mono text-[11px]">
+            <span className="px-2.5 py-1 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 font-bold border border-brand-500/25 shadow-sm">
+              Версия программы: v1.6.0
+            </span>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
