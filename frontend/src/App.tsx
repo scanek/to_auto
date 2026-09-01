@@ -70,8 +70,8 @@ export function App() {
 
     setCurrentUser(null);
     setIsAuthenticated(false);
+    await loadVehicles();
     setLoading(false);
-    setIsAuthModalOpen(true);
   }, []);
 
   useEffect(() => {
@@ -451,24 +451,6 @@ export function App() {
           <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-3">
             <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
             <p className="text-xs text-slate-500 dark:text-slate-400">Загрузка данных гаража...</p>
-          </div>
-        ) : !currentUser ? (
-          <div className="flex flex-col items-center justify-center min-h-[60vh] max-w-md mx-auto text-center space-y-4 p-6 bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-3xl shadow-sm">
-            <div className="w-16 h-16 rounded-3xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center">
-              <ZapOff className="w-8 h-8" />
-            </div>
-            <h2 className="text-xl font-extrabold text-slate-900 dark:text-white">
-              Личный гараж
-            </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-              Войдите в свой аккаунт или зарегистрируйтесь, чтобы получить доступ к вашим автомобилям, записям ТО, заправкам и страхованию.
-            </p>
-            <button
-              onClick={() => setIsAuthModalOpen(true)}
-              className="w-full py-3 px-6 rounded-2xl bg-brand-500 hover:bg-brand-600 active:scale-95 text-white font-bold text-xs shadow-md shadow-brand-500/20 transition-all"
-            >
-              Войти / Регистрация
-            </button>
           </div>
         ) : selectedVehicle ? (
           <VehicleDetails

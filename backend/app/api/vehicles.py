@@ -74,11 +74,28 @@ async def get_vehicles(
     current_user: Optional[User] = Depends(get_optional_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get vehicles. Returns current user's vehicles + public vehicles from other users."""
+    """Get vehicles. Returns current user's vehicles + public vehicles (or all public for guests)."""
     if not current_user:
-        return []
+        # Guests / Unauthenticated users: return all public showcase vehicles
+        query = (
+            select(Vehicle)
+            .options(selectinload(Vehicle.user))
+            .where(Vehicle.is_public == True)
+            .order_by(Vehicle.created_at.desc())
+        )
+        result = await db.execute(query)
+        vehicles = result.scalars().all()
+        responses = []
+        for v in vehicles:
+            resp = VehicleResponse.model_validate(v)
+            resp.is_owner = False
+            if v.user:
+                resp.owner_name = v.user.full_name or v.user.username
+            await calculate_vehicle_totals(db, v, resp)
+            responses.append(resp)
+        return responses
 
-    # In regular garage view, all users (including admins) see only their own vehicles + other users' public vehicles
+    # Logged-in users: their own vehicles + public vehicles
     query = (
         select(Vehicle)
         .options(selectinload(Vehicle.user))

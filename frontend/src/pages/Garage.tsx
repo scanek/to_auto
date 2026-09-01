@@ -98,6 +98,30 @@ export const Garage: React.FC<GarageProps> = ({
 
   return (
     <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-4 sm:space-y-8 animate-fadeIn">
+      {/* Guest Welcome & Showcase Banner */}
+      {!isAuthenticated && (
+        <div className="bg-gradient-to-r from-brand-600/15 via-brand-500/10 to-purple-600/15 border border-brand-500/30 rounded-3xl p-5 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm animate-fadeIn">
+          <div className="flex items-center space-x-3.5 min-w-0">
+            <div className="w-12 h-12 rounded-2xl bg-brand-500/20 text-brand-600 dark:text-brand-400 flex items-center justify-center flex-shrink-0 shadow-inner">
+              <Globe className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+                Публичная витрина автомобилей
+              </h2>
+              <p className="text-xs text-slate-600 dark:text-slate-300 max-w-2xl mt-0.5 leading-relaxed">
+                Вы просматриваете автомобили с открытым доступом. Выберите любой авто, чтобы изучить историю ТО, заправок и аналитики. Войдите или зарегистрируйтесь, чтобы создать свой гараж.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onAddVehicle}
+            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 active:scale-95 text-white font-bold text-xs shadow-md shadow-brand-500/25 transition-all flex-shrink-0"
+          >
+            Войти / Регистрация
+          </button>
+        </div>
+      )}
       {/* Top Banner Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-4">
         <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 p-4 sm:p-5 rounded-2xl flex items-center justify-between shadow-sm">
