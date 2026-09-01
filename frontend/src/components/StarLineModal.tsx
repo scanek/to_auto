@@ -28,6 +28,9 @@ export const StarLineModal: React.FC<StarLineModalProps> = ({
   const [captchaSid, setCaptchaSid] = useState<string | null>(null);
   const [captchaImg, setCaptchaImg] = useState<string | null>(null);
   const [captchaCode, setCaptchaCode] = useState('');
+  const [customAppId, setCustomAppId] = useState('');
+  const [customSecret, setCustomSecret] = useState('');
+  const [showCustomApi, setShowCustomApi] = useState(false);
 
   // Result state
   const [loading, setLoading] = useState(false);
@@ -50,6 +53,8 @@ export const StarLineModal: React.FC<StarLineModalProps> = ({
       const res = await api.authStarLine(vehicle.id, {
         login,
         password,
+        app_id: customAppId.trim() || undefined,
+        secret: customSecret.trim() || undefined,
         sms_code: needSms ? smsCode : undefined,
         captcha_sid: captchaSid || undefined,
         captcha_code: captchaCode || undefined,
@@ -341,6 +346,51 @@ export const StarLineModal: React.FC<StarLineModalProps> = ({
                   />
                 </div>
               )}
+
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowCustomApi(!showCustomApi)}
+                  className="text-[11px] text-slate-500 dark:text-slate-400 hover:text-sky-500 flex items-center space-x-1 transition"
+                >
+                  <KeyRound className="w-3 h-3" />
+                  <span>{showCustomApi ? 'Скрыть параметры API' : 'Указать свои App ID и Secret (если требуется)'}</span>
+                </button>
+
+                {showCustomApi && (
+                  <div className="mt-2 p-3 rounded-xl bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 text-xs space-y-2 animate-fadeIn">
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                      По умолчанию используются общие ключи сервера. Если StarLine сообщает об ограничении учетной записи, создайте личное бесплатное приложение на{' '}
+                      <a href="https://developer.starline.ru/" target="_blank" rel="noreferrer" className="text-sky-500 underline font-semibold">
+                        developer.starline.ru
+                      </a>{' '}
+                      и укажите свои ключи:
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Личный App ID</label>
+                        <input
+                          type="text"
+                          placeholder="например, 12345"
+                          value={customAppId}
+                          onChange={(e) => setCustomAppId(e.target.value)}
+                          className="w-full px-2.5 py-1.5 text-xs bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-lg font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Личный Secret</label>
+                        <input
+                          type="text"
+                          placeholder="секретный ключ"
+                          value={customSecret}
+                          onChange={(e) => setCustomSecret(e.target.value)}
+                          className="w-full px-2.5 py-1.5 text-xs bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-lg font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             <button
