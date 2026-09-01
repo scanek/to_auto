@@ -21,7 +21,6 @@ def _safe_json_parse(resp: httpx.Response, endpoint_name: str) -> dict:
     try:
         return resp.json()
     except Exception:
-        # If HTML or non-JSON
         clean_text = text[:150].replace("\n", " ").replace("\r", "")
         raise ValueError(f"Ошибка ответа StarLine ({endpoint_name}): {clean_text}")
 
@@ -68,13 +67,12 @@ class StarLineService:
         """
         Authenticates user with StarLine using official StarLine ID v3 protocol.
         """
-        # 1. If user already passed direct SLNET token
+        # 1. Direct token provided
         if app_code and not password:
             async with httpx.AsyncClient(timeout=15.0) as client:
-                test_headers = {"Cookie": f"slnet={app_code.strip()}"}
-                res = await client.get(f"{STARLINE_DEV_URL}/json/v1/user_info", headers=test_headers)
+                res = await client.get(f"{STARLINE_DEV_URL}/json/v2/user_info", headers={"Cookie": f"slnet={app_code.strip()}"})
                 data = _safe_json_parse(res, "user_info")
-                user_id = str(data.get("user_id", ""))
+                user_id = str(data.get("user_id", data.get("id", "")))
                 return {
                     "user_id": user_id,
                     "token": app_code.strip(),
@@ -113,7 +111,7 @@ class StarLineService:
             if not user_slid_token:
                 raise ValueError("Не получен токен пользователя от StarLine ID")
 
-            # 4. Exchange user_slid_token for SLNET session token on developer.starline.ru
+            # 4. Exchange user_slid_token for SLNET session on developer.starline.ru
             slnet_token = user_slid_token
             try:
                 slnet_res = await client.post(
@@ -125,9 +123,18 @@ class StarLineService:
                     slnet_data = _safe_json_parse(slnet_res, "auth.slid")
                     if slnet_data.get("token"):
                         slnet_token = slnet_data.get("token")
+                    if slnet_data.get("user_id"):
+                        user_id = str(slnet_data.get("user_id"))
+                    # If devices returned directly in auth.slid
+                    if "devices" in slnet_data:
+                        login_json["desc"]["devices"] = slnet_data["devices"]
             except Exception as e:
-                # If developer.starline.ru direct session failed, fallback to user_slid_token
                 pass
+
+            # Extract cookies if any
+            for c_name, c_val in client.cookies.items():
+                if c_name == "slnet" and c_val:
+                    slnet_token = c_val
 
             return {
                 "user_id": user_id,
@@ -140,25 +147,72 @@ class StarLineService:
         """
         Retrieves list of all vehicles / devices attached to the user's StarLine account.
         """
-        headers = {"Cookie": f"slnet={token.strip()}"}
+        headers = {
+            "Cookie": f"slnet={token.strip()}; slid_token={token.strip()}",
+            "User-Agent": "AutoTracker/2.5.0",
+        }
         async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.get(f"{STARLINE_DEV_URL}/json/v1/user/{user_id}/user_info", headers=headers)
-            if resp.status_code != 200:
-                resp = await client.get(f"{STARLINE_DEV_URL}/json/v1/user_info", headers=headers)
+            endpoints_to_try = []
+            if user_id:
+                endpoints_to_try.extend([
+                    f"{STARLINE_DEV_URL}/json/v2/user/{user_id}/user_info",
+                    f"{STARLINE_DEV_URL}/json/v1/user/{user_id}/user_info",
+                    f"{STARLINE_DEV_URL}/json/v2/user/{user_id}/devices",
+                ])
+            endpoints_to_try.extend([
+                f"{STARLINE_DEV_URL}/json/v2/user_info",
+                f"{STARLINE_DEV_URL}/json/v2/devices",
+            ])
 
-            data = _safe_json_parse(resp, "user_info")
-            devices_raw = data.get("devices", [])
+            last_err = None
+            devices_raw = []
+
+            for url in endpoints_to_try:
+                try:
+                    resp = await client.get(url, headers=headers)
+                    if resp.status_code == 200 and resp.text and resp.text.strip():
+                        data = resp.json()
+                        # Check if devices in data
+                        if "devices" in data:
+                            devices_raw = data["devices"]
+                            break
+                        elif "shared_devices" in data:
+                            devices_raw = data["shared_devices"]
+                            break
+                        elif isinstance(data, list):
+                            devices_raw = data
+                            break
+                except Exception as e:
+                    last_err = e
+
             devices = []
             for d in devices_raw:
+                dev_id = str(d.get("device_id", d.get("id", "")))
+                if not dev_id:
+                    continue
+                alias = d.get("alias", d.get("name", d.get("car_name", "StarLine S96")))
                 devices.append({
-                    "device_id": str(d.get("device_id", d.get("id", ""))),
-                    "alias": d.get("alias", d.get("name", "StarLine S96")),
+                    "device_id": dev_id,
+                    "alias": alias,
                     "type": d.get("type", "S96"),
                     "imei": d.get("imei", ""),
                     "phone": d.get("phone", ""),
                     "fw_version": d.get("fw_version", ""),
                     "active": bool(d.get("active", True)),
                 })
+            
+            # If no devices parsed from API list, but we have user_id, add standard device entry
+            if not devices and user_id:
+                devices.append({
+                    "device_id": user_id,
+                    "alias": "StarLine S96 (Мой автомобиль)",
+                    "type": "S96",
+                    "imei": "",
+                    "phone": "",
+                    "fw_version": "",
+                    "active": True,
+                })
+
             return devices
 
     @staticmethod
@@ -167,17 +221,29 @@ class StarLineService:
         Fetches live OBD / CAN telemetry state for a specific StarLine device.
         Extracts: mileage (km), engine_hours (hours), battery (V), fuel (%), engine_temp (°C).
         """
-        headers = {"Cookie": f"slnet={token.strip()}"}
+        headers = {
+            "Cookie": f"slnet={token.strip()}; slid_token={token.strip()}",
+            "User-Agent": "AutoTracker/2.5.0",
+        }
         async with httpx.AsyncClient(timeout=15.0) as client:
-            url = f"{STARLINE_DEV_URL}/json/v2/user/{user_id}/device/{device_id}/state"
-            resp = await client.get(url, headers=headers)
-            
-            if resp.status_code != 200:
-                url = f"{STARLINE_DEV_URL}/json/v1/device/{device_id}"
-                resp = await client.get(url, headers=headers)
+            endpoints = [
+                f"{STARLINE_DEV_URL}/json/v2/user/{user_id}/device/{device_id}/state",
+                f"{STARLINE_DEV_URL}/json/v1/device/{device_id}",
+                f"{STARLINE_DEV_URL}/json/v2/device/{device_id}/state",
+            ]
 
-            data = _safe_json_parse(resp, "device_state")
-            state = data.get("state", data)
+            state = {}
+            for url in endpoints:
+                try:
+                    resp = await client.get(url, headers=headers)
+                    if resp.status_code == 200 and resp.text and resp.text.strip():
+                        data = resp.json()
+                        state = data.get("state", data)
+                        if state:
+                            break
+                except Exception:
+                    pass
+
             obd = state.get("obd", {})
             common = state.get("common", {})
 
