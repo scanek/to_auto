@@ -238,7 +238,6 @@ class StarLineService:
                     "active": bool(d.get("active", True)),
                 })
             
-            # Fallback: Always guarantee at least 1 device is available for selection
             if not devices:
                 devices.append({
                     "device_id": str(user_id) if user_id else "s96_device",
@@ -295,7 +294,7 @@ class StarLineService:
                 "engine_hours", "hours", "motohours", "moto_hours", "obd_engine_hours",
                 "engine_time_hours", "work_hours", "worktime_hours", "ign_hours",
                 "obd.engine_hours", "state.engine_hours", "car_state.engine_hours",
-                "r_engine", "r_ign", "work_time"
+                "r_engine", "r_ign", "work_time", "car_state.r_engine", "common.engine_time"
             )
             engine_hours = _find_numeric_in_flat(all_flat, hours_keys, min_val=0.1, max_val=50000.0)
 
@@ -304,7 +303,7 @@ class StarLineService:
                     "engine_time", "engine_time_sec", "engine_work_time", "work_time", 
                     "ign_time", "ignition_time", "r_engine", "r_ign", "r_run", "engine_runs",
                     "engine_on_time", "time_engine", "total_engine_time", "total_work_time",
-                    "obd.engine_time", "car_state.r_engine", "state.engine_time"
+                    "obd.engine_time", "car_state.r_engine", "state.engine_time", "car_state.ign_time"
                 )
                 raw_val = _find_numeric_in_flat(all_flat, sec_keys, min_val=60.0)
                 if raw_val:
@@ -327,13 +326,11 @@ class StarLineService:
             temp_keys = ("ctemp", "engine_temp", "t_engine", "temp_engine", "temp_eng")
             engine_temp = _find_numeric_in_flat(all_flat, temp_keys, min_val=-40.0, max_val=150.0)
 
-            # Debug keys
-            debug_engine_keys = {
-                k: v for k, v in all_flat.items() 
-                if any(x in k.lower() for x in ("eng", "hour", "time", "ign", "mot", "work", "r_"))
-                and isinstance(v, (int, float)) and v > 0
-                and not any(x in k.lower() for x in ("temp", "ctemp", "ts", "date", "_id"))
-            }
+            # Diagnostic list of all discovered non-boolean keys inside devices / state / obd / common
+            discovered_keys = []
+            for k, v in all_flat.items():
+                if not isinstance(v, bool) and not any(x in k.lower() for x in ("_id", "imei", "phone", "date", "ts", "pass", "token")):
+                    discovered_keys.append(f"{k}={v}")
 
             return {
                 "mileage": mileage,
@@ -341,7 +338,7 @@ class StarLineService:
                 "battery": battery,
                 "fuel_percent": fuel_percent,
                 "engine_temp": engine_temp,
-                "debug_engine_keys": debug_engine_keys,
+                "discovered_keys": discovered_keys,
             }
 
     @staticmethod
@@ -384,9 +381,11 @@ class StarLineService:
 
         summary = ", ".join(updated_fields) if updated_fields else "Телеметрия обновлена"
         
-        if telemetry.get("engine_hours") is None and telemetry.get("debug_engine_keys"):
-            debug_items = [f"{k}={v}" for k, v in list(telemetry["debug_engine_keys"].items())[:3]]
-            summary += f" (найдены ключи: {', '.join(debug_items)})"
+        if telemetry.get("engine_hours") is None and telemetry.get("discovered_keys"):
+            # Show the top numeric keys found in StarLine
+            sample_keys = [x for x in telemetry["discovered_keys"] if not x.endswith("=None") and not x.endswith("=0")][:4]
+            if sample_keys:
+                summary += f" [CAN-ключи: {', '.join(sample_keys)}]"
 
         return {
             "vehicle_id": vehicle.id,
