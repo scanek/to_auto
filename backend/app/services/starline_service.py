@@ -417,6 +417,6 @@ class StarLineService:
             "interior_temp": vehicle.starline_interior_temp,
             "balance": vehicle.starline_balance,
             "is_armed": vehicle.starline_is_armed,
-            "last_sync": now.isoformat(),
+            "last_sync": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "updated_summary": summary,
         }

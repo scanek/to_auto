@@ -115,6 +115,21 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   const [isSyncingStarLine, setIsSyncingStarLine] = useState(false);
   const [showFuelInLitres, setShowFuelInLitres] = useState(true);
   const [recordsSearchQuery, setRecordsSearchQuery] = useState('');
+  const [hideTelematicsPrompt, setHideTelematicsPrompt] = useState<boolean>(() => {
+    return localStorage.getItem(`hide_telematics_prompt_${vehicle.id}`) === 'true';
+  });
+
+  const formatSyncTime = (timestamp?: string | null) => {
+    if (!timestamp) return 'Только что';
+    try {
+      const iso = timestamp.endsWith('Z') || timestamp.includes('+') ? timestamp : `${timestamp}Z`;
+      const date = new Date(iso);
+      if (isNaN(date.getTime())) return 'Только что';
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return 'Только что';
+    }
+  };
 
   const handleSyncStarLine = async () => {
     if (isSyncingStarLine) return;
@@ -465,6 +480,17 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                   <CalendarClock className="w-4 h-4 text-amber-500 flex-shrink-0" />
                   <span>Регламент</span>
                 </button>
+
+                {vehicle.telematics_provider !== 'starline' && (
+                  <button
+                    onClick={() => setIsStarLineModalOpen(true)}
+                    className="flex items-center justify-center space-x-1 bg-sky-500/10 hover:bg-sky-500/20 text-sky-600 dark:text-sky-400 px-2.5 sm:px-3 py-2 rounded-xl text-xs font-bold border border-sky-500/30 transition-all active:scale-95"
+                    title="Подключить сигнализацию StarLine S96"
+                  >
+                    <Satellite className="w-4 h-4 flex-shrink-0" />
+                    <span>StarLine</span>
+                  </button>
+                )}
               </>
             )}
           </div>
@@ -514,9 +540,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                   <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center space-x-2 mt-0.5">
                     <span>Синхронизация:</span>
                     <strong className="text-slate-700 dark:text-slate-200">
-                      {vehicle.starline_last_sync
-                        ? new Date(vehicle.starline_last_sync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                        : 'Только что'}
+                      {formatSyncTime(vehicle.starline_last_sync)}
                     </strong>
                   </div>
                 </div>
@@ -676,18 +700,30 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               </div>
             </div>
           </div>
-        ) : isOwner ? (
-          <div className="p-2.5 sm:p-3 rounded-xl bg-slate-50 dark:bg-dark-900/60 border border-slate-200 dark:border-dark-750 flex items-center justify-between gap-2">
-            <div className="flex items-center space-x-2 text-xs text-slate-600 dark:text-slate-400">
+        ) : isOwner && !hideTelematicsPrompt ? (
+          <div className="p-2.5 sm:p-3 rounded-xl bg-slate-50 dark:bg-dark-900/60 border border-slate-200 dark:border-dark-750 flex items-center justify-between gap-2 animate-fadeIn">
+            <div className="flex items-center space-x-2 text-xs text-slate-600 dark:text-slate-400 min-w-0">
               <Satellite className="w-4 h-4 text-sky-500 flex-shrink-0" />
-              <span>Подключите <strong>StarLine S96</strong> для автоматического получения пробега и моточасов прямо из CAN-шины авто.</span>
+              <span className="truncate sm:whitespace-normal">Подключите <strong>StarLine S96</strong> для автоматического получения пробега и данных авто.</span>
             </div>
-            <button
-              onClick={() => setIsStarLineModalOpen(true)}
-              className="px-2.5 py-1 bg-sky-500/10 hover:bg-sky-500/20 text-sky-600 dark:text-sky-400 font-bold rounded-lg text-xs transition whitespace-nowrap border border-sky-500/30 active:scale-95"
-            >
-              🛰️ Подключить StarLine
-            </button>
+            <div className="flex items-center space-x-1.5 flex-shrink-0">
+              <button
+                onClick={() => setIsStarLineModalOpen(true)}
+                className="px-2.5 py-1 bg-sky-500/10 hover:bg-sky-500/20 text-sky-600 dark:text-sky-400 font-bold rounded-lg text-xs transition whitespace-nowrap border border-sky-500/30 active:scale-95"
+              >
+                🛰️ Подключить
+              </button>
+              <button
+                onClick={() => {
+                  setHideTelematicsPrompt(true);
+                  localStorage.setItem(`hide_telematics_prompt_${vehicle.id}`, 'true');
+                }}
+                className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-200 dark:hover:bg-dark-800 transition"
+                title="Скрыть эту плашку для данного авто"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         ) : null}
 
