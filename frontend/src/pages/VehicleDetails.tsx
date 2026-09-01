@@ -143,25 +143,6 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
     }
   };
 
-  const [executingCommand, setExecutingCommand] = useState<string | null>(null);
-
-  const handleExecuteCommand = async (command: string, label: string) => {
-    if (!window.confirm(`Отправить команду "${label}" на автомобиль ${vehicle.make} ${vehicle.model}?`)) {
-      return;
-    }
-    setExecutingCommand(command);
-    try {
-      const res = await api.executeTelematicsCommand(vehicle.id, command);
-      alert(res.message || `Команда "${label}" успешно отправлена!`);
-      await onRefreshVehicle();
-      await loadData();
-    } catch (err: any) {
-      alert(err.message || `Ошибка выполнения команды "${label}"`);
-    } finally {
-      setExecutingCommand(null);
-    }
-  };
-
   const handleSyncStarLine = async () => {
     if (isSyncingStarLine) return;
     setIsSyncingStarLine(true);
@@ -807,63 +788,6 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 </div>
               </div>
             </div>
-            )}
-
-            {/* Quick Remote Control Commands */}
-            {!isTelematicsCollapsed && isOwner && (
-              <div className="pt-2.5 border-t border-sky-500/15 dark:border-dark-750 flex flex-wrap items-center justify-between gap-2">
-                <div className="text-xs font-bold text-slate-600 dark:text-slate-300 flex items-center space-x-1.5">
-                  <Key className="w-3.5 h-3.5 text-brand-500" />
-                  <span>Команды StarLine:</span>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                  {/* Poke / Search Horn & Flash */}
-                  <button
-                    onClick={() => handleExecuteCommand('poke', 'Поиск на парковке (сигнал и вспышки)')}
-                    disabled={Boolean(executingCommand)}
-                    className="px-3 py-1.5 rounded-xl bg-white/90 dark:bg-dark-800 hover:bg-sky-50 dark:hover:bg-dark-750 text-sky-600 dark:text-sky-400 font-bold text-xs border border-sky-500/30 flex items-center space-x-1.5 transition shadow-sm active:scale-95 disabled:opacity-50"
-                    title="Подать звуковой сигнал и поморгать аварийкой для поиска авто"
-                  >
-                    <Volume2 className="w-3.5 h-3.5 text-sky-500" />
-                    <span>Посигналить</span>
-                  </button>
-
-                  {/* Remote Engine Start / Stop */}
-                  <button
-                    onClick={() => handleExecuteCommand(
-                      vehicle.starline_is_running ? 'ign_stop' : 'ign_start',
-                      vehicle.starline_is_running ? 'Глушение двигателя' : 'Дистанционный автозапуск'
-                    )}
-                    disabled={Boolean(executingCommand)}
-                    className={`px-3 py-1.5 rounded-xl font-bold text-xs border flex items-center space-x-1.5 transition shadow-sm active:scale-95 disabled:opacity-50 ${
-                      vehicle.starline_is_running
-                        ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/30'
-                        : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-                    }`}
-                    title={vehicle.starline_is_running ? 'Заглушить двигатель' : 'Дистанционно запустить двигатель на прогрев'}
-                  >
-                    <Power className={`w-3.5 h-3.5 ${vehicle.starline_is_running ? 'text-rose-500' : 'text-emerald-500'}`} />
-                    <span>{vehicle.starline_is_running ? 'Заглушить ДВС' : 'Автозапуск ДВС'}</span>
-                  </button>
-
-                  {/* Arm / Disarm */}
-                  <button
-                    onClick={() => handleExecuteCommand(
-                      vehicle.starline_is_armed ? 'disarm' : 'arm',
-                      vehicle.starline_is_armed ? 'Снятие с охраны' : 'Постановка в охрану'
-                    )}
-                    disabled={Boolean(executingCommand)}
-                    className="px-3 py-1.5 rounded-xl bg-white/90 dark:bg-dark-800 hover:bg-slate-100 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-300 font-bold text-xs border border-slate-200 dark:border-dark-700 flex items-center space-x-1.5 transition shadow-sm active:scale-95 disabled:opacity-50"
-                  >
-                    {vehicle.starline_is_armed ? (
-                      <><Unlock className="w-3.5 h-3.5 text-amber-500" /><span>Снять с охраны</span></>
-                    ) : (
-                      <><Lock className="w-3.5 h-3.5 text-emerald-500" /><span>Поставить в охрану</span></>
-                    )}
-                  </button>
-                </div>
-              </div>
             )}
 
             {/* GPS Location & Parking Map Link */}
