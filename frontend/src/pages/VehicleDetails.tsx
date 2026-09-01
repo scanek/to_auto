@@ -179,7 +179,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   };
 
   const handleSeasonSwap = async (targetSeason: 'summer' | 'winter') => {
-    const target = tyres.find((t) => t.season === targetSeason);
+    const target = Array.isArray(tyres) ? tyres.find((t) => t?.season === targetSeason) : undefined;
     if (!target) {
       alert(`Комплект ${targetSeason === 'summer' ? 'летних' : 'зимних'} шин еще не добавлен`);
       return;
@@ -321,14 +321,14 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   };
 
   const navTabs = [
-    { id: 'service', label: 'ТО', icon: Wrench, count: serviceRecords.filter(r => r.record_type === 'service').length },
-    { id: 'repairs', label: 'Ремонт', icon: AlertTriangle, count: serviceRecords.filter(r => r.record_type === 'repair').length },
-    { id: 'upgrades', label: 'Тюнинг', icon: Sparkles, count: serviceRecords.filter(r => r.record_type === 'upgrade').length },
-    { id: 'fuel', label: 'Топливо', icon: Fuel, count: fuelLogs.length },
-    { id: 'reminders', label: 'Регламент', icon: CalendarClock, count: reminders.length },
-    { id: 'tyres', label: 'Шины', icon: Disc, count: tyres.length },
+    { id: 'service', label: 'ТО', icon: Wrench, count: Array.isArray(serviceRecords) ? serviceRecords.filter(r => r?.record_type === 'service').length : 0 },
+    { id: 'repairs', label: 'Ремонт', icon: AlertTriangle, count: Array.isArray(serviceRecords) ? serviceRecords.filter(r => r?.record_type === 'repair').length : 0 },
+    { id: 'upgrades', label: 'Тюнинг', icon: Sparkles, count: Array.isArray(serviceRecords) ? serviceRecords.filter(r => r?.record_type === 'upgrade').length : 0 },
+    { id: 'fuel', label: 'Топливо', icon: Fuel, count: Array.isArray(fuelLogs) ? fuelLogs.length : 0 },
+    { id: 'reminders', label: 'Регламент', icon: CalendarClock, count: Array.isArray(reminders) ? reminders.length : 0 },
+    { id: 'tyres', label: 'Шины', icon: Disc, count: Array.isArray(tyres) ? tyres.length : 0 },
     { id: 'analytics', label: 'Аналитика', icon: BarChart3 },
-    { id: 'documents', label: 'Документы', icon: FileText, count: documents.length },
+    { id: 'documents', label: 'Документы', icon: FileText, count: Array.isArray(documents) ? documents.length : 0 },
   ];
 
   return (
@@ -606,7 +606,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                   </div>
                   <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
                     {activeInsurances.length > 0 ? (
-                      activeInsurances.map((d) => d.title).join(' • ')
+                      activeInsurances.map((d) => d?.title || '').filter(Boolean).join(' • ')
                     ) : (
                       <span className="text-slate-400 italic">Нет активных полисов</span>
                     )}
@@ -846,7 +846,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                       </div>
                     )}
 
-                    {rec.items && rec.items.length > 0 && (
+                    {Array.isArray(rec.items) && rec.items.length > 0 && (
                       <div className="space-y-1.5 pt-2 border-t border-slate-200 dark:border-dark-750/70">
                         <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
                           Позиции и артикулы ({rec.items.length}):
