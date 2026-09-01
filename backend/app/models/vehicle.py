@@ -27,6 +27,19 @@ class Vehicle(Base):
     currency = Column(String(10), default="RUB") # "RUB", "USD", "EUR", etc.
     photo_url = Column(String(500), nullable=True)
     notes = Column(Text, nullable=True)
+
+    # Telematics (StarLine S96 / CAN OBD / Webhooks)
+    telematics_provider = Column(String(50), default="none")
+    starline_user_id = Column(String(100), nullable=True)
+    starline_device_id = Column(String(100), nullable=True)
+    starline_device_alias = Column(String(100), nullable=True)
+    starline_token = Column(String(500), nullable=True)
+    starline_last_sync = Column(DateTime, nullable=True)
+    starline_battery = Column(Float, nullable=True)
+    starline_fuel_percent = Column(Float, nullable=True)
+    starline_engine_temp = Column(Float, nullable=True)
+    telematics_auto_sync = Column(Boolean, default=False)
+    telematics_webhook_key = Column(String(100), nullable=True, unique=True, index=True)
     
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)

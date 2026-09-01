@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { QuickMileageModal } from '../components/QuickMileageModal';
 import { QrBookletModal } from '../components/QrBookletModal';
+import { StarLineModal } from '../components/StarLineModal';
 import { downloadIcsReminder } from '../utils/qrcodeHelper';
 import {
   Wrench,
@@ -16,6 +17,8 @@ import {
   CheckCircle2,
   AlertTriangle,
   Sparkles,
+  Satellite,
+  BatteryCharging,
   Check,
   Disc,
   ExternalLink,
@@ -105,7 +108,24 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
 
   const [isQuickMileageOpen, setIsQuickMileageOpen] = useState(false);
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+  const [isStarLineModalOpen, setIsStarLineModalOpen] = useState(false);
+  const [isSyncingStarLine, setIsSyncingStarLine] = useState(false);
   const [recordsSearchQuery, setRecordsSearchQuery] = useState('');
+
+    const handleSyncStarLine = async () => {
+    if (isSyncingStarLine) return;
+    setIsSyncingStarLine(true);
+    try {
+      const res = await api.syncTelematics(vehicle.id);
+      // Telematics synced
+      await onRefreshVehicle();
+      await loadData();
+    } catch (err: any) {
+      alert(err.message || 'Ошибка синхронизации со StarLine');
+    } finally {
+      setIsSyncingStarLine(false);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -331,7 +351,9 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   const navTabs = [
     { id: 'service', label: 'ТО', icon: Wrench, count: Array.isArray(serviceRecords) ? serviceRecords.filter(r => r?.record_type === 'service').length : 0 },
     { id: 'repairs', label: 'Ремонт', icon: AlertTriangle, count: Array.isArray(serviceRecords) ? serviceRecords.filter(r => r?.record_type === 'repair').length : 0 },
-    { id: 'upgrades', label: 'Тюнинг', icon: Sparkles, count: Array.isArray(serviceRecords) ? serviceRecords.filter(r => r?.record_type === 'upgrade').length : 0 },
+    { id: 'upgrades', label: 'Тюнинг', icon: Sparkles,
+  Satellite,
+  BatteryCharging, count: Array.isArray(serviceRecords) ? serviceRecords.filter(r => r?.record_type === 'upgrade').length : 0 },
     { id: 'fuel', label: 'Топливо', icon: Fuel, count: Array.isArray(fuelLogs) ? fuelLogs.length : 0 },
     { id: 'reminders', label: 'Регламент', icon: CalendarClock, count: Array.isArray(reminders) ? reminders.length : 0 },
     { id: 'tyres', label: 'Шины', icon: Disc, count: Array.isArray(tyres) ? tyres.length : 0 },
@@ -443,6 +465,82 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
             </span>
           </div>
         )}
+
+        {/* StarLine S96 Live Telematics Bar */}
+        {vehicle.telematics_provider === 'starline' ? (
+          <div className="p-3 sm:p-3.5 rounded-xl bg-gradient-to-r from-sky-500/10 via-brand-500/5 to-transparent border border-sky-500/20 flex flex-wrap items-center justify-between gap-2.5">
+            <div className="flex items-center space-x-2.5">
+              <div className="w-8 h-8 rounded-lg bg-sky-500/20 text-sky-500 flex items-center justify-center flex-shrink-0">
+                <Satellite className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="flex items-center space-x-1.5">
+                  <span className="text-xs font-extrabold text-slate-900 dark:text-white">
+                    {vehicle.starline_device_alias || 'StarLine S96'}
+                  </span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Онлайн CAN/OBD" />
+                  <span className="text-[10px] text-sky-600 dark:text-sky-400 font-bold bg-sky-500/10 px-1.5 py-0.5 rounded">
+                    Онлайн
+                  </span>
+                </div>
+                <div className="text-[10px] text-slate-400">
+                  {vehicle.starline_last_sync ? `Синхр: ${new Date(vehicle.starline_last_sync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Телематика активна'}
+                </div>
+              </div>
+            </div>
+
+            {/* Live Metrics */}
+            <div className="flex items-center space-x-3 text-xs font-mono">
+              {vehicle.starline_battery && (
+                <div className="flex items-center space-x-1 text-emerald-600 dark:text-emerald-400 font-bold" title="Напряжение аккумулятора">
+                  <BatteryCharging className="w-3.5 h-3.5" />
+                  <span>{vehicle.starline_battery.toFixed(1)} В</span>
+                </div>
+              )}
+              {vehicle.starline_fuel_percent && (
+                <div className="flex items-center space-x-1 text-sky-600 dark:text-sky-400 font-bold" title="Уровень топлива">
+                  <Fuel className="w-3.5 h-3.5" />
+                  <span>{vehicle.starline_fuel_percent}%</span>
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            {isOwner && (
+              <div className="flex items-center space-x-1.5">
+                <button
+                  onClick={handleSyncStarLine}
+                  disabled={isSyncingStarLine}
+                  className="px-2.5 py-1.5 bg-sky-500 hover:bg-sky-600 active:scale-95 text-white font-bold rounded-lg text-xs flex items-center space-x-1 shadow-sm transition disabled:opacity-50"
+                  title="Запросить свежий пробег и моточасы с сигнализации"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isSyncingStarLine ? 'animate-spin' : ''}`} />
+                  <span>{isSyncingStarLine ? 'Опрос...' : 'Обновить'}</span>
+                </button>
+                <button
+                  onClick={() => setIsStarLineModalOpen(true)}
+                  className="p-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-600 dark:text-slate-300 rounded-lg text-xs transition border border-slate-200 dark:border-dark-700"
+                  title="Настройки телематики StarLine"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
+        ) : isOwner ? (
+          <div className="p-2.5 sm:p-3 rounded-xl bg-slate-50 dark:bg-dark-900/60 border border-slate-200 dark:border-dark-750 flex items-center justify-between gap-2">
+            <div className="flex items-center space-x-2 text-xs text-slate-600 dark:text-slate-400">
+              <Satellite className="w-4 h-4 text-sky-500 flex-shrink-0" />
+              <span>Подключите <strong>StarLine S96</strong> для автоматического получения пробега и моточасов прямо из CAN-шины авто.</span>
+            </div>
+            <button
+              onClick={() => setIsStarLineModalOpen(true)}
+              className="px-2.5 py-1 bg-sky-500/10 hover:bg-sky-500/20 text-sky-600 dark:text-sky-400 font-bold rounded-lg text-xs transition whitespace-nowrap border border-sky-500/30 active:scale-95"
+            >
+              🛰️ Подключить StarLine
+            </button>
+          </div>
+        ) : null}
 
         {/* Vehicle Stats Bar (5 cards cleanly distributed) */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 pt-3 sm:pt-4 border-t border-slate-200 dark:border-dark-750">

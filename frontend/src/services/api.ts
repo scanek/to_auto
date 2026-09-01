@@ -649,4 +649,41 @@ export const api = {
       return true;
     });
   },
+  // --- Telematics & StarLine S96 API ---
+  authStarLine: (vehicleId: number, data: { login: string; password?: string; app_code?: string }) =>
+    request<{ status: string; user_id: string; token: string; devices: any[]; message: string }>(
+      `${API_BASE}/telematics/${vehicleId}/starline/auth`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    ),
+
+  connectStarLine: (
+    vehicleId: number,
+    data: { login: string; token: string; user_id: string; device_id: string; device_alias?: string; auto_sync: boolean }
+  ) =>
+    request<{ status: string; message: string; sync?: any }>(
+      `${API_BASE}/telematics/${vehicleId}/starline/connect`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    ),
+
+  syncTelematics: (vehicleId: number) =>
+    request<{ status: string; data: any; message: string }>(
+      `${API_BASE}/telematics/${vehicleId}/sync`,
+      {
+        method: 'POST',
+      }
+    ),
+
+  disconnectTelematics: (vehicleId: number) =>
+    request<{ status: string; message: string }>(
+      `${API_BASE}/telematics/${vehicleId}/disconnect`,
+      {
+        method: 'DELETE',
+      }
+    ),
 };
