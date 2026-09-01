@@ -219,44 +219,45 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
     await loadData();
   };
 
-  // Filter service records by tab
-  const baseFilteredServiceRecords = serviceRecords.filter(
-    (r) =>
-      activeTab === 'all' ||
-      (activeTab === 'service' && r.record_type === 'service') ||
-      (activeTab === 'repairs' && r.record_type === 'repair') ||
-      (activeTab === 'upgrades' && r.record_type === 'upgrade')
-  );
+  // Filter service records safely by tab
+  const baseFilteredServiceRecords = useMemo(() => {
+    if (!Array.isArray(serviceRecords)) return [];
+    return serviceRecords.filter(
+      (r) =>
+        r && (
+          activeTab === 'all' ||
+          (activeTab === 'service' && r.record_type === 'service') ||
+          (activeTab === 'repairs' && r.record_type === 'repair') ||
+          (activeTab === 'upgrades' && r.record_type === 'upgrade')
+        )
+    );
+  }, [serviceRecords, activeTab]);
 
   const displayedServiceRecords = useMemo(() => {
-    if (!recordsSearchQuery.trim()) return baseFilteredServiceRecords;
+    if (!recordsSearchQuery || !recordsSearchQuery.trim()) return baseFilteredServiceRecords;
     const q = recordsSearchQuery.toLowerCase().trim();
     return baseFilteredServiceRecords.filter((rec) => {
-      const inTitle = rec.title?.toLowerCase().includes(q);
-      const inTag = rec.to_tag?.toLowerCase().includes(q);
-      const inStore = rec.store?.toLowerCase().includes(q);
-      const inDesc = rec.description?.toLowerCase().includes(q);
-      const inNotes = rec.notes?.toLowerCase().includes(q);
-      const inItems = rec.items?.some(
+      if (!rec) return false;
+      const inTitle = rec.title ? String(rec.title).toLowerCase().includes(q) : false;
+      const inTag = rec.to_tag ? String(rec.to_tag).toLowerCase().includes(q) : false;
+      const inStore = rec.store ? String(rec.store).toLowerCase().includes(q) : false;
+      const inDesc = rec.description ? String(rec.description).toLowerCase().includes(q) : false;
+      const inNotes = rec.notes ? String(rec.notes).toLowerCase().includes(q) : false;
+      const inItems = Array.isArray(rec.items) ? rec.items.some(
         (it) =>
-          it.name?.toLowerCase().includes(q) ||
-          it.brand?.toLowerCase().includes(q) ||
-          it.part_number?.toLowerCase().includes(q) ||
-          it.store?.toLowerCase().includes(q)
-      );
+          (it?.name && String(it.name).toLowerCase().includes(q)) ||
+          (it?.brand && String(it.brand).toLowerCase().includes(q)) ||
+          (it?.part_number && String(it.part_number).toLowerCase().includes(q)) ||
+          (it?.store && String(it.store).toLowerCase().includes(q))
+      ) : false;
       return inTitle || inTag || inStore || inDesc || inNotes || inItems;
     });
   }, [baseFilteredServiceRecords, recordsSearchQuery]);
 
-  const _unused = serviceRecords.filter((r) => {
-    if (activeTab === 'service') return r.record_type === 'service';
-    if (activeTab === 'repairs') return r.record_type === 'repair';
-    if (activeTab === 'upgrades') return r.record_type === 'upgrade';
-    return true;
-  });
-
-  const activeTyre = tyres.find((t) => t.is_active);
-  const activeInsurances = documents.filter((d) => d.is_active && (d.doc_type === 'insurance' || d.doc_type === 'osago' || d.doc_type === 'kasko'));
+  const activeTyre = Array.isArray(tyres) ? tyres.find((t) => t?.is_active) : undefined;
+  const activeInsurances = Array.isArray(documents)
+    ? documents.filter((d) => d?.is_active && (d.doc_type === 'insurance' || d.doc_type === 'osago' || d.doc_type === 'kasko'))
+    : [];
 
   const COLORS = ['#0284c7', '#e11d48', '#059669', '#d97706', '#7c3aed', '#0891b2'];
 
@@ -756,9 +757,9 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                           <div className="w-10 h-10 rounded-2xl bg-rose-500/10 dark:bg-rose-500/15 border border-rose-500/25 flex items-center justify-center text-rose-600 dark:text-rose-400 flex-shrink-0 shadow-sm">
                             <Wrench className="w-5 h-5" />
                           </div>
-                        ) : (rec.to_tag && /^ТО-\d+$/i.test(rec.to_tag.trim())) ? (
+                        ) : (rec.to_tag && /^ТО-\d+$/i.test(String(rec.to_tag).trim())) ? (
                           <div className="w-10 h-10 rounded-2xl bg-brand-500/10 dark:bg-brand-500/20 border border-brand-500/30 flex items-center justify-center text-brand-600 dark:text-brand-400 flex-shrink-0 shadow-sm">
-                            <span className="font-mono text-xs font-black tracking-tight">{rec.to_tag.trim()}</span>
+                            <span className="font-mono text-xs font-black tracking-tight">{String(rec.to_tag).trim()}</span>
                           </div>
                         ) : (
                           <div className="w-10 h-10 rounded-2xl bg-brand-500/10 dark:bg-brand-500/20 border border-brand-500/30 flex items-center justify-center text-brand-600 dark:text-brand-400 flex-shrink-0 shadow-sm">
@@ -769,26 +770,26 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                         {/* Title & Tags */}
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-1.5">
-                            {rec.to_tag && (
-                              rec.to_tag.trim().toLowerCase() === 'вне то' ? (
+                            {rec.to_tag ? (
+                              String(rec.to_tag).trim().toLowerCase() === 'вне то' ? (
                                 <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-dark-750 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-dark-700">
                                   Вне ТО
                                 </span>
                               ) : rec.record_type === 'upgrade' ? (
                                 <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/25">
                                   <Sparkles className="w-2.5 h-2.5" />
-                                  <span>{rec.to_tag}</span>
+                                  <span>{String(rec.to_tag)}</span>
                                 </span>
                               ) : rec.record_type === 'repair' ? (
                                 <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/25">
-                                  <span>{rec.to_tag}</span>
+                                  <span>{String(rec.to_tag)}</span>
                                 </span>
                               ) : (
                                 <span className="inline-flex items-center gap-1 text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-md bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/25">
-                                  <span>{rec.to_tag}</span>
+                                  <span>{String(rec.to_tag)}</span>
                                 </span>
                               )
-                            )}
+                            ) : null}
                             <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">{rec.title}</h4>
                           </div>
                           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400 mt-1 font-mono">
