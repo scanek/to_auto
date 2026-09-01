@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   X,
   QrCode,
@@ -12,8 +12,10 @@ import {
   Sparkles,
   ShieldCheck,
   Fuel,
+  Wrench,
+  Edit3,
 } from 'lucide-react';
-import { Vehicle, MaintenancePlan } from '../types';
+import { Vehicle, MaintenancePlan, ServiceRecord } from '../types';
 import { generateQrUrl, downloadIcsReminder } from '../utils/qrcodeHelper';
 
 interface QrBookletModalProps {
@@ -21,6 +23,7 @@ interface QrBookletModalProps {
   onClose: () => void;
   vehicle: Vehicle;
   reminders: MaintenancePlan[];
+  records?: ServiceRecord[];
 }
 
 export const QrBookletModal: React.FC<QrBookletModalProps> = ({
@@ -28,23 +31,100 @@ export const QrBookletModal: React.FC<QrBookletModalProps> = ({
   onClose,
   vehicle,
   reminders,
+  records = [],
 }) => {
   const [activeTab, setActiveTab] = useState<'qr' | 'sticker'>('qr');
   const [copied, setCopied] = useState(false);
+
+  // 1. Detect latest real oil change from records
+  const latestOilRecord = useMemo(() => {
+    if (!records || records.length === 0) return null;
+    const sorted = [...records].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+    return sorted.find((r) => {
+      const t = (r.title || '').toLowerCase();
+      const d = (r.description || '').toLowerCase();
+      const hasOilItem = r.items?.some(
+        (it) =>
+          (it.name || '').toLowerCase().includes('масло') ||
+          (it.category || '').toLowerCase() === 'oil' ||
+          (it.category || '').toLowerCase().includes('масл')
+      );
+      return t.includes('масло') || t.includes('то-') || t.includes('двс') || d.includes('масло') || hasOilItem;
+    });
+  }, [records]);
+
+  // Extract oil item if present in latest record
+  const latestOilItem = useMemo(() => {
+    if (!latestOilRecord?.items) return null;
+    return latestOilRecord.items.find(
+      (it) =>
+        (it.name || '').toLowerCase().includes('масло') ||
+        (it.category || '').toLowerCase() === 'oil' ||
+        (it.category || '').toLowerCase().includes('масл')
+    );
+  }, [latestOilRecord]);
+
+  // 2. Detect oil reminder plan
+  const oilReminder = useMemo(() => {
+    return (
+      reminders.find(
+        (r) =>
+          (r.title || '').toLowerCase().includes('масло') ||
+          (r.title || '').toLowerCase().includes('то-') ||
+          (r.title || '').toLowerCase().includes('двс') ||
+          r.category === 'oil'
+      ) || reminders[0]
+    );
+  }, [reminders]);
+
+  // Initial computed values
+  const defaultInterval = oilReminder?.interval_distance || 7500;
+  const initialNextOdo = useMemo(() => {
+    if (latestOilRecord?.odometer) {
+      return latestOilRecord.odometer + defaultInterval;
+    }
+    if (oilReminder?.last_service_odometer) {
+      return oilReminder.last_service_odometer + defaultInterval;
+    }
+    return vehicle.current_odometer + defaultInterval;
+  }, [latestOilRecord, oilReminder, defaultInterval, vehicle.current_odometer]);
+
+  const initialOilSpec = useMemo(() => {
+    if (latestOilItem?.brand && latestOilItem?.name) {
+      return `${latestOilItem.brand} ${latestOilItem.name}`;
+    }
+    if (latestOilItem?.name) return latestOilItem.name;
+    if (oilReminder?.brand && oilReminder?.spec) {
+      return `${oilReminder.brand} ${oilReminder.spec}`;
+    }
+    if (oilReminder?.brand) return oilReminder.brand;
+    if (oilReminder?.spec) return oilReminder.spec;
+    if (vehicle.engine) return `По мануалу (${vehicle.engine})`;
+    return 'По регламенту ТО';
+  }, [latestOilItem, oilReminder, vehicle.engine]);
+
+  // Interactive Editable States
+  const [customNextOdo, setCustomNextOdo] = useState<number>(initialNextOdo);
+  const [customOilSpec, setCustomOilSpec] = useState<string>(initialOilSpec);
+  const [customServiceCenter, setCustomServiceCenter] = useState<string>(latestOilRecord?.store || 'Автосервис / СТО');
+  const [isEditingSticker, setIsEditingSticker] = useState<boolean>(false);
+
+  // Sync initial values when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setCustomNextOdo(initialNextOdo);
+      setCustomOilSpec(initialOilSpec);
+      setCustomServiceCenter(latestOilRecord?.store || 'Автосервис / СТО');
+    }
+  }, [isOpen, initialNextOdo, initialOilSpec, latestOilRecord]);
 
   if (!isOpen) return null;
 
   // Build the public link to this vehicle
   const shareUrl = `${window.location.origin}/?vehicle=${vehicle.id}`;
   const qrSvgUrl = generateQrUrl(shareUrl, 300);
-
-  // Find next oil reminder
-  const oilReminder = reminders.find(
-    (r) =>
-      r.title.toLowerCase().includes('масло') ||
-      r.title.toLowerCase().includes('то-') ||
-      r.title.toLowerCase().includes('двс')
-  ) || reminders[0];
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(shareUrl);
@@ -70,19 +150,16 @@ export const QrBookletModal: React.FC<QrBookletModalProps> = ({
 
   const handleAddToCalendar = () => {
     const targetDate = new Date();
-    targetDate.setMonth(targetDate.getMonth() + 6); // default 6 months or next target
-    const targetKm = oilReminder
-      ? (oilReminder.last_service_odometer || vehicle.current_odometer) + (oilReminder.interval_distance || 7500)
-      : vehicle.current_odometer + 7500;
+    targetDate.setMonth(targetDate.getMonth() + (oilReminder?.interval_months || 6));
 
     downloadIcsReminder({
       title: oilReminder ? oilReminder.title : 'Замена моторного масла и фильтров',
       carName: `${vehicle.make} ${vehicle.model}`,
       licensePlate: vehicle.license_plate,
       targetDate: targetDate,
-      odometerTarget: targetKm,
+      odometerTarget: customNextOdo,
       distanceUnit: vehicle.distance_unit,
-      oilSpec: vehicle.oil_spec,
+      oilSpec: customOilSpec,
       bookletUrl: shareUrl,
     });
   };
@@ -102,7 +179,7 @@ export const QrBookletModal: React.FC<QrBookletModalProps> = ({
             </div>
             <div>
               <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
-                QR-код и Наклейка ТО
+                QR-код и Бирка ТО
               </h2>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 {vehicle.make} {vehicle.model} {vehicle.license_plate ? `(${vehicle.license_plate})` : ''}
@@ -182,7 +259,7 @@ export const QrBookletModal: React.FC<QrBookletModalProps> = ({
                 </button>
               </div>
 
-              {/* Option A: Add reminder to phone calendar */}
+              {/* Add reminder to phone calendar */}
               <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/15 to-brand-500/10 border border-amber-500/25 rounded-2xl p-3.5 text-left flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div>
                   <div className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center space-x-1.5">
@@ -190,7 +267,7 @@ export const QrBookletModal: React.FC<QrBookletModalProps> = ({
                     <span>Напоминание о замене масла</span>
                   </div>
                   <div className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
-                    Добавить плановое ТО в календарь смартфона (Apple / Google / Outlook)
+                    Добавить событие следующего ТО ({Math.round(customNextOdo).toLocaleString('ru-RU')} {vehicle.distance_unit}) в календарь смартфона (Apple / Google / Outlook)
                   </div>
                 </div>
 
@@ -205,6 +282,51 @@ export const QrBookletModal: React.FC<QrBookletModalProps> = ({
             </div>
           ) : (
             <div className="space-y-4">
+              {/* Sticker Customizer Bar */}
+              <div className="bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-2xl p-3 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center space-x-1.5">
+                    <Edit3 className="w-3.5 h-3.5 text-brand-500" />
+                    <span>Параметры для бирки</span>
+                  </span>
+                  <button
+                    onClick={() => setIsEditingSticker(!isEditingSticker)}
+                    className="text-[11px] text-brand-600 dark:text-brand-400 font-bold hover:underline"
+                  >
+                    {isEditingSticker ? 'Свернуть' : 'Настроить значения'}
+                  </button>
+                </div>
+
+                {isEditingSticker && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 text-xs animate-fadeIn">
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">
+                        Следующая замена ({vehicle.distance_unit})
+                      </label>
+                      <input
+                        type="number"
+                        value={customNextOdo}
+                        onChange={(e) => setCustomNextOdo(parseFloat(e.target.value) || 0)}
+                        className="w-full bg-white dark:bg-dark-800 border border-slate-300 dark:border-dark-700 rounded-lg px-2.5 py-1.5 font-mono font-bold text-slate-900 dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">
+                        Масло / Вязкость
+                      </label>
+                      <input
+                        type="text"
+                        value={customOilSpec}
+                        onChange={(e) => setCustomOilSpec(e.target.value)}
+                        placeholder="Например: Лукойл Genesis 5W-30"
+                        className="w-full bg-white dark:bg-dark-800 border border-slate-300 dark:border-dark-700 rounded-lg px-2.5 py-1.5 font-semibold text-slate-900 dark:text-white"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Printable Service Sticker Preview */}
               <div
                 id="printable-service-sticker"
@@ -238,7 +360,7 @@ export const QrBookletModal: React.FC<QrBookletModalProps> = ({
                     {vehicle.make} {vehicle.model} {vehicle.year ? `(${vehicle.year})` : ''}
                   </span>
                   <span className="font-mono text-[11px] text-slate-600">
-                    {Math.round(vehicle.current_odometer).toLocaleString('ru-RU')} {vehicle.distance_unit}
+                    Текущий: {Math.round(vehicle.current_odometer).toLocaleString('ru-RU')} {vehicle.distance_unit}
                   </span>
                 </div>
 
@@ -249,9 +371,7 @@ export const QrBookletModal: React.FC<QrBookletModalProps> = ({
                       След. замена масла
                     </span>
                     <span className="font-mono font-black text-blue-600 text-xs">
-                      {oilReminder
-                        ? `${Math.round((oilReminder.last_service_odometer || vehicle.current_odometer) + (oilReminder.interval_distance || 7500)).toLocaleString('ru-RU')} км`
-                        : `${Math.round(vehicle.current_odometer + 7500).toLocaleString('ru-RU')} км`}
+                      {Math.round(customNextOdo).toLocaleString('ru-RU')} {vehicle.distance_unit}
                     </span>
                   </div>
 
@@ -259,8 +379,8 @@ export const QrBookletModal: React.FC<QrBookletModalProps> = ({
                     <span className="text-[9px] text-slate-500 uppercase font-bold block">
                       Масло / Вязкость
                     </span>
-                    <span className="font-mono font-bold text-slate-800 text-[11px]">
-                      {vehicle.oil_spec || '5W-30 / 5W-40'}
+                    <span className="font-mono font-bold text-slate-800 text-[11px] truncate block" title={customOilSpec}>
+                      {customOilSpec}
                     </span>
                   </div>
 

@@ -1773,6 +1773,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
           onClose={() => setIsQrModalOpen(false)}
           vehicle={vehicle}
           reminders={reminders}
+          records={serviceRecords}
         />
       )}
     </div>
