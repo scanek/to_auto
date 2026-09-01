@@ -1,3 +1,4 @@
+import os
 import httpx
 import hashlib
 import json
@@ -8,8 +9,8 @@ from sqlalchemy import select
 
 from app.models.vehicle import Vehicle
 
-DEFAULT_STARLINE_APP_ID = "52429"
-DEFAULT_STARLINE_SECRET = "sLH_ZdZNh13xPAS1_taVqeUF_uoGk1wP"
+DEFAULT_STARLINE_APP_ID = os.getenv("STARLINE_APP_ID", "52429")
+DEFAULT_STARLINE_SECRET = os.getenv("STARLINE_SECRET", "sLH_ZdZNh13xPAS1_taVqeUF_uoGk1wP")
 
 STARLINE_ID_URL = "https://id.starline.ru/apiV3"
 STARLINE_DEV_URL = "https://developer.starline.ru"
@@ -326,11 +327,16 @@ class StarLineService:
             temp_keys = ("ctemp", "engine_temp", "t_engine", "temp_engine", "temp_eng")
             engine_temp = _find_numeric_in_flat(all_flat, temp_keys, min_val=-40.0, max_val=150.0)
 
-            # Diagnostic list of all discovered non-boolean keys inside devices / state / obd / common
-            discovered_keys = []
-            for k, v in all_flat.items():
-                if not isinstance(v, bool) and not any(x in k.lower() for x in ("_id", "imei", "phone", "date", "ts", "pass", "token")):
-                    discovered_keys.append(f"{k}={v}")
+            # 6. SIM Balance
+            balance_keys = ("balance", "sim_balance", "balance_val", "common.balance", "devices[0].balance")
+            balance = _find_numeric_in_flat(all_flat, balance_keys, min_val=-500.0, max_val=50000.0)
+
+            # 7. Security Alarm Arm Status
+            is_armed = None
+            for arm_k in ("devices[0].car_state.arm", "car_state.arm", "state.car_state.arm", "arm"):
+                if arm_k in all_flat:
+                    is_armed = bool(all_flat[arm_k])
+                    break
 
             return {
                 "mileage": mileage,
@@ -338,7 +344,8 @@ class StarLineService:
                 "battery": battery,
                 "fuel_percent": fuel_percent,
                 "engine_temp": engine_temp,
-                "discovered_keys": discovered_keys,
+                "balance": balance,
+                "is_armed": is_armed,
             }
 
     @staticmethod
@@ -375,6 +382,12 @@ class StarLineService:
             vehicle.starline_engine_temp = telemetry["engine_temp"]
             updated_fields.append(f"ДВС: {int(telemetry['engine_temp'])}°C")
 
+        if telemetry.get("balance") is not None:
+            vehicle.starline_balance = telemetry["balance"]
+
+        if telemetry.get("is_armed") is not None:
+            vehicle.starline_is_armed = telemetry["is_armed"]
+
         vehicle.starline_last_sync = now
         await db.commit()
         await db.refresh(vehicle)
@@ -388,6 +401,8 @@ class StarLineService:
             "battery": vehicle.starline_battery,
             "fuel_percent": vehicle.starline_fuel_percent,
             "engine_temp": vehicle.starline_engine_temp,
+            "balance": vehicle.starline_balance,
+            "is_armed": vehicle.starline_is_armed,
             "last_sync": now.isoformat(),
             "updated_summary": summary,
         }

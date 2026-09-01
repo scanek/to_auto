@@ -36,6 +36,8 @@ export interface Vehicle {
   starline_battery?: number;
   starline_fuel_percent?: number;
   starline_engine_temp?: number;
+  starline_balance?: number;
+  starline_is_armed?: boolean;
   telematics_auto_sync?: boolean;
   telematics_webhook_key?: string;
 
