@@ -7,13 +7,15 @@ import {
   Check,
   Calendar,
   Share2,
-  ExternalLink,
   BookOpen,
   Sparkles,
   ShieldCheck,
-  Fuel,
   Wrench,
   Edit3,
+  Clock,
+  Gauge,
+  Tag,
+  Layers,
 } from 'lucide-react';
 import { Vehicle, MaintenancePlan, ServiceRecord } from '../types';
 import { generateQrUrl, downloadIcsReminder } from '../utils/qrcodeHelper';
@@ -33,7 +35,8 @@ export const QrBookletModal: React.FC<QrBookletModalProps> = ({
   reminders,
   records = [],
 }) => {
-  const [activeTab, setActiveTab] = useState<'qr' | 'sticker'>('qr');
+  const [activeTab, setActiveTab] = useState<'qr' | 'sticker'>('sticker');
+  const [stickerTemplate, setStickerTemplate] = useState<'dealer' | 'compact'>('dealer');
   const [copied, setCopied] = useState(false);
 
   // 1. Detect latest real oil change from records
@@ -79,18 +82,65 @@ export const QrBookletModal: React.FC<QrBookletModalProps> = ({
     );
   }, [reminders]);
 
-  // Initial computed values
-  const defaultInterval = oilReminder?.interval_distance || 7500;
-  const initialNextOdo = useMemo(() => {
-    if (latestOilRecord?.odometer) {
-      return latestOilRecord.odometer + defaultInterval;
-    }
-    if (oilReminder?.last_service_odometer) {
-      return oilReminder.last_service_odometer + defaultInterval;
-    }
-    return vehicle.current_odometer + defaultInterval;
-  }, [latestOilRecord, oilReminder, defaultInterval, vehicle.current_odometer]);
+  // Interval parameters
+  const defaultIntervalKm = oilReminder?.interval_distance || 7500;
+  const defaultIntervalHours = oilReminder?.interval_hours || 250;
+  const defaultIntervalMonths = oilReminder?.interval_months || 12;
 
+  // Smart calculation of next oil change odometer
+  const initialNextOdo = useMemo(() => {
+    let baseOdo = 0;
+    if (latestOilRecord?.odometer) {
+      baseOdo = latestOilRecord.odometer;
+    } else if (oilReminder?.last_service_odometer && oilReminder.last_service_odometer > 0) {
+      baseOdo = oilReminder.last_service_odometer;
+    } else if (vehicle.starting_odometer && vehicle.starting_odometer > 0) {
+      baseOdo = vehicle.starting_odometer;
+    }
+
+    if (baseOdo > 0) {
+      // Calculate next target from baseline
+      let target = baseOdo + defaultIntervalKm;
+      // If target is in the past compared to current odometer, step up by interval cycles
+      if (target < vehicle.current_odometer) {
+        const cycles = Math.ceil((vehicle.current_odometer - baseOdo) / defaultIntervalKm);
+        target = baseOdo + cycles * defaultIntervalKm;
+      }
+      return target;
+    }
+
+    return vehicle.current_odometer + defaultIntervalKm;
+  }, [latestOilRecord, oilReminder, defaultIntervalKm, vehicle.starting_odometer, vehicle.current_odometer]);
+
+  // Smart calculation of next engine hours
+  const initialNextHours = useMemo(() => {
+    let baseHours = 0;
+    if (latestOilRecord?.engine_hours && latestOilRecord.engine_hours > 0) {
+      baseHours = latestOilRecord.engine_hours;
+    } else if (oilReminder?.last_service_hours && oilReminder.last_service_hours > 0) {
+      baseHours = oilReminder.last_service_hours;
+    }
+
+    if (baseHours > 0) {
+      let target = baseHours + defaultIntervalHours;
+      if (vehicle.current_engine_hours && target < vehicle.current_engine_hours) {
+        const cycles = Math.ceil((vehicle.current_engine_hours - baseHours) / defaultIntervalHours);
+        target = baseHours + cycles * defaultIntervalHours;
+      }
+      return target;
+    }
+
+    return (vehicle.current_engine_hours || 0) + defaultIntervalHours;
+  }, [latestOilRecord, oilReminder, defaultIntervalHours, vehicle.current_engine_hours]);
+
+  // Smart calculation of next date
+  const initialNextDate = useMemo(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + defaultIntervalMonths);
+    return d.toISOString().split('T')[0];
+  }, [defaultIntervalMonths]);
+
+  // Oil specification text
   const initialOilSpec = useMemo(() => {
     if (latestOilItem?.brand && latestOilItem?.name) {
       return `${latestOilItem.brand} ${latestOilItem.name}`;
@@ -101,12 +151,22 @@ export const QrBookletModal: React.FC<QrBookletModalProps> = ({
     }
     if (oilReminder?.brand) return oilReminder.brand;
     if (oilReminder?.spec) return oilReminder.spec;
+    if (vehicle.oil_spec) return vehicle.oil_spec;
     if (vehicle.engine) return `По мануалу (${vehicle.engine})`;
     return 'По регламенту ТО';
-  }, [latestOilItem, oilReminder, vehicle.engine]);
+  }, [latestOilItem, oilReminder, vehicle.oil_spec, vehicle.engine]);
+
+  // Nearest other scheduled maintenance
+  const nearestOtherReminder = useMemo(() => {
+    const others = reminders.filter((r) => r.id !== oilReminder?.id);
+    if (others.length === 0) return null;
+    return others.sort((a, b) => (a.remaining_distance || 999999) - (b.remaining_distance || 999999))[0];
+  }, [reminders, oilReminder]);
 
   // Interactive Editable States
   const [customNextOdo, setCustomNextOdo] = useState<number>(initialNextOdo);
+  const [customNextHours, setCustomNextHours] = useState<number>(initialNextHours);
+  const [customNextDate, setCustomNextDate] = useState<string>(initialNextDate);
   const [customOilSpec, setCustomOilSpec] = useState<string>(initialOilSpec);
   const [customServiceCenter, setCustomServiceCenter] = useState<string>(latestOilRecord?.store || 'Автосервис / СТО');
   const [isEditingSticker, setIsEditingSticker] = useState<boolean>(false);
@@ -115,10 +175,12 @@ export const QrBookletModal: React.FC<QrBookletModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setCustomNextOdo(initialNextOdo);
+      setCustomNextHours(initialNextHours);
+      setCustomNextDate(initialNextDate);
       setCustomOilSpec(initialOilSpec);
       setCustomServiceCenter(latestOilRecord?.store || 'Автосервис / СТО');
     }
-  }, [isOpen, initialNextOdo, initialOilSpec, latestOilRecord]);
+  }, [isOpen, initialNextOdo, initialNextHours, initialNextDate, initialOilSpec, latestOilRecord]);
 
   if (!isOpen) return null;
 
@@ -149,8 +211,7 @@ export const QrBookletModal: React.FC<QrBookletModalProps> = ({
   };
 
   const handleAddToCalendar = () => {
-    const targetDate = new Date();
-    targetDate.setMonth(targetDate.getMonth() + (oilReminder?.interval_months || 6));
+    const targetDate = new Date(customNextDate);
 
     downloadIcsReminder({
       title: oilReminder ? oilReminder.title : 'Замена моторного масла и фильтров',
@@ -179,7 +240,7 @@ export const QrBookletModal: React.FC<QrBookletModalProps> = ({
             </div>
             <div>
               <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
-                QR-код и Бирка ТО
+                Сервисная Бирка и QR-код ТО
               </h2>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 {vehicle.make} {vehicle.model} {vehicle.license_plate ? `(${vehicle.license_plate})` : ''}
@@ -197,16 +258,6 @@ export const QrBookletModal: React.FC<QrBookletModalProps> = ({
         {/* Tab Switcher */}
         <div className="p-3 bg-slate-100 dark:bg-dark-900/40 border-b border-slate-200 dark:border-dark-750 flex items-center justify-center gap-2">
           <button
-            onClick={() => setActiveTab('qr')}
-            className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${
-              activeTab === 'qr'
-                ? 'bg-brand-500 text-white shadow-md shadow-brand-500/20'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            📱 QR-код сервисной книги
-          </button>
-          <button
             onClick={() => setActiveTab('sticker')}
             className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${
               activeTab === 'sticker'
@@ -216,11 +267,310 @@ export const QrBookletModal: React.FC<QrBookletModalProps> = ({
           >
             🏷️ Наклейка под капот / Бирка ТО
           </button>
+          <button
+            onClick={() => setActiveTab('qr')}
+            className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              activeTab === 'qr'
+                ? 'bg-brand-500 text-white shadow-md shadow-brand-500/20'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            📱 QR-код сервисной книги
+          </button>
         </div>
 
         {/* Content Body */}
         <div className="p-5 overflow-y-auto space-y-4">
-          {activeTab === 'qr' ? (
+          {activeTab === 'sticker' ? (
+            <div className="space-y-4">
+              {/* Template Switcher (Option 1 vs Option 3) */}
+              <div className="flex items-center justify-between gap-2 p-1.5 bg-slate-100 dark:bg-dark-900 rounded-xl border border-slate-200 dark:border-dark-750 text-xs">
+                <button
+                  onClick={() => setStickerTemplate('dealer')}
+                  className={`flex-1 py-1.5 px-2 rounded-lg font-bold transition-all flex items-center justify-center space-x-1.5 ${
+                    stickerTemplate === 'dealer'
+                      ? 'bg-white dark:bg-dark-800 text-brand-600 dark:text-brand-400 shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                  }`}
+                >
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Вариант 1: Дилерская карта ТО</span>
+                </button>
+
+                <button
+                  onClick={() => setStickerTemplate('compact')}
+                  className={`flex-1 py-1.5 px-2 rounded-lg font-bold transition-all flex items-center justify-center space-x-1.5 ${
+                    stickerTemplate === 'compact'
+                      ? 'bg-white dark:bg-dark-800 text-brand-600 dark:text-brand-400 shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                  }`}
+                >
+                  <Tag className="w-3.5 h-3.5" />
+                  <span>Вариант 3: Наклейка (90×50 мм)</span>
+                </button>
+              </div>
+
+              {/* Sticker Customizer Bar */}
+              <div className="bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-2xl p-3 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center space-x-1.5">
+                    <Edit3 className="w-3.5 h-3.5 text-brand-500" />
+                    <span>Параметры для бирки</span>
+                  </span>
+                  <button
+                    onClick={() => setIsEditingSticker(!isEditingSticker)}
+                    className="text-[11px] text-brand-600 dark:text-brand-400 font-bold hover:underline"
+                  >
+                    {isEditingSticker ? 'Свернуть' : 'Настроить значения'}
+                  </button>
+                </div>
+
+                {isEditingSticker && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 text-xs animate-fadeIn">
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">
+                        Следующая замена масла ({vehicle.distance_unit})
+                      </label>
+                      <input
+                        type="number"
+                        value={customNextOdo}
+                        onChange={(e) => setCustomNextOdo(parseFloat(e.target.value) || 0)}
+                        className="w-full bg-white dark:bg-dark-800 border border-slate-300 dark:border-dark-700 rounded-lg px-2.5 py-1.5 font-mono font-bold text-slate-900 dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">
+                        Масло и вязкость
+                      </label>
+                      <input
+                        type="text"
+                        value={customOilSpec}
+                        onChange={(e) => setCustomOilSpec(e.target.value)}
+                        placeholder="Например: Lukoil Genesis 5W-40"
+                        className="w-full bg-white dark:bg-dark-800 border border-slate-300 dark:border-dark-700 rounded-lg px-2.5 py-1.5 font-semibold text-slate-900 dark:text-white"
+                      />
+                    </div>
+
+                    {vehicle.track_engine_hours && (
+                      <div>
+                        <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">
+                          Следующие моточасы (м/ч)
+                        </label>
+                        <input
+                          type="number"
+                          value={customNextHours}
+                          onChange={(e) => setCustomNextHours(parseFloat(e.target.value) || 0)}
+                          className="w-full bg-white dark:bg-dark-800 border border-slate-300 dark:border-dark-700 rounded-lg px-2.5 py-1.5 font-mono font-bold text-cyan-600 dark:text-cyan-400"
+                        />
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">
+                        Дата следующего ТО
+                      </label>
+                      <input
+                        type="date"
+                        value={customNextDate}
+                        onChange={(e) => setCustomNextDate(e.target.value)}
+                        className="w-full bg-white dark:bg-dark-800 border border-slate-300 dark:border-dark-700 rounded-lg px-2.5 py-1.5 font-semibold text-slate-900 dark:text-white"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">
+                        Автосервис / СТО / Мастер
+                      </label>
+                      <input
+                        type="text"
+                        value={customServiceCenter}
+                        onChange={(e) => setCustomServiceCenter(e.target.value)}
+                        placeholder="Название автосервиса или Личный гараж"
+                        className="w-full bg-white dark:bg-dark-800 border border-slate-300 dark:border-dark-700 rounded-lg px-2.5 py-1.5 font-semibold text-slate-900 dark:text-white"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* ========================================================================= */}
+              {/* OPTION 1: DEALER SERVICE CARD TEMPLATE */}
+              {/* ========================================================================= */}
+              {stickerTemplate === 'dealer' ? (
+                <div
+                  id="printable-service-sticker"
+                  className="bg-white text-slate-900 p-5 rounded-2xl border-2 border-slate-800 shadow-lg space-y-3 font-sans relative overflow-hidden"
+                >
+                  {/* Top Bar Accent */}
+                  <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-600" />
+
+                  {/* Header */}
+                  <div className="flex items-center justify-between border-b-2 border-slate-800 pb-2.5 pt-0.5">
+                    <div>
+                      <div className="text-xs font-black uppercase tracking-wider text-slate-900 flex items-center space-x-1.5">
+                        <span className="px-1.5 py-0.5 bg-blue-700 text-white rounded text-[10px] font-black">
+                          ТО
+                        </span>
+                        <span>СЕРВИСНАЯ КАРТА АВТОМОБИЛЯ</span>
+                      </div>
+                      <div className="text-[10px] text-slate-500 font-semibold mt-0.5">
+                        {customServiceCenter}
+                      </div>
+                    </div>
+
+                    {vehicle.license_plate && (
+                      <span className="font-mono text-xs font-black px-2.5 py-1 rounded bg-slate-100 border border-slate-400 tracking-wider">
+                        {vehicle.license_plate}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Vehicle Name & Current Mileage */}
+                  <div className="flex items-center justify-between text-xs font-bold">
+                    <span className="text-sm font-extrabold text-blue-900">
+                      {vehicle.make} {vehicle.model} {vehicle.year ? `(${vehicle.year})` : ''}
+                    </span>
+                    <span className="font-mono text-[11px] text-slate-600">
+                      Текущий: {Math.round(vehicle.current_odometer).toLocaleString('ru-RU')} {vehicle.distance_unit}
+                    </span>
+                  </div>
+
+                  {/* Core Maintenance Box */}
+                  <div className="bg-slate-50 border-2 border-blue-900/20 rounded-xl p-3 grid grid-cols-2 gap-3 text-left">
+                    <div>
+                      <span className="text-[9px] uppercase font-bold text-slate-500 block">
+                        🛢️ След. замена масла ДВС
+                      </span>
+                      <span className="font-mono font-black text-blue-700 text-base block mt-0.5">
+                        {Math.round(customNextOdo).toLocaleString('ru-RU')} {vehicle.distance_unit}
+                      </span>
+                      <span className="text-[10px] text-slate-500 font-medium block mt-0.5">
+                        или до {new Date(customNextDate).toLocaleDateString('ru-RU')}
+                      </span>
+                    </div>
+
+                    <div className="border-l border-slate-200 pl-3">
+                      <span className="text-[9px] uppercase font-bold text-slate-500 block">
+                        ⚙️ Масло и вязкость
+                      </span>
+                      <span className="font-bold text-slate-900 text-xs block mt-0.5 truncate" title={customOilSpec}>
+                        {customOilSpec}
+                      </span>
+                      {vehicle.track_engine_hours && (
+                        <span className="font-mono text-[11px] text-cyan-700 font-bold block mt-1">
+                          ⏱️ {Math.round(customNextHours)} м/ч
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Nearest scheduled maintenance info */}
+                  {nearestOtherReminder && (
+                    <div className="bg-amber-50/80 border border-amber-300 rounded-lg px-2.5 py-1.5 text-[10px] text-amber-900 flex items-center justify-between">
+                      <span className="font-bold truncate">
+                        📌 Ближайшее регламентное ТО: {nearestOtherReminder.title}
+                      </span>
+                      <span className="font-mono font-black ml-2 whitespace-nowrap">
+                        {Math.round(
+                          (nearestOtherReminder.last_service_odometer || vehicle.current_odometer) +
+                            (nearestOtherReminder.interval_distance || 15000)
+                        ).toLocaleString('ru-RU')}{' '}
+                        {vehicle.distance_unit}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Footer with QR */}
+                  <div className="flex items-center justify-between pt-1 border-t border-slate-200">
+                    <div className="text-[10px] text-slate-600 space-y-0.5 pr-2">
+                      <div className="font-bold text-slate-800">
+                        📱 Онлайн сервисная книжка
+                      </div>
+                      <div className="text-[9px] text-slate-500">
+                        Отсканируйте камерой для просмотра полной истории ТО
+                      </div>
+                    </div>
+
+                    <div className="w-14 h-14 p-1 bg-white border border-slate-300 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <img src={qrSvgUrl} alt="QR" className="w-full h-full object-contain" />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* ========================================================================= */
+                /* OPTION 3: COMPACT STICKER TEMPLATE (90x50 mm) */
+                /* ========================================================================= */
+                <div
+                  id="printable-service-sticker"
+                  className="bg-white text-slate-900 p-3.5 rounded-xl border-2 border-dashed border-slate-900 shadow-md space-y-2 font-sans max-w-[340px] mx-auto"
+                >
+                  {/* Compact Header */}
+                  <div className="flex items-center justify-between border-b pb-1.5 border-slate-900">
+                    <span className="text-[11px] font-black uppercase tracking-tight text-slate-900">
+                      ТО • {vehicle.make} {vehicle.model}
+                    </span>
+                    {vehicle.license_plate && (
+                      <span className="font-mono text-[10px] font-black px-1.5 py-0.5 rounded border border-slate-900 bg-slate-50">
+                        {vehicle.license_plate}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Compact Body */}
+                  <div className="grid grid-cols-3 gap-1.5 items-center">
+                    <div className="col-span-2 space-y-1">
+                      <div>
+                        <span className="text-[8px] uppercase font-bold text-slate-500 block">
+                          СЛЕД. ЗАМЕНА МАСЛА
+                        </span>
+                        <span className="font-mono font-black text-sm text-blue-800 leading-none">
+                          {Math.round(customNextOdo).toLocaleString('ru-RU')} {vehicle.distance_unit}
+                        </span>
+                      </div>
+
+                      <div className="text-[9px] font-bold text-slate-800 truncate" title={customOilSpec}>
+                        {customOilSpec}
+                      </div>
+
+                      {vehicle.track_engine_hours && (
+                        <div className="text-[9px] font-mono text-cyan-800 font-bold">
+                          {Math.round(customNextHours)} м/ч
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="w-14 h-14 p-1 bg-white border border-slate-400 rounded flex items-center justify-center justify-self-end flex-shrink-0">
+                      <img src={qrSvgUrl} alt="QR" className="w-full h-full object-contain" />
+                    </div>
+                  </div>
+
+                  {/* Compact Footer */}
+                  <div className="border-t pt-1 border-slate-200 flex items-center justify-between text-[8px] text-slate-500 font-medium">
+                    <span>{customServiceCenter}</span>
+                    <span>{new Date(customNextDate).toLocaleDateString('ru-RU')}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Print CTA */}
+              <div className="flex items-center justify-between pt-2">
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Подходит для печати на самоклеящейся бумаге или обычном принтере.
+                </p>
+                <button
+                  onClick={handlePrintSticker}
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold flex items-center space-x-1.5 shadow-md shadow-blue-600/25 transition-all flex-shrink-0"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>Печать наклейки</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* ========================================================================= */
+            /* QR TAB */
+            /* ========================================================================= */
             <div className="space-y-4 text-center">
               {/* QR Image Box */}
               <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-inner w-56 h-56 mx-auto flex items-center justify-center">
@@ -277,149 +627,6 @@ export const QrBookletModal: React.FC<QrBookletModalProps> = ({
                 >
                   <Calendar className="w-3.5 h-3.5" />
                   <span>В календарь (.ics)</span>
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {/* Sticker Customizer Bar */}
-              <div className="bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-2xl p-3 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center space-x-1.5">
-                    <Edit3 className="w-3.5 h-3.5 text-brand-500" />
-                    <span>Параметры для бирки</span>
-                  </span>
-                  <button
-                    onClick={() => setIsEditingSticker(!isEditingSticker)}
-                    className="text-[11px] text-brand-600 dark:text-brand-400 font-bold hover:underline"
-                  >
-                    {isEditingSticker ? 'Свернуть' : 'Настроить значения'}
-                  </button>
-                </div>
-
-                {isEditingSticker && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 text-xs animate-fadeIn">
-                    <div>
-                      <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">
-                        Следующая замена ({vehicle.distance_unit})
-                      </label>
-                      <input
-                        type="number"
-                        value={customNextOdo}
-                        onChange={(e) => setCustomNextOdo(parseFloat(e.target.value) || 0)}
-                        className="w-full bg-white dark:bg-dark-800 border border-slate-300 dark:border-dark-700 rounded-lg px-2.5 py-1.5 font-mono font-bold text-slate-900 dark:text-white"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">
-                        Масло / Вязкость
-                      </label>
-                      <input
-                        type="text"
-                        value={customOilSpec}
-                        onChange={(e) => setCustomOilSpec(e.target.value)}
-                        placeholder="Например: Лукойл Genesis 5W-30"
-                        className="w-full bg-white dark:bg-dark-800 border border-slate-300 dark:border-dark-700 rounded-lg px-2.5 py-1.5 font-semibold text-slate-900 dark:text-white"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Printable Service Sticker Preview */}
-              <div
-                id="printable-service-sticker"
-                className="bg-white text-slate-900 p-4 sm:p-5 rounded-2xl border-2 border-dashed border-slate-300 shadow-md space-y-3 font-sans"
-              >
-                {/* Sticker Header */}
-                <div className="flex items-center justify-between border-b pb-2 border-slate-200">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center text-[10px] font-black">
-                      ТО
-                    </div>
-                    <div>
-                      <div className="text-xs font-black uppercase tracking-tight text-slate-900">
-                        Электронная сервисная книжка
-                      </div>
-                      <div className="text-[9px] text-slate-500 font-mono">
-                        Бортовой Журнал • scanek.ru
-                      </div>
-                    </div>
-                  </div>
-                  {vehicle.license_plate && (
-                    <span className="font-mono text-xs font-black px-2 py-0.5 rounded border border-slate-400 bg-slate-50">
-                      {vehicle.license_plate}
-                    </span>
-                  )}
-                </div>
-
-                {/* Car info */}
-                <div className="flex items-center justify-between text-xs font-bold">
-                  <span className="text-sm font-extrabold text-blue-900">
-                    {vehicle.make} {vehicle.model} {vehicle.year ? `(${vehicle.year})` : ''}
-                  </span>
-                  <span className="font-mono text-[11px] text-slate-600">
-                    Текущий: {Math.round(vehicle.current_odometer).toLocaleString('ru-RU')} {vehicle.distance_unit}
-                  </span>
-                </div>
-
-                {/* Main Maintenance Box */}
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 grid grid-cols-3 gap-2 text-center text-xs">
-                  <div>
-                    <span className="text-[9px] text-slate-500 uppercase font-bold block">
-                      След. замена масла
-                    </span>
-                    <span className="font-mono font-black text-blue-600 text-xs">
-                      {Math.round(customNextOdo).toLocaleString('ru-RU')} {vehicle.distance_unit}
-                    </span>
-                  </div>
-
-                  <div>
-                    <span className="text-[9px] text-slate-500 uppercase font-bold block">
-                      Масло / Вязкость
-                    </span>
-                    <span className="font-mono font-bold text-slate-800 text-[11px] truncate block" title={customOilSpec}>
-                      {customOilSpec}
-                    </span>
-                  </div>
-
-                  <div>
-                    <span className="text-[9px] text-slate-500 uppercase font-bold block">
-                      Моточасы (м/ч)
-                    </span>
-                    <span className="font-mono font-bold text-slate-800 text-[11px]">
-                      {vehicle.track_engine_hours ? `${Math.round(vehicle.current_engine_hours || 0)} м/ч` : '—'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Sticker Footer with QR */}
-                <div className="flex items-center justify-between pt-1">
-                  <div className="text-[10px] text-slate-600 space-y-0.5">
-                    <div>📌 Наклейка на стойку двери / под капот</div>
-                    <div className="text-[9px] text-slate-400">
-                      Отсканируйте QR для просмотра всей истории ТО
-                    </div>
-                  </div>
-
-                  <div className="w-14 h-14 p-1 bg-white border border-slate-300 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <img src={qrSvgUrl} alt="QR" className="w-full h-full object-contain" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Print CTA */}
-              <div className="flex items-center justify-between pt-2">
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  Подходит для печати на самоклеящейся бумаге или обычном принтере.
-                </p>
-                <button
-                  onClick={handlePrintSticker}
-                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold flex items-center space-x-1.5 shadow-md shadow-blue-600/25 transition-all flex-shrink-0"
-                >
-                  <Printer className="w-4 h-4" />
-                  <span>Печать наклейки</span>
                 </button>
               </div>
             </div>
