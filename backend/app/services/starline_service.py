@@ -335,17 +335,21 @@ class StarLineService:
     async def fetch_device_telemetry(user_id: str, device_id: str, token: str) -> Dict[str, Any]:
         headers = {
             "Cookie": f"slnet={token.strip()}; slid_token={token.strip()}",
-            "User-Agent": "AutoTracker/2.5.0",
+            "token": token.strip(),
+            "Authorization": f"Bearer {token.strip()}",
+            "User-Agent": "AutoTracker/2.6.0",
+            "Accept": "application/json",
         }
         async with httpx.AsyncClient(timeout=15.0) as client:
             endpoints = [
+                f"{STARLINE_DEV_URL}/json/v2/user/{user_id}/user_info",
+                f"{STARLINE_DEV_URL}/json/v1/user/{user_id}/user_info",
                 f"{STARLINE_DEV_URL}/json/v2/user/{user_id}/device/{device_id}/state",
-                f"{STARLINE_DEV_URL}/json/v1/user/{user_id}/device/{device_id}/obd",
+                f"{STARLINE_DEV_URL}/json/v1/user/{user_id}/device/{device_id}/state",
                 f"{STARLINE_DEV_URL}/json/v2/user/{user_id}/device/{device_id}/obd",
+                f"{STARLINE_DEV_URL}/json/v1/user/{user_id}/device/{device_id}/obd",
                 f"{STARLINE_DEV_URL}/json/v1/device/{device_id}/obd",
                 f"{STARLINE_DEV_URL}/json/v1/device/{device_id}/params",
-                f"{STARLINE_DEV_URL}/json/v1/user/{user_id}/user_info",
-                f"{STARLINE_DEV_URL}/json/v2/user/{user_id}/user_info",
                 f"{STARLINE_DEV_URL}/json/v1/device/{device_id}",
                 f"{STARLINE_DEV_URL}/json/v2/device/{device_id}/state",
                 f"{STARLINE_DEV_URL}/json/v1/user/{user_id}/device/{device_id}/position",
