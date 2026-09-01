@@ -1,7 +1,8 @@
 {
+  "id": "/",
   "name": "Бортовой Журнал автомобиля",
   "short_name": "Бортовой Журнал",
-  "description": "Учет технического обслуживания, расходов, топлива, шин и регламентов автомобиля",
+  "description": "Учет технического обслуживания, расходов, топлива, шин, моточасов и регламентов автомобиля",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -13,13 +14,25 @@
       "src": "/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/icons/icon.svg",
@@ -28,5 +41,9 @@
       "purpose": "any"
     }
   ],
-  "categories": ["utilities", "productivity", "auto"]
+  "categories": [
+    "utilities",
+    "productivity",
+    "auto"
+  ]
 }

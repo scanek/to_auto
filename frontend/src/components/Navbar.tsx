@@ -4,6 +4,7 @@ import {
   Plus,
   Car,
   Settings,
+  Smartphone,
   LogIn,
   LogOut,
   ZapOff,
@@ -20,6 +21,7 @@ interface NavbarProps {
   pendingSyncCount?: number;
   onSelectVehicle: (v: Vehicle | null) => void;
   onOpenSettingsModal: () => void;
+  onOpenInstallModal?: () => void;
   onOpenAuthModal: () => void;
   onAddVehicle: () => void;
   onLogout: () => void;
@@ -34,6 +36,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   pendingSyncCount = 0,
   onSelectVehicle,
   onOpenSettingsModal,
+  onOpenInstallModal,
   onOpenAuthModal,
   onAddVehicle,
   onLogout,
@@ -121,6 +124,18 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
+                    {/* Install PWA Button */}
+          {onOpenInstallModal && (
+            <button
+              onClick={onOpenInstallModal}
+              className="flex items-center space-x-1.5 bg-brand-500/10 hover:bg-brand-500/20 text-brand-600 dark:text-brand-400 border border-brand-500/20 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95"
+              title="Установить приложение на телефон или рабочий стол"
+            >
+              <Smartphone className="w-3.5 h-3.5 text-brand-500" />
+              <span className="hidden md:inline">Установить</span>
+            </button>
+          )}
+
           {/* Unified Settings & Tools Button */}
           <button
             onClick={onOpenSettingsModal}
@@ -176,6 +191,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                         </span>
                       </div>
                     </div>
+
+                    {onOpenInstallModal && (
+                      <button
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          onOpenInstallModal();
+                        }}
+                        className="w-full flex items-center space-x-2 p-2 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-dark-800 font-semibold transition-colors text-left"
+                      >
+                        <Smartphone className="w-4 h-4 text-brand-500" />
+                        <span>Установить приложение</span>
+                      </button>
+                    )}
 
                     <button
                       onClick={() => {
