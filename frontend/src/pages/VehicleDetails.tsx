@@ -39,6 +39,8 @@ import {
   Thermometer,
   CreditCard,
   ShieldAlert,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -117,6 +119,9 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   const [recordsSearchQuery, setRecordsSearchQuery] = useState('');
   const [hideTelematicsPrompt, setHideTelematicsPrompt] = useState<boolean>(() => {
     return localStorage.getItem(`hide_telematics_prompt_${vehicle.id}`) === 'true';
+  });
+  const [isTelematicsCollapsed, setIsTelematicsCollapsed] = useState<boolean>(() => {
+    return localStorage.getItem(`collapse_telematics_${vehicle.id}`) === 'true';
   });
 
   const formatSyncTime = (timestamp?: string | null) => {
@@ -565,12 +570,24 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                   >
                     <Edit2 className="w-3.5 h-3.5" />
                   </button>
+                  <button
+                    onClick={() => {
+                      const next = !isTelematicsCollapsed;
+                      setIsTelematicsCollapsed(next);
+                      localStorage.setItem(`collapse_telematics_${vehicle.id}`, String(next));
+                    }}
+                    className="p-2 bg-white/80 dark:bg-dark-800 hover:bg-slate-100 dark:hover:bg-dark-750 text-slate-600 dark:text-slate-300 rounded-xl text-xs transition border border-slate-200 dark:border-dark-700 shadow-sm"
+                    title={isTelematicsCollapsed ? 'Развернуть виджет StarLine' : 'Свернуть виджет StarLine'}
+                  >
+                    {isTelematicsCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+                  </button>
                 </div>
               )}
             </div>
 
             {/* Telemetry Metric Cards Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2 sm:gap-2.5">
+            {!isTelematicsCollapsed && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2 sm:gap-2.5 animate-fadeIn">
               {/* Odometer */}
               <div className="bg-white/80 dark:bg-dark-800/90 backdrop-blur-md p-2.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm">
                 <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 flex items-center justify-between">
@@ -699,6 +716,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 </div>
               </div>
             </div>
+            )}
           </div>
         ) : isOwner && !hideTelematicsPrompt ? (
           <div className="p-2.5 sm:p-3 rounded-xl bg-slate-50 dark:bg-dark-900/60 border border-slate-200 dark:border-dark-750 flex items-center justify-between gap-2 animate-fadeIn">
