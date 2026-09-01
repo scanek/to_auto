@@ -1,6 +1,5 @@
 # ==========================================
-# Fast & Hardened Python FastAPI + Static Build
-# Frontend is pre-compiled in backend/static (instant ~3s build)
+# Fast & Robust Python FastAPI + Static Build
 # ==========================================
 FROM python:3.11-slim
 
@@ -16,22 +15,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Create non-root system user for security
-RUN groupadd -r appuser && useradd -r -u 1001 -g appuser -d /app appuser
-
-# Install Python dependencies (cached layer)
+# Install Python dependencies
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy Backend app & Pre-compiled production frontend
 COPY backend/app ./app
 COPY backend/static ./static
+COPY backend/entrypoint.sh ./entrypoint.sh
 
-# Create data & uploads volumes directory and assign permissions to appuser
-RUN mkdir -p /app/data/uploads && chown -R appuser:appuser /app
-
-# Switch to non-root user
-USER appuser
+RUN chmod +x ./entrypoint.sh && mkdir -p /app/data/uploads
 
 EXPOSE 8000
 
@@ -41,4 +34,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 
 VOLUME ["/app/data"]
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+ENTRYPOINT ["/bin/sh", "/app/entrypoint.sh"]

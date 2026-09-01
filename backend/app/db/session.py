@@ -173,6 +173,26 @@ async def heal_service_records_totals():
         except Exception as e:
             print(f"Service records healing note: {e}")
 
+
+async def assign_legacy_vehicles_if_needed():
+    """Assigns any legacy vehicles without user_id to the first user."""
+    from app.models.user import User
+    from app.models.vehicle import Vehicle
+    from sqlalchemy import select
+
+    async with AsyncSessionLocal() as session:
+        try:
+            first_user = (await session.execute(select(User).order_by(User.id.asc()))).scalars().first()
+            if first_user:
+                unassigned = (await session.execute(select(Vehicle).where(Vehicle.user_id.is_(None)))).scalars().all()
+                for v in unassigned:
+                    v.user_id = first_user.id
+                if unassigned:
+                    await session.commit()
+                    print(f"Assigned {len(unassigned)} legacy vehicles to user {first_user.username}")
+        except Exception as e:
+            print(f"Vehicle assignment note: {e}")
+
 async def init_db():
     async with engine.begin() as conn:
         # 1. Create tables if they don't exist
@@ -182,3 +202,4 @@ async def init_db():
             await auto_migrate_sqlite(conn)
     # 3. Heal any existing service records costs
     await heal_service_records_totals()
+    await assign_legacy_vehicles_if_needed()
