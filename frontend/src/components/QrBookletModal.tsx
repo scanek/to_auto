@@ -152,58 +152,51 @@ export const QrBookletModal: React.FC<QrBookletModalProps> = ({
   const defaultIntervalHours = oilReminder?.interval_hours || 250;
   const defaultIntervalMonths = oilReminder?.interval_months || 12;
 
-  // Smart calculation of next oil change odometer
+  // Exact calculation: Last Oil Change Odometer + Interval (e.g. 60000 + 7500 = 67500)
   const initialNextOdo = useMemo(() => {
     let baseOdo = 0;
-    if (latestOilRecord?.odometer) {
+    if (latestOilRecord?.odometer && latestOilRecord.odometer > 0) {
       baseOdo = latestOilRecord.odometer;
     } else if (oilReminder?.last_service_odometer && oilReminder.last_service_odometer > 0) {
       baseOdo = oilReminder.last_service_odometer;
     } else if (vehicle.starting_odometer && vehicle.starting_odometer > 0) {
       baseOdo = vehicle.starting_odometer;
+    } else {
+      baseOdo = vehicle.current_odometer;
     }
 
-    if (baseOdo > 0) {
-      // Calculate next target from baseline
-      let target = baseOdo + defaultIntervalKm;
-      // If target is in the past compared to current odometer, step up by interval cycles
-      if (target < vehicle.current_odometer) {
-        const cycles = Math.ceil((vehicle.current_odometer - baseOdo) / defaultIntervalKm);
-        target = baseOdo + cycles * defaultIntervalKm;
-      }
-      return target;
-    }
-
-    return vehicle.current_odometer + defaultIntervalKm;
+    return baseOdo + defaultIntervalKm;
   }, [latestOilRecord, oilReminder, defaultIntervalKm, vehicle.starting_odometer, vehicle.current_odometer]);
 
-  // Smart calculation of next engine hours
+  // Exact calculation: Last Oil Change Engine Hours + Interval (e.g. 150 + 250 = 400)
   const initialNextHours = useMemo(() => {
     let baseHours = 0;
     if (latestOilRecord?.engine_hours && latestOilRecord.engine_hours > 0) {
       baseHours = latestOilRecord.engine_hours;
     } else if (oilReminder?.last_service_hours && oilReminder.last_service_hours > 0) {
       baseHours = oilReminder.last_service_hours;
+    } else {
+      baseHours = vehicle.current_engine_hours || 0;
     }
 
-    if (baseHours > 0) {
-      let target = baseHours + defaultIntervalHours;
-      if (vehicle.current_engine_hours && target < vehicle.current_engine_hours) {
-        const cycles = Math.ceil((vehicle.current_engine_hours - baseHours) / defaultIntervalHours);
-        target = baseHours + cycles * defaultIntervalHours;
-      }
-      return target;
-    }
-
-    return (vehicle.current_engine_hours || 0) + defaultIntervalHours;
+    return baseHours + defaultIntervalHours;
   }, [latestOilRecord, oilReminder, defaultIntervalHours, vehicle.current_engine_hours]);
 
-  // Smart calculation of next date
+  // Exact calculation: Last Oil Change Date + Interval Months (e.g. 15.01.2026 + 12m = 15.01.2027)
   const initialNextDate = useMemo(() => {
-    const d = new Date();
-    d.setMonth(d.getMonth() + defaultIntervalMonths);
-    return d.toISOString().split('T')[0];
-  }, [defaultIntervalMonths]);
+    let baseDate = new Date();
+    if (latestOilRecord?.date) {
+      const d = new Date(latestOilRecord.date);
+      if (!isNaN(d.getTime())) baseDate = d;
+    } else if (oilReminder?.last_service_date) {
+      const d = new Date(oilReminder.last_service_date);
+      if (!isNaN(d.getTime())) baseDate = d;
+    }
+
+    const targetDate = new Date(baseDate);
+    targetDate.setMonth(targetDate.getMonth() + defaultIntervalMonths);
+    return targetDate.toISOString().split('T')[0];
+  }, [latestOilRecord, oilReminder, defaultIntervalMonths]);
 
   // Oil specification text
   const initialOilSpec = useMemo(() => {
@@ -296,6 +289,37 @@ export const QrBookletModal: React.FC<QrBookletModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+      {/* Dedicated Print Stylesheet for Sticker */}
+      <style>{`
+        @media print {
+          body * {
+            visibility: hidden !important;
+          }
+          #printable-service-sticker, #printable-service-sticker * {
+            visibility: visible !important;
+          }
+          #printable-service-sticker {
+            position: fixed !important;
+            left: 50% !important;
+            top: 20mm !important;
+            transform: translateX(-50%) !important;
+            width: 95mm !important;
+            max-width: 95mm !important;
+            margin: 0 auto !important;
+            padding: 4mm !important;
+            border: 2px solid #000 !important;
+            border-radius: 3mm !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+            box-shadow: none !important;
+            page-break-inside: avoid !important;
+          }
+          @page {
+            size: auto;
+            margin: 8mm;
+          }
+        }
+      `}</style>
       <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl transition-colors max-h-[92vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-dark-750 bg-slate-50 dark:bg-dark-900/60 flex-shrink-0">
