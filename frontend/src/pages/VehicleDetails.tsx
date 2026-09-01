@@ -136,6 +136,23 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
     }
   };
 
+  const handleQuickChangeTankCapacity = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const current = vehicle.fuel_tank_capacity || 55;
+    const input = prompt('Укажите объем топливного бака автомобиля (в литрах):', String(current));
+    if (input !== null) {
+      const val = parseFloat(input.trim().replace(',', '.'));
+      if (!isNaN(val) && val > 0) {
+        try {
+          await api.updateVehicle(vehicle.id, { fuel_tank_capacity: val });
+          await onRefreshVehicle();
+        } catch (err: any) {
+          alert('Ошибка при сохранении объема бака: ' + (err.message || ''));
+        }
+      }
+    }
+  };
+
   const loadData = async () => {
     try {
       const [srv, fuel, rem, docs, an, ty] = await Promise.all([
@@ -588,7 +605,17 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                     <span className="text-sm sm:text-base font-black text-sky-600 dark:text-sky-400 font-mono">
                       {vehicle.starline_fuel_percent !== null && vehicle.starline_fuel_percent !== undefined ? (
                         showFuelInLitres ? (
-                          <>{((vehicle.fuel_tank_capacity || 55) * (vehicle.starline_fuel_percent / 100)).toFixed(1)} <span className="text-xs font-semibold text-slate-500">/{vehicle.fuel_tank_capacity || 55} л</span></>
+                          <>
+                            {((vehicle.fuel_tank_capacity || 55) * (vehicle.starline_fuel_percent / 100)).toFixed(1)}{' '}
+                            <button
+                              type="button"
+                              onClick={handleQuickChangeTankCapacity}
+                              className="text-xs font-semibold text-slate-500 hover:text-sky-500 underline decoration-dotted transition"
+                              title="Нажмите, чтобы изменить объем бака"
+                            >
+                              /{vehicle.fuel_tank_capacity || 55} л ✎
+                            </button>
+                          </>
                         ) : (
                           `${Math.round(vehicle.starline_fuel_percent)}%`
                         )

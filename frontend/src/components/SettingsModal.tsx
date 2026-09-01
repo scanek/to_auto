@@ -87,14 +87,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const loadAdminData = async () => {
     setLoadingAdminData(true);
     try {
-      const [usersData, vehiclesData] = await Promise.all([
-        api.getAdminUsers(),
-        api.getAdminAllVehicles(),
-      ]);
-      setAdminUsers(usersData);
-      setAdminVehicles(vehiclesData);
-    } catch (err: any) {
-      console.error('Failed to load admin data', err);
+      try {
+        const usersData = await api.getAdminUsers();
+        setAdminUsers(usersData || []);
+      } catch (err: any) {
+        console.error('Failed to load admin users', err);
+      }
+      try {
+        const vehiclesData = await api.getAdminAllVehicles();
+        setAdminVehicles(vehiclesData || []);
+      } catch (err: any) {
+        console.error('Failed to load admin vehicles', err);
+      }
     } finally {
       setLoadingAdminData(false);
     }

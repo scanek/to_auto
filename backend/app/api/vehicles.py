@@ -153,6 +153,62 @@ async def get_vehicles(
     await batch_populate_vehicles_totals(db, vehicles, responses)
     return responses
 
+@router.get("/admin/all", response_model=list[VehicleResponse])
+async def get_all_vehicles_admin(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Admin only: list ALL vehicles across all users."""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Доступ разрешен только администраторам",
+        )
+    
+    query = (
+        select(Vehicle)
+        .options(selectinload(Vehicle.user))
+        .order_by(Vehicle.created_at.desc())
+    )
+    result = await db.execute(query)
+    vehicles = result.scalars().all()
+
+    responses = []
+    for v in vehicles:
+        resp = VehicleResponse.model_validate(v)
+        resp.is_owner = (v.user_id == current_user.id)
+        if v.user:
+            resp.owner_name = v.user.full_name or v.user.username
+        responses.append(resp)
+
+    await batch_populate_vehicles_totals(db, vehicles, responses)
+    return responses
+
+@router.delete("/admin/{vehicle_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_vehicle_admin(
+    vehicle_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Admin only: delete any vehicle."""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Доступ разрешен только администраторам",
+        )
+    
+    result = await db.execute(select(Vehicle).where(Vehicle.id == vehicle_id))
+    vehicle = result.scalar_one_or_none()
+    if not vehicle:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Автомобиль не найден",
+        )
+    
+    await db.delete(vehicle)
+    await db.commit()
+    return None
+
 @router.get("/{vehicle_id}", response_model=VehicleResponse)
 async def get_vehicle(
     vehicle_id: int,
