@@ -289,9 +289,21 @@ export const QrBookletModal: React.FC<QrBookletModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-      {/* Dedicated Print Stylesheet for Sticker */}
+      {/* Dedicated Print Stylesheet for Sticker (Strict 1-Page Output) */}
       <style>{`
         @media print {
+          @page {
+            size: auto;
+            margin: 0mm;
+          }
+          html, body {
+            height: auto !important;
+            min-height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+            overflow: hidden !important;
+          }
           body * {
             visibility: hidden !important;
           }
@@ -299,24 +311,23 @@ export const QrBookletModal: React.FC<QrBookletModalProps> = ({
             visibility: visible !important;
           }
           #printable-service-sticker {
-            position: fixed !important;
+            position: absolute !important;
             left: 50% !important;
-            top: 20mm !important;
+            top: 12mm !important;
             transform: translateX(-50%) !important;
-            width: 95mm !important;
-            max-width: 95mm !important;
-            margin: 0 auto !important;
-            padding: 4mm !important;
-            border: 2px solid #000 !important;
+            width: 90mm !important;
+            max-width: 90mm !important;
+            margin: 0 !important;
+            padding: 3mm !important;
+            border: 2px solid #000000 !important;
             border-radius: 3mm !important;
             background: #ffffff !important;
             color: #000000 !important;
             box-shadow: none !important;
+            page-break-before: avoid !important;
+            page-break-after: avoid !important;
             page-break-inside: avoid !important;
-          }
-          @page {
-            size: auto;
-            margin: 8mm;
+            break-inside: avoid !important;
           }
         }
       `}</style>
@@ -383,7 +394,7 @@ export const QrBookletModal: React.FC<QrBookletModalProps> = ({
                   }`}
                 >
                   <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>Вариант 1: Дилерская карта ТО</span>
+                  <span>Сервисная карта</span>
                 </button>
 
                 <button
@@ -395,7 +406,7 @@ export const QrBookletModal: React.FC<QrBookletModalProps> = ({
                   }`}
                 >
                   <Tag className="w-3.5 h-3.5" />
-                  <span>Вариант 3: Наклейка (90×50 мм)</span>
+                  <span>Компактная наклейка</span>
                 </button>
               </div>
 
