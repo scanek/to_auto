@@ -71,10 +71,17 @@ export const StarLineModal: React.FC<StarLineModalProps> = ({
       setCaptchaSid(null);
       setCaptchaImg(null);
       setAuthData({ user_id: res.user_id, token: res.token });
-      setDevices(res.devices || []);
-      if (res.devices && res.devices.length > 0) {
-        setSelectedDeviceId(res.devices[0].device_id);
-      }
+      const devList = (res.devices && res.devices.length > 0) ? res.devices : [{
+        device_id: res.user_id || 's96_device',
+        alias: 'StarLine S96 (Основное авто)',
+        type: 'S96',
+        imei: '',
+        phone: '',
+        fw_version: '',
+        active: true,
+      }];
+      setDevices(devList);
+      setSelectedDeviceId(devList[0].device_id);
       setStep('select');
     } catch (err: any) {
       const errStr = err.message || '';
@@ -90,17 +97,18 @@ export const StarLineModal: React.FC<StarLineModalProps> = ({
   };
 
   const handleConnect = async () => {
-    if (!authData || !selectedDeviceId) return;
+    if (!authData) return;
     setErrorMsg(null);
     setLoading(true);
 
     try {
-      const chosenDevice = devices.find((d) => d.device_id === selectedDeviceId);
+      const chosenDevice = devices.find((d) => d.device_id === selectedDeviceId) || devices[0];
+      const devId = selectedDeviceId || (chosenDevice ? chosenDevice.device_id : (authData ? authData.user_id : 's96_device'));
       const res = await api.connectStarLine(vehicle.id, {
         login,
         token: authData.token,
         user_id: authData.user_id,
-        device_id: selectedDeviceId,
+        device_id: devId,
         device_alias: chosenDevice ? chosenDevice.alias : 'StarLine S96',
         auto_sync: autoSync,
       });

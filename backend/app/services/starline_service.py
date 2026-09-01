@@ -43,7 +43,6 @@ def _flatten_dict(d: Any, parent_key: str = '', sep: str = '.') -> Dict[str, Any
     return dict(items)
 
 def _find_numeric_in_flat(flat: Dict[str, Any], substrings: tuple[str, ...], min_val: float = 0.0, max_val: float = 1e9) -> Optional[float]:
-    # 1. Exact key end match first
     for k, v in flat.items():
         k_lower = k.lower()
         if any(k_lower == s or k_lower.endswith(f".{s}") or k_lower.endswith(f"_{s}") or f"['{s}']" in k_lower for s in substrings):
@@ -55,7 +54,6 @@ def _find_numeric_in_flat(flat: Dict[str, Any], substrings: tuple[str, ...], min
                 except (ValueError, TypeError):
                     pass
 
-    # 2. Partial substring match
     for k, v in flat.items():
         k_lower = k.lower()
         if any(s in k_lower for s in substrings):
@@ -240,10 +238,11 @@ class StarLineService:
                     "active": bool(d.get("active", True)),
                 })
             
-            if not devices and user_id:
+            # Fallback: Always guarantee at least 1 device is available for selection
+            if not devices:
                 devices.append({
-                    "device_id": user_id,
-                    "alias": "StarLine S96 (Мой автомобиль)",
+                    "device_id": str(user_id) if user_id else "s96_device",
+                    "alias": "StarLine S96 (Основное авто)",
                     "type": "S96",
                     "imei": "",
                     "phone": "",
@@ -255,9 +254,6 @@ class StarLineService:
 
     @staticmethod
     async def fetch_device_telemetry(user_id: str, device_id: str, token: str) -> Dict[str, Any]:
-        """
-        Fetches live OBD / CAN telemetry state using deep flattened path inspection.
-        """
         headers = {
             "Cookie": f"slnet={token.strip()}; slid_token={token.strip()}",
             "User-Agent": "AutoTracker/2.5.0",
@@ -295,15 +291,14 @@ class StarLineService:
             mileage = _find_numeric_in_flat(all_flat, mileage_keys, min_val=1.0)
 
             # 2. Engine Hours
-            # First check direct hours keys:
             hours_keys = (
                 "engine_hours", "hours", "motohours", "moto_hours", "obd_engine_hours",
                 "engine_time_hours", "work_hours", "worktime_hours", "ign_hours",
-                "obd.engine_hours", "state.engine_hours", "car_state.engine_hours"
+                "obd.engine_hours", "state.engine_hours", "car_state.engine_hours",
+                "r_engine", "r_ign", "work_time"
             )
             engine_hours = _find_numeric_in_flat(all_flat, hours_keys, min_val=0.1, max_val=50000.0)
 
-            # If not found directly in hours, check seconds / runtime / ignition counters:
             if engine_hours is None:
                 sec_keys = (
                     "engine_time", "engine_time_sec", "engine_work_time", "work_time", 
@@ -313,12 +308,9 @@ class StarLineService:
                 )
                 raw_val = _find_numeric_in_flat(all_flat, sec_keys, min_val=60.0)
                 if raw_val:
-                    # If value > 10000, it's seconds -> convert to hours
                     if raw_val > 10000.0:
                         engine_hours = round(raw_val / 3600.0, 1)
                     elif raw_val > 600.0 and raw_val <= 10000.0:
-                        # Could be minutes or seconds or hours:
-                        # If minutes (e.g. 60,000 min -> 1000 h):
                         engine_hours = round(raw_val / 60.0, 1)
                     else:
                         engine_hours = round(raw_val, 1)
@@ -335,7 +327,7 @@ class StarLineService:
             temp_keys = ("ctemp", "engine_temp", "t_engine", "temp_engine", "temp_eng")
             engine_temp = _find_numeric_in_flat(all_flat, temp_keys, min_val=-40.0, max_val=150.0)
 
-            # Debug: All non-zero numeric keys containing engine / work / ign / time / hour
+            # Debug keys
             debug_engine_keys = {
                 k: v for k, v in all_flat.items() 
                 if any(x in k.lower() for x in ("eng", "hour", "time", "ign", "mot", "work", "r_"))
@@ -392,7 +384,6 @@ class StarLineService:
 
         summary = ", ".join(updated_fields) if updated_fields else "Телеметрия обновлена"
         
-        # If engine hours not found, append discovered engine keys for instant feedback
         if telemetry.get("engine_hours") is None and telemetry.get("debug_engine_keys"):
             debug_items = [f"{k}={v}" for k, v in list(telemetry["debug_engine_keys"].items())[:3]]
             summary += f" (найдены ключи: {', '.join(debug_items)})"
