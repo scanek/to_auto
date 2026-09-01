@@ -45,12 +45,14 @@ async def auto_migrate_sqlite(conn):
             ("to_tag", "VARCHAR(50)"),
             ("engine_hours", "FLOAT"),
             ("store", "VARCHAR(100)"),
+            ("client_mutation_id", "VARCHAR(100)"),
             ("url", "VARCHAR(500)"),
         ],
         "service_items": [
             ("brand", "VARCHAR(100)"),
             ("unit", "VARCHAR(20) DEFAULT 'шт'"),
             ("store", "VARCHAR(100)"),
+            ("client_mutation_id", "VARCHAR(100)"),
             ("url", "VARCHAR(500)"),
         ],
         "maintenance_plans": [

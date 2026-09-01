@@ -7,6 +7,8 @@ services:
       dockerfile: Dockerfile
     container_name: autotracker
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     ports:
       - "9900:8000"
     environment:

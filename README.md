@@ -4,7 +4,7 @@
 
 Автор и разработчик: **Александр Щеголев** ([@scanek](https://github.com/scanek))  
 Официальный репозиторий: **[https://github.com/scanek/to_auto](https://github.com/scanek/to_auto)**  
-Текущая версия: **v2.3.0 (Security & Production Hardening)**
+Текущая версия: **v2.4.0 (P0/P1 Full Security & Performance Suite)**
 
 ---
 

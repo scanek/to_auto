@@ -1,3 +1,5 @@
+from fastapi import Request
+from app.core.rate_limiter import limiter, get_client_ip
 import os
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Header
@@ -58,7 +60,9 @@ async def get_me(current_user: User = Depends(get_current_user)):
     return UserResponse.model_validate(current_user)
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
-async def register(payload: UserCreate, db: AsyncSession = Depends(get_db)):
+async def register(request: Request, payload: UserCreate, db: AsyncSession = Depends(get_db)):
+    ip = get_client_ip(request)
+    limiter.check(f"register:{ip}", max_requests=5, window_seconds=600, error_message="Слишком много регистраций с вашего IP.")
     """Register a new user account. First registered user becomes Admin."""
     count_res = await db.execute(select(func.count(User.id)))
     user_count = count_res.scalar() or 0
@@ -127,7 +131,9 @@ async def register(payload: UserCreate, db: AsyncSession = Depends(get_db)):
     )
 
 @router.post("/login", response_model=TokenResponse)
-async def login(payload: UserLogin, db: AsyncSession = Depends(get_db)):
+async def login(request: Request, payload: UserLogin, db: AsyncSession = Depends(get_db)):
+    ip = get_client_ip(request)
+    limiter.check(f"login:{ip}", max_requests=10, window_seconds=60, error_message="Слишком много попыток входа.")
     """Authenticate with username or email and password."""
     identifier_clean = payload.username.strip().lower()
 
