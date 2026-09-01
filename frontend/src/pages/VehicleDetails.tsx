@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { QuickMileageModal } from '../components/QuickMileageModal';
+import { QrBookletModal } from '../components/QrBookletModal';
+import { downloadIcsReminder } from '../utils/qrcodeHelper';
 import {
   Wrench,
   Fuel,
@@ -29,6 +31,8 @@ import {
   Search,
   X,
   CircleDot,
+  QrCode,
+  CalendarPlus,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -100,6 +104,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   const [newHoursVal, setNewHoursVal] = useState(vehicle.current_engine_hours || 0);
 
   const [isQuickMileageOpen, setIsQuickMileageOpen] = useState(false);
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [recordsSearchQuery, setRecordsSearchQuery] = useState('');
 
   const loadData = async () => {
@@ -376,34 +381,45 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
             </div>
           </div>
 
-          {/* Quick Actions Buttons */}
-          {isOwner && (
-            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-              <button
-                onClick={() => onOpenServiceModal('service')}
-                className="flex items-center justify-center space-x-1 bg-brand-500 hover:bg-brand-600 active:scale-95 text-white px-2.5 sm:px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-brand-500/20"
-              >
-                <Plus className="w-4 h-4 flex-shrink-0" />
-                <span>Запись ТО</span>
-              </button>
+          {/* Header Action Buttons */}
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            <button
+              onClick={() => setIsQrModalOpen(true)}
+              className="flex items-center justify-center space-x-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-200 px-2.5 sm:px-3 py-2 rounded-xl text-xs font-bold border border-slate-200 dark:border-dark-700 transition-all shadow-sm active:scale-95"
+              title="QR-код сервисной книжки, бирка ТО под капот и напоминания в календарь"
+            >
+              <QrCode className="w-4 h-4 text-brand-500 flex-shrink-0" />
+              <span>QR и Бирка ТО</span>
+            </button>
 
-              <button
-                onClick={() => onOpenFuelModal()}
-                className="flex items-center justify-center space-x-1 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-2.5 sm:px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-600/20"
-              >
-                <Fuel className="w-4 h-4 flex-shrink-0" />
-                <span>Заправка</span>
-              </button>
+            {isOwner && (
+              <>
+                <button
+                  onClick={() => onOpenServiceModal('service')}
+                  className="flex items-center justify-center space-x-1 bg-brand-500 hover:bg-brand-600 active:scale-95 text-white px-2.5 sm:px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-brand-500/20"
+                >
+                  <Plus className="w-4 h-4 flex-shrink-0" />
+                  <span>Запись ТО</span>
+                </button>
 
-              <button
-                onClick={() => onOpenReminderModal()}
-                className="flex items-center justify-center space-x-1 bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-200 px-2.5 sm:px-3.5 py-2 rounded-xl text-xs font-semibold border border-slate-200 dark:border-dark-700 transition-all"
-              >
-                <CalendarClock className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                <span>Регламент</span>
-              </button>
-            </div>
-          )}
+                <button
+                  onClick={() => onOpenFuelModal()}
+                  className="flex items-center justify-center space-x-1 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-2.5 sm:px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-600/20"
+                >
+                  <Fuel className="w-4 h-4 flex-shrink-0" />
+                  <span>Заправка</span>
+                </button>
+
+                <button
+                  onClick={() => onOpenReminderModal()}
+                  className="flex items-center justify-center space-x-1 bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-200 px-2.5 sm:px-3.5 py-2 rounded-xl text-xs font-semibold border border-slate-200 dark:border-dark-700 transition-all"
+                >
+                  <CalendarClock className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                  <span>Регламент</span>
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Read-only Banner for foreign public cars */}
@@ -1072,22 +1088,45 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                         <ProgressBar percentage={rem.progress_percentage} status={rem.status} />
                       </div>
 
-                      {/* Last done baseline and Mark Done button */}
+                      {/* Last done baseline, Calendar and Mark Done button */}
                       <div className="flex items-center justify-between pt-2.5 border-t border-slate-200 dark:border-dark-750/70 text-xs">
                         <div className="text-[11px] text-slate-500 truncate mr-2">
                           Было: {Math.round(rem.last_service_odometer).toLocaleString('ru-RU')} {vehicle.distance_unit}
                           {rem.last_service_hours ? ` (${rem.last_service_hours} м/ч)` : ''}
                         </div>
 
-                        {isOwner && (
+                        <div className="flex items-center space-x-1.5 flex-shrink-0">
                           <button
-                            onClick={() => handleMarkReminderDone(rem.id)}
-                            className="flex items-center space-x-1 bg-slate-100 hover:bg-emerald-600 hover:text-white dark:bg-dark-800 text-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-lg text-xs font-semibold border border-slate-200 dark:border-dark-700 transition-all flex-shrink-0"
+                            onClick={() => {
+                              const targetDate = new Date();
+                              targetDate.setMonth(targetDate.getMonth() + (rem.interval_months || 6));
+                              downloadIcsReminder({
+                                title: rem.title,
+                                carName: `${vehicle.make} ${vehicle.model}`,
+                                licensePlate: vehicle.license_plate,
+                                targetDate,
+                                odometerTarget: (rem.last_service_odometer || vehicle.current_odometer) + (rem.interval_distance || 7500),
+                                distanceUnit: vehicle.distance_unit,
+                                oilSpec: vehicle.oil_spec,
+                                bookletUrl: `${window.location.origin}/?vehicle=${vehicle.id}`,
+                              });
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-amber-500 hover:bg-amber-500/10 rounded-lg transition-colors"
+                            title="Добавить напоминание в календарь телефона (.ics)"
                           >
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                            <span>Выполнено</span>
+                            <CalendarPlus className="w-3.5 h-3.5" />
                           </button>
-                        )}
+
+                          {isOwner && (
+                            <button
+                              onClick={() => handleMarkReminderDone(rem.id)}
+                              className="flex items-center space-x-1 bg-slate-100 hover:bg-emerald-600 hover:text-white dark:bg-dark-800 text-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-lg text-xs font-semibold border border-slate-200 dark:border-dark-700 transition-all"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                              <span>Выполнено</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
@@ -1724,6 +1763,16 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
             await onRefreshVehicle();
             await loadData();
           }}
+        />
+      )}
+
+      {/* QR Booklet & Under-hood Sticker Modal */}
+      {isQrModalOpen && (
+        <QrBookletModal
+          isOpen={isQrModalOpen}
+          onClose={() => setIsQrModalOpen(false)}
+          vehicle={vehicle}
+          reminders={reminders}
         />
       )}
     </div>
