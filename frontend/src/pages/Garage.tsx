@@ -16,6 +16,8 @@ import {
   Eye,
   EyeOff,
   RotateCcw,
+  Satellite,
+  Sparkles,
 } from 'lucide-react';
 import { Vehicle } from '../types';
 
@@ -96,8 +98,52 @@ export const Garage: React.FC<GarageProps> = ({
     0
   );
 
+  const [isReleaseBannerDismissed, setIsReleaseBannerDismissed] = useState<boolean>(() => {
+    return localStorage.getItem('dismissed_release_v260') === 'true';
+  });
+
+  const handleDismissReleaseBanner = () => {
+    setIsReleaseBannerDismissed(true);
+    localStorage.setItem('dismissed_release_v260', 'true');
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-4 sm:space-y-8 animate-fadeIn">
+      {/* AutoTracker v2.6.0 Release Banner */}
+      {!isReleaseBannerDismissed && (
+        <div className="relative overflow-hidden bg-gradient-to-r from-sky-600/15 via-brand-600/10 to-emerald-600/15 border border-sky-500/30 rounded-3xl p-4 sm:p-5 shadow-sm animate-fadeIn">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 sm:gap-4">
+            <div className="flex items-start space-x-3.5">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-sky-500 to-brand-500 text-white flex items-center justify-center flex-shrink-0 shadow-md shadow-sky-500/20">
+                <Satellite className="w-5 h-5 sm:w-6 sm:h-6 animate-pulse" />
+              </div>
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-sky-500 text-white shadow-sm">
+                    Новый релиз v2.6.0
+                  </span>
+                  <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white">
+                    Телематика StarLine S96 & Премиум-дашборд CAN-шины
+                  </h3>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-300 max-w-3xl leading-relaxed">
+                  🛰️ Прямая синхронизация с сигнализациями StarLine: реальный пробег из CAN-шины, уровень топлива в баке с пересчетом в литры, напряжение АКБ, раздельная температура ДВС и салона, баланс SIM-карты и обновленная панель администратора.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2 self-end md:self-center flex-shrink-0">
+              <button
+                onClick={handleDismissReleaseBanner}
+                className="px-3 py-1.5 rounded-xl bg-white/80 dark:bg-dark-800 hover:bg-slate-100 dark:hover:bg-dark-750 text-slate-600 dark:text-slate-300 text-xs font-semibold border border-slate-200 dark:border-dark-700 transition"
+              >
+                Понятно, скрыть
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Guest Welcome & Showcase Banner */}
       {!isAuthenticated && (
         <div className="bg-gradient-to-r from-brand-600/15 via-brand-500/10 to-purple-600/15 border border-brand-500/30 rounded-3xl p-5 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm animate-fadeIn">

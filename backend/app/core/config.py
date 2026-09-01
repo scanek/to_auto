@@ -11,7 +11,7 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "AutoTracker (LubeLogger Style)"
-    VERSION: str = "2.5.0"
+    VERSION: str = "2.6.0"
     API_V1_STR: str = "/api/v1"
     
     # Database
