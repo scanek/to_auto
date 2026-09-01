@@ -33,6 +33,12 @@ class VehicleBase(BaseModel):
     starline_interior_temp: Optional[float] = None
     starline_balance: Optional[float] = None
     starline_is_armed: Optional[bool] = None
+    starline_is_running: Optional[bool] = None
+    starline_is_handbrake: Optional[bool] = None
+    starline_is_doors_closed: Optional[bool] = None
+    starline_gsm_level: Optional[int] = None
+    starline_gps_lat: Optional[float] = None
+    starline_gps_lon: Optional[float] = None
     telematics_webhook_key: Optional[str] = None
     telematics_auto_sync: bool = False
 

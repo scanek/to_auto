@@ -42,6 +42,12 @@ class Vehicle(Base):
     starline_interior_temp = Column(Float, nullable=True) # Температура салона
     starline_balance = Column(Float, nullable=True)
     starline_is_armed = Column(Boolean, nullable=True)
+    starline_is_running = Column(Boolean, nullable=True) # Двигатель заведен / заглушен
+    starline_is_handbrake = Column(Boolean, nullable=True) # Ручной тормоз
+    starline_is_doors_closed = Column(Boolean, nullable=True) # Двери/периметр закрыты
+    starline_gsm_level = Column(Integer, nullable=True) # Качество связи GSM
+    starline_gps_lat = Column(Float, nullable=True) # GPS широта
+    starline_gps_lon = Column(Float, nullable=True) # GPS долгота
     telematics_auto_sync = Column(Boolean, default=False)
     telematics_webhook_key = Column(String(100), nullable=True, unique=True, index=True)
     

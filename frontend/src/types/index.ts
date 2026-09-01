@@ -40,6 +40,12 @@ export interface Vehicle {
   starline_interior_temp?: number;
   starline_balance?: number;
   starline_is_armed?: boolean;
+  starline_is_running?: boolean;
+  starline_is_handbrake?: boolean;
+  starline_is_doors_closed?: boolean;
+  starline_gsm_level?: number;
+  starline_gps_lat?: number;
+  starline_gps_lon?: number;
   telematics_auto_sync?: boolean;
   telematics_webhook_key?: string;
 

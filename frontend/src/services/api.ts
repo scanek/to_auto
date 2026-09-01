@@ -682,6 +682,15 @@ export const api = {
       }
     ),
 
+  executeTelematicsCommand: (vehicleId: number, command: string) =>
+    request<{ status: string; command: string; message: string }>(
+      `${API_BASE}/telematics/${vehicleId}/execute`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ command }),
+      }
+    ),
+
   disconnectTelematics: (vehicleId: number) =>
     request<{ status: string; message: string }>(
       `${API_BASE}/telematics/${vehicleId}/disconnect`,

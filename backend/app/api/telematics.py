@@ -168,6 +168,51 @@ async def sync_vehicle_telematics(
             detail=f"Не удалось получить свежие данные со StarLine: {str(e)}"
         )
 
+class CommandRequest(BaseModel):
+    command: str # e.g. 'poke', 'arm', 'disarm', 'ign_start', 'ign_stop', 'valet_on', 'valet_off'
+
+@router.post("/{vehicle_id}/execute")
+async def execute_telematics_command(
+    vehicle_id: int,
+    payload: CommandRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Sends an active control command to the StarLine S96 device.
+    """
+    vehicle = await verify_vehicle_access(db, vehicle_id, current_user, require_owner=True)
+
+    if vehicle.telematics_provider != "starline" or not vehicle.starline_device_id or not vehicle.starline_token:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Для этого автомобиля не настроена интеграция со StarLine"
+        )
+
+    try:
+        res = await StarLineService.execute_device_command(
+            device_id=vehicle.starline_device_id,
+            token=vehicle.starline_token,
+            command_type=payload.command,
+            user_id=vehicle.starline_user_id,
+        )
+        # Trigger background refresh after command
+        try:
+            await StarLineService.sync_vehicle_with_starline(db, vehicle)
+        except Exception:
+            pass
+
+        return {
+            "status": "success",
+            "command": payload.command,
+            "message": res.get("message") or f"Команда {payload.command} успешно отправлена на StarLine",
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Ошибка отправки команды StarLine: {str(e)}"
+        )
+
 @router.delete("/{vehicle_id}/disconnect")
 async def disconnect_telematics(
     vehicle_id: int,

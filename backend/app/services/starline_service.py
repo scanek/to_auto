@@ -346,6 +346,36 @@ class StarLineService:
                     is_armed = bool(all_flat[arm_k])
                     break
 
+            # 9. Engine Running Status (ign / run)
+            is_running = None
+            for run_k in ("devices[0].car_state.run", "car_state.run", "state.car_state.run", "run", "devices[0].car_state.ign", "car_state.ign", "state.ign"):
+                if run_k in all_flat:
+                    is_running = bool(all_flat[run_k])
+                    break
+
+            # 10. Handbrake Status (pbrake / handbrake)
+            is_handbrake = None
+            for hb_k in ("devices[0].car_state.pbrake", "car_state.pbrake", "state.car_state.pbrake", "pbrake", "handbrake"):
+                if hb_k in all_flat:
+                    is_handbrake = bool(all_flat[hb_k])
+                    break
+
+            # 11. Doors Closed Status (door == False means doors are closed)
+            is_doors_closed = None
+            for door_k in ("devices[0].car_state.door", "car_state.door", "state.car_state.door", "door"):
+                if door_k in all_flat:
+                    is_doors_closed = not bool(all_flat[door_k])
+                    break
+
+            # 12. GSM Signal Level (0-31)
+            gsm_level = _find_numeric_in_flat(all_flat, ("devices[0].gsm_lvl", "gsm_lvl", "common.gsm_lvl", "devices[0].gsm", "gsm"), min_val=0.0, max_val=35.0)
+            if gsm_level is not None:
+                gsm_level = int(gsm_level)
+
+            # 13. GPS Latitude & Longitude
+            gps_lat = _find_numeric_in_flat(all_flat, ("devices[0].position.y", "position.y", "car_state.y", "y", "lat", "latitude", "devices[0].lat"), min_val=-90.0, max_val=90.0)
+            gps_lon = _find_numeric_in_flat(all_flat, ("devices[0].position.x", "position.x", "car_state.x", "x", "lon", "lng", "longitude", "devices[0].lon"), min_val=-180.0, max_val=180.0)
+
             return {
                 "mileage": mileage,
                 "engine_hours": engine_hours,
@@ -355,6 +385,12 @@ class StarLineService:
                 "interior_temp": interior_temp,
                 "balance": balance,
                 "is_armed": is_armed,
+                "is_running": is_running,
+                "is_handbrake": is_handbrake,
+                "is_doors_closed": is_doors_closed,
+                "gsm_level": gsm_level,
+                "gps_lat": gps_lat,
+                "gps_lon": gps_lon,
             }
 
     @staticmethod
@@ -401,6 +437,22 @@ class StarLineService:
         if telemetry.get("is_armed") is not None:
             vehicle.starline_is_armed = telemetry["is_armed"]
 
+        if telemetry.get("is_running") is not None:
+            vehicle.starline_is_running = telemetry["is_running"]
+
+        if telemetry.get("is_handbrake") is not None:
+            vehicle.starline_is_handbrake = telemetry["is_handbrake"]
+
+        if telemetry.get("is_doors_closed") is not None:
+            vehicle.starline_is_doors_closed = telemetry["is_doors_closed"]
+
+        if telemetry.get("gsm_level") is not None:
+            vehicle.starline_gsm_level = telemetry["gsm_level"]
+
+        if telemetry.get("gps_lat") is not None and telemetry.get("gps_lon") is not None:
+            vehicle.starline_gps_lat = telemetry["gps_lat"]
+            vehicle.starline_gps_lon = telemetry["gps_lon"]
+
         vehicle.starline_last_sync = now
         await db.commit()
         await db.refresh(vehicle)
@@ -417,6 +469,61 @@ class StarLineService:
             "interior_temp": vehicle.starline_interior_temp,
             "balance": vehicle.starline_balance,
             "is_armed": vehicle.starline_is_armed,
+            "is_running": vehicle.starline_is_running,
+            "is_handbrake": vehicle.starline_is_handbrake,
+            "is_doors_closed": vehicle.starline_is_doors_closed,
+            "gsm_level": vehicle.starline_gsm_level,
+            "gps_lat": vehicle.starline_gps_lat,
+            "gps_lon": vehicle.starline_gps_lon,
             "last_sync": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "updated_summary": summary,
         }
+
+    @staticmethod
+    async def execute_device_command(
+        device_id: str,
+        token: str,
+        command_type: str,
+        user_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Executes an active control command on the StarLine device (e.g. arm, disarm, poke, ign_start, ign_stop, valet_on).
+        """
+        headers = {
+            "token": token,
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+
+        # Common StarLine API command execution endpoints
+        urls = [
+            f"{STARLINE_DEV_URL}/json/v1/device/{device_id}/execute",
+            f"{STARLINE_DEV_URL}/json/v2/device/{device_id}/execute",
+            f"{STARLINE_DEV_URL}/json/v1/user/{user_id}/device/{device_id}/execute" if user_id else None,
+        ]
+
+        payload = {"type": command_type}
+        last_error = "Не удалось отправить команду"
+
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            for url in filter(None, urls):
+                try:
+                    resp = await client.post(url, json=payload, headers=headers)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        code = data.get("code", 200)
+                        if code in (200, 0):
+                            return {
+                                "status": "success",
+                                "command": command_type,
+                                "message": data.get("codestring") or "Команда успешно принята StarLine",
+                                "raw": data,
+                            }
+                        else:
+                            last_error = data.get("codestring") or f"Ошибка StarLine: код {code}"
+                    else:
+                        last_error = f"HTTP {resp.status_code}: {resp.text}"
+                except Exception as ex:
+                    last_error = str(ex)
+
+        raise ValueError(last_error)
