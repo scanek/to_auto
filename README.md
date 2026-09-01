@@ -143,6 +143,13 @@
     * Возможность скрыть плашку подключения телематики `[X]` для автомобилей без установленной сигнализации.
     * Выделенная кнопка `🛰️ StarLine` в строке действий автомобиля.
     * Поддержка ввода персональных ключей разработчика StarLine Developer API.
+  * **Спецификация ключей StarLine API (зафиксировано)**:
+    * 🚗 **Одометр CAN**: `odo`, `car_state.odo`, `common.rfull`, `obd.mileage`.
+    * 🌡️ **ДВС (Двигатель)**: `etemp` (*Engine Temp*), `obd.engine_temp`, `obd.coolant_temp`.
+    * 🌡️ **Салон**: `ctemp` (*Cabin Temp*), `itemp` (*Interior Temp*), `common.temp`.
+    * 🔋 **АКБ**: `battery`, `akb`, `voltage`.
+    * ⛽ **Бак**: `fuel`, `fuel_lvl`.
+    * 🧭 **GPS/LBS координаты**: `position.x` (Широта Lat), `position.y` (Долгота Lon), `lbs.lat`, `lbs.lon`.
   * **Универсальный Inbound Webhook**: возможность передачи данных о пробеге из Home Assistant, Tasker или сторонних GPS-трекеров.
 
 ---
