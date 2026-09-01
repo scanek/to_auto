@@ -27,6 +27,8 @@ import {
   Lock,
   User as UserIcon,
   Search,
+  X,
+  CircleDot,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
