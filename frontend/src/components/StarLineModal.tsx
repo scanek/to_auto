@@ -23,14 +23,11 @@ export const StarLineModal: React.FC<StarLineModalProps> = ({
   // Form state
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
-  const [appId, setAppId] = useState('52429');
-  const [secret, setSecret] = useState('sLH_ZdZNh13xPAS1_taVqeUF_uoGk1wP');
   const [smsCode, setSmsCode] = useState('');
   const [needSms, setNeedSms] = useState(false);
   const [captchaSid, setCaptchaSid] = useState<string | null>(null);
   const [captchaImg, setCaptchaImg] = useState<string | null>(null);
   const [captchaCode, setCaptchaCode] = useState('');
-  const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Result state
   const [loading, setLoading] = useState(false);
@@ -53,8 +50,6 @@ export const StarLineModal: React.FC<StarLineModalProps> = ({
       const res = await api.authStarLine(vehicle.id, {
         login,
         password,
-        app_id: appId.trim() || '52429',
-        secret: secret.trim() || 'sLH_ZdZNh13xPAS1_taVqeUF_uoGk1wP',
         sms_code: needSms ? smsCode : undefined,
         captcha_sid: captchaSid || undefined,
         captcha_code: captchaCode || undefined,
@@ -346,40 +341,6 @@ export const StarLineModal: React.FC<StarLineModalProps> = ({
                   />
                 </div>
               )}
-
-              <div className="pt-1">
-                <button
-                  type="button"
-                  onClick={() => setShowAdvanced(!showAdvanced)}
-                  className="text-[11px] text-slate-500 dark:text-slate-400 hover:underline flex items-center space-x-1"
-                >
-                  <KeyRound className="w-3 h-3" />
-                  <span>{showAdvanced ? 'Скрыть параметры API' : 'Параметры StarLine API (AppId & Secret)'}</span>
-                </button>
-
-                {showAdvanced && (
-                  <div className="grid grid-cols-2 gap-2 mt-2 p-2.5 rounded-xl bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 text-xs animate-fadeIn">
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-500 mb-0.5">App ID</label>
-                      <input
-                        type="text"
-                        value={appId}
-                        onChange={(e) => setAppId(e.target.value)}
-                        className="w-full px-2 py-1 text-[11px] bg-white dark:bg-dark-800 border rounded font-mono"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Secret</label>
-                      <input
-                        type="text"
-                        value={secret}
-                        onChange={(e) => setSecret(e.target.value)}
-                        className="w-full px-2 py-1 text-[11px] bg-white dark:bg-dark-800 border rounded font-mono"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
             </div>
 
             <button
