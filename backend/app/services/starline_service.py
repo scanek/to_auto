@@ -323,15 +323,23 @@ class StarLineService:
             fuel_keys = ("fuel", "fuel_lvl", "fuel_percent", "gas_level", "fuel_litres", "fuel_val", "obd.fuel")
             fuel_percent = _find_numeric_in_flat(all_flat, fuel_keys, min_val=0.0, max_val=100.0)
 
-            # 5. Engine Temperature
-            temp_keys = ("ctemp", "engine_temp", "t_engine", "temp_engine", "temp_eng")
-            engine_temp = _find_numeric_in_flat(all_flat, temp_keys, min_val=-40.0, max_val=150.0)
+            # 5. Engine Temperature (ctemp / etemp)
+            engine_temp_keys = ("ctemp", "engine_temp", "t_engine", "temp_engine", "temp_eng", "state.ctemp")
+            engine_temp = _find_numeric_in_flat(all_flat, engine_temp_keys, min_val=-40.0, max_val=150.0)
 
-            # 6. SIM Balance
+            # 6. Cabin / Interior Temperature (temp / itemp)
+            interior_temp_keys = (
+                "itemp", "temp_in", "t_interior", "t_in", "cabin_temp", "interior_temp",
+                "temp", "temp_val", "car_temp", "state.temp", "common.temp", "state.itemp",
+                "devices[0].state.temp", "devices[0].state.itemp"
+            )
+            interior_temp = _find_numeric_in_flat(all_flat, interior_temp_keys, min_val=-40.0, max_val=85.0)
+
+            # 7. SIM Balance
             balance_keys = ("balance", "sim_balance", "balance_val", "common.balance", "devices[0].balance")
             balance = _find_numeric_in_flat(all_flat, balance_keys, min_val=-500.0, max_val=50000.0)
 
-            # 7. Security Alarm Arm Status
+            # 8. Security Alarm Arm Status
             is_armed = None
             for arm_k in ("devices[0].car_state.arm", "car_state.arm", "state.car_state.arm", "arm"):
                 if arm_k in all_flat:
@@ -344,6 +352,7 @@ class StarLineService:
                 "battery": battery,
                 "fuel_percent": fuel_percent,
                 "engine_temp": engine_temp,
+                "interior_temp": interior_temp,
                 "balance": balance,
                 "is_armed": is_armed,
             }
@@ -382,6 +391,10 @@ class StarLineService:
             vehicle.starline_engine_temp = telemetry["engine_temp"]
             updated_fields.append(f"ДВС: {int(telemetry['engine_temp'])}°C")
 
+        if telemetry.get("interior_temp") is not None:
+            vehicle.starline_interior_temp = telemetry["interior_temp"]
+            updated_fields.append(f"салон: {int(telemetry['interior_temp'])}°C")
+
         if telemetry.get("balance") is not None:
             vehicle.starline_balance = telemetry["balance"]
 
@@ -401,6 +414,7 @@ class StarLineService:
             "battery": vehicle.starline_battery,
             "fuel_percent": vehicle.starline_fuel_percent,
             "engine_temp": vehicle.starline_engine_temp,
+            "interior_temp": vehicle.starline_interior_temp,
             "balance": vehicle.starline_balance,
             "is_armed": vehicle.starline_is_armed,
             "last_sync": now.isoformat(),

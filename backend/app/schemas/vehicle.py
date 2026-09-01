@@ -30,6 +30,7 @@ class VehicleBase(BaseModel):
     starline_battery: Optional[float] = None
     starline_fuel_percent: Optional[float] = None
     starline_engine_temp: Optional[float] = None
+    starline_interior_temp: Optional[float] = None
     starline_balance: Optional[float] = None
     starline_is_armed: Optional[bool] = None
     telematics_webhook_key: Optional[str] = None

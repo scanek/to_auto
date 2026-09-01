@@ -546,7 +546,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
             </div>
 
             {/* Telemetry Metric Cards Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-2.5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2 sm:gap-2.5">
               {/* Odometer */}
               <div className="bg-white/80 dark:bg-dark-800/90 backdrop-blur-md p-2.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm">
                 <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 flex items-center justify-between">
@@ -585,7 +585,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 </div>
               </div>
 
-              {/* Fuel Level with Interactive Litres / Percent Toggle */}
+              {/* Fuel Level with Clean Interactive Litres / Percent Toggle */}
               <div
                 onClick={() => setShowFuelInLitres(!showFuelInLitres)}
                 className="bg-white/80 dark:bg-dark-800/90 backdrop-blur-md p-2.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm cursor-pointer hover:border-sky-500/50 hover:shadow-md transition group select-none"
@@ -605,17 +605,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                     <span className="text-sm sm:text-base font-black text-sky-600 dark:text-sky-400 font-mono">
                       {vehicle.starline_fuel_percent !== null && vehicle.starline_fuel_percent !== undefined ? (
                         showFuelInLitres ? (
-                          <>
-                            {((vehicle.fuel_tank_capacity || 55) * (vehicle.starline_fuel_percent / 100)).toFixed(1)}{' '}
-                            <button
-                              type="button"
-                              onClick={handleQuickChangeTankCapacity}
-                              className="text-xs font-semibold text-slate-500 hover:text-sky-500 underline decoration-dotted transition"
-                              title="Нажмите, чтобы изменить объем бака"
-                            >
-                              /{vehicle.fuel_tank_capacity || 55} л ✎
-                            </button>
-                          </>
+                          <>{((vehicle.fuel_tank_capacity || 55) * (vehicle.starline_fuel_percent / 100)).toFixed(1)} <span className="text-xs font-semibold text-slate-500">л</span></>
                         ) : (
                           `${Math.round(vehicle.starline_fuel_percent)}%`
                         )
@@ -659,7 +649,20 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 </div>
               </div>
 
-              {/* SIM Balance / Guard Status */}
+              {/* Cabin / Interior Temp */}
+              <div className="bg-white/80 dark:bg-dark-800/90 backdrop-blur-md p-2.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm">
+                <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 flex items-center justify-between">
+                  <span>Салон</span>
+                  <Thermometer className="w-3 h-3 text-sky-500" />
+                </div>
+                <div className="text-sm sm:text-base font-black font-mono mt-1 text-sky-600 dark:text-sky-400">
+                  {vehicle.starline_interior_temp !== null && vehicle.starline_interior_temp !== undefined
+                    ? `${Math.round(vehicle.starline_interior_temp)}°C`
+                    : '—'}
+                </div>
+              </div>
+
+              {/* SIM Balance */}
               <div className="bg-white/80 dark:bg-dark-800/90 backdrop-blur-md p-2.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm">
                 <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 flex items-center justify-between">
                   <span>SIM Баланс</span>

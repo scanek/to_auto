@@ -39,6 +39,7 @@ class Vehicle(Base):
     starline_battery = Column(Float, nullable=True)
     starline_fuel_percent = Column(Float, nullable=True)
     starline_engine_temp = Column(Float, nullable=True)
+    starline_interior_temp = Column(Float, nullable=True) # Температура салона
     starline_balance = Column(Float, nullable=True)
     starline_is_armed = Column(Boolean, nullable=True)
     telematics_auto_sync = Column(Boolean, default=False)

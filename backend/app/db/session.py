@@ -49,6 +49,7 @@ async def auto_migrate_sqlite(conn):
             ("starline_battery", "FLOAT"),
             ("starline_fuel_percent", "FLOAT"),
             ("starline_engine_temp", "FLOAT"),
+                ("starline_interior_temp", "FLOAT"),
                 ("starline_balance", "FLOAT"),
                 ("starline_is_armed", "BOOLEAN"),
                 ("fuel_tank_capacity", "FLOAT DEFAULT 55.0"),
