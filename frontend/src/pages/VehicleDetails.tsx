@@ -99,6 +99,9 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   const [editingHours, setEditingHours] = useState(false);
   const [newHoursVal, setNewHoursVal] = useState(vehicle.current_engine_hours || 0);
 
+  const [isQuickMileageOpen, setIsQuickMileageOpen] = useState(false);
+  const [recordsSearchQuery, setRecordsSearchQuery] = useState('');
+
   const loadData = async () => {
     try {
       const [srv, fuel, rem, docs, an, ty] = await Promise.all([
@@ -227,10 +230,10 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
     return serviceRecords.filter(
       (r) =>
         r && (
-          activeTab === 'all' ||
           (activeTab === 'service' && r.record_type === 'service') ||
           (activeTab === 'repairs' && r.record_type === 'repair') ||
-          (activeTab === 'upgrades' && r.record_type === 'upgrade')
+          (activeTab === 'upgrades' && r.record_type === 'upgrade') ||
+          (!['service', 'repairs', 'upgrades'].includes(activeTab))
         )
     );
   }, [serviceRecords, activeTab]);
