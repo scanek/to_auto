@@ -1,17 +1,6 @@
 # ==========================================
-# Stage 1: Build Frontend (React + Vite + TS)
-# ==========================================
-FROM node:20-alpine AS frontend-builder
-WORKDIR /build
-
-COPY frontend/package*.json ./
-RUN npm ci
-
-COPY frontend/ ./
-RUN npm run build
-
-# ==========================================
-# Stage 2: Python FastAPI Backend + Static (Hardened)
+# Fast & Hardened Python FastAPI + Static Build
+# Frontend is pre-compiled in backend/static (instant ~3s build)
 # ==========================================
 FROM python:3.11-slim
 
@@ -22,7 +11,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies (curl for healthcheck)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
@@ -30,15 +19,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Create non-root system user for security
 RUN groupadd -r appuser && useradd -r -u 1001 -g appuser -d /app appuser
 
-# Install Python dependencies
+# Install Python dependencies (cached layer)
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy Backend app
+# Copy Backend app & Pre-compiled production frontend
 COPY backend/app ./app
-
-# Copy Built Frontend to static directory served by FastAPI
-COPY --from=frontend-builder /build/dist ./static
+COPY backend/static ./static
 
 # Create data & uploads volumes directory and assign permissions to appuser
 RUN mkdir -p /app/data/uploads && chown -R appuser:appuser /app
