@@ -84,7 +84,9 @@ def _extract_mileage(flat: Dict[str, Any]) -> Optional[float]:
         if k in flat and flat[k] is not None:
             try:
                 val = float(flat[k])
-                if val >= 10.0:  # Real total odometer
+                if val > 1_000_000.0:
+                    val = val / 1000.0
+                if val >= 50.0:  # Real total odometer
                     return val
             except (ValueError, TypeError):
                 pass
@@ -94,7 +96,9 @@ def _extract_mileage(flat: Dict[str, Any]) -> Optional[float]:
         if (kl.endswith("rfull") or kl.endswith("odometer") or kl.endswith(".mileage") or kl == "mileage") and "trip" not in kl and "day" not in kl:
             try:
                 val = float(v)
-                if val >= 10.0:
+                if val > 1_000_000.0:
+                    val = val / 1000.0
+                if val >= 50.0:
                     return val
             except (ValueError, TypeError):
                 pass

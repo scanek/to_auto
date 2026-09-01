@@ -163,6 +163,42 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
     }
   };
 
+  const handleQuickChangeOdometer = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const current = Math.round(vehicle.current_odometer);
+    const input = prompt(`Введите актуальный общий пробег автомобиля (${vehicle.distance_unit || 'км'}):`, String(current));
+    if (input !== null) {
+      const val = parseFloat(input.trim().replace(/\s/g, '').replace(',', '.'));
+      if (!isNaN(val) && val >= 0) {
+        try {
+          await api.updateVehicle(vehicle.id, { current_odometer: val });
+          await onRefreshVehicle();
+          await loadData();
+        } catch (err: any) {
+          alert('Ошибка при сохранении пробега: ' + (err.message || ''));
+        }
+      }
+    }
+  };
+
+  const handleQuickChangeEngineHours = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const current = vehicle.current_engine_hours || 0;
+    const input = prompt('Введите актуальные моточасы двигателя (м/ч):', String(current));
+    if (input !== null) {
+      const val = parseFloat(input.trim().replace(/\s/g, '').replace(',', '.'));
+      if (!isNaN(val) && val >= 0) {
+        try {
+          await api.updateVehicle(vehicle.id, { current_engine_hours: val });
+          await onRefreshVehicle();
+          await loadData();
+        } catch (err: any) {
+          alert('Ошибка при сохранении моточасов: ' + (err.message || ''));
+        }
+      }
+    }
+  };
+
   const handleQuickChangeTankCapacity = async (e: React.MouseEvent) => {
     e.stopPropagation();
     const current = vehicle.fuel_tank_capacity || 55;
@@ -666,25 +702,37 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
             {!isTelematicsCollapsed && (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2 sm:gap-2.5 animate-fadeIn">
               {/* Odometer */}
-              <div className="bg-white/80 dark:bg-dark-800/90 backdrop-blur-md p-2.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm">
+              <div
+                onClick={handleQuickChangeOdometer}
+                className="cursor-pointer bg-white/80 dark:bg-dark-800/90 hover:bg-sky-50/50 dark:hover:bg-dark-750 backdrop-blur-md p-2.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm transition group select-none"
+                title="Нажмите для быстрой корректировки общего пробега"
+              >
                 <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 flex items-center justify-between">
-                  <span>Пробег CAN</span>
+                  <span className="group-hover:text-sky-500 transition-colors">Пробег {vehicle.telematics_provider === 'starline' ? 'CAN' : ''}</span>
                   <Disc className="w-3 h-3 text-sky-500" />
                 </div>
-                <div className="text-sm sm:text-base font-black text-slate-900 dark:text-white font-mono mt-1">
-                  {Math.round(vehicle.current_odometer).toLocaleString('ru-RU')} <span className="text-xs font-semibold text-slate-500">{vehicle.distance_unit || 'км'}</span>
+                <div className="text-sm sm:text-base font-black text-slate-900 dark:text-white font-mono mt-1 flex items-baseline space-x-1">
+                  <span>{Math.round(vehicle.current_odometer).toLocaleString('ru-RU')}</span>
+                  <span className="text-xs font-semibold text-slate-500">{vehicle.distance_unit || 'км'}</span>
                 </div>
               </div>
 
               {/* Engine Hours */}
-              <div className="bg-white/80 dark:bg-dark-800/90 backdrop-blur-md p-2.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm">
+              <div
+                onClick={handleQuickChangeEngineHours}
+                className="cursor-pointer bg-white/80 dark:bg-dark-800/90 hover:bg-amber-50/50 dark:hover:bg-dark-750 backdrop-blur-md p-2.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm transition group select-none"
+                title="Нажмите для быстрой корректировки моточасов"
+              >
                 <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 flex items-center justify-between">
-                  <span>Моточасы</span>
+                  <span className="group-hover:text-amber-500 transition-colors">Моточасы</span>
                   <CalendarClock className="w-3 h-3 text-amber-500" />
                 </div>
-                <div className="text-sm sm:text-base font-black text-amber-600 dark:text-amber-400 font-mono mt-1">
+                <div className="text-sm sm:text-base font-black text-amber-600 dark:text-amber-400 font-mono mt-1 flex items-baseline space-x-1">
                   {vehicle.current_engine_hours > 0 ? (
-                    <>{vehicle.current_engine_hours} <span className="text-xs font-semibold text-slate-500">м/ч</span></>
+                    <>
+                      <span>{vehicle.current_engine_hours}</span>
+                      <span className="text-xs font-semibold text-slate-500">м/ч</span>
+                    </>
                   ) : (
                     <span className="text-xs text-slate-400">В норме</span>
                   )}
