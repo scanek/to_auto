@@ -9,8 +9,38 @@ from sqlalchemy import select
 from app.db.session import get_db
 from app.models.user import User, UserRole
 
+import secrets
+from app.core.config import DATA_DIR
+
+def _get_or_create_jwt_secret() -> str:
+    """
+    Retrieves SECRET_KEY from environment or securely generates and persists
+    a unique 64-byte secret in DATA_DIR/.jwt_secret across container restarts.
+    No hardcoded secrets exist in source control.
+    """
+    env_secret = os.getenv("SECRET_KEY")
+    if env_secret and len(env_secret.strip()) >= 32:
+        return env_secret.strip()
+    
+    secret_file = DATA_DIR / ".jwt_secret"
+    if secret_file.exists():
+        try:
+            stored = secret_file.read_text(encoding="utf-8").strip()
+            if len(stored) >= 32:
+                return stored
+        except Exception:
+            pass
+            
+    # Generate new cryptographically strong random token
+    new_secret = secrets.token_urlsafe(64)
+    try:
+        secret_file.write_text(new_secret, encoding="utf-8")
+    except Exception as e:
+        print(f"Warning: Could not persist JWT secret to {secret_file}: {e}")
+    return new_secret
+
 # Secret key and JWT config
-SECRET_KEY = os.getenv("SECRET_KEY", "autotracker-jwt-secret-key-prod-2026-very-secure")
+SECRET_KEY = _get_or_create_jwt_secret()
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = int(os.getenv("ACCESS_TOKEN_EXPIRE_DAYS", "30"))
 
