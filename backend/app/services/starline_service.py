@@ -68,6 +68,39 @@ def _find_numeric_in_flat(flat: Dict[str, Any], substrings: tuple[str, ...], min
                     pass
     return None
 
+def _extract_mileage(flat: Dict[str, Any]) -> Optional[float]:
+    """
+    Specifically extracts total odometer mileage (rfull / mileage / odometer) from StarLine.
+    Strictly ignores trip distance, run status flags, etc.
+    """
+    priority_keys = [
+        "devices[0].common.rfull", "common.rfull", "devices[0].rfull", "rfull",
+        "devices[0].obd.mileage", "obd.mileage", "devices[0].car_state.mileage", "car_state.mileage",
+        "devices[0].mileage", "mileage", "devices[0].odometer", "odometer",
+        "devices[0].state.mileage", "state.mileage", "devices[0].total_mileage", "total_mileage",
+        "devices[0].can_mileage", "can_mileage", "devices[0].obd_mileage", "obd_mileage"
+    ]
+    for k in priority_keys:
+        if k in flat and flat[k] is not None:
+            try:
+                val = float(flat[k])
+                if val >= 10.0:  # Real total odometer
+                    return val
+            except (ValueError, TypeError):
+                pass
+                
+    for k, v in flat.items():
+        kl = k.lower()
+        if (kl.endswith("rfull") or kl.endswith("odometer") or kl.endswith(".mileage") or kl == "mileage") and "trip" not in kl and "day" not in kl:
+            try:
+                val = float(v)
+                if val >= 10.0:
+                    return val
+            except (ValueError, TypeError):
+                pass
+                
+    return None
+
 def _extract_temperatures(flat: Dict[str, Any]) -> tuple[Optional[float], Optional[float]]:
     """
     Specifically and strictly extracts (engine_temp, interior_temp) from StarLine telemetry.
@@ -369,13 +402,8 @@ class StarLineService:
                 except Exception:
                     pass
 
-            # 1. Mileage / Odometer
-            mileage_keys = (
-                "mileage", "odometer", "obd_mileage", "rfull", "total_mileage", 
-                "car_mileage", "can_mileage", "odo", "run", "distance", "km",
-                "obd.mileage", "common.rfull", "state.mileage", "car_state.mileage"
-            )
-            mileage = _find_numeric_in_flat(all_flat, mileage_keys, min_val=1.0)
+            # 1. Mileage / Odometer (Strict Total Odometer Extraction)
+            mileage = _extract_mileage(all_flat)
 
             # 2. Engine Hours
             hours_keys = (
@@ -561,7 +589,7 @@ class StarLineService:
         now = datetime.datetime.utcnow()
         updated_fields = []
 
-        if telemetry.get("mileage") is not None and telemetry["mileage"] > 0:
+        if telemetry.get("mileage") is not None and telemetry["mileage"] >= 10.0:
             vehicle.current_odometer = telemetry["mileage"]
             updated_fields.append(f"пробег: {int(telemetry['mileage']):,} км".replace(",", " "))
 
