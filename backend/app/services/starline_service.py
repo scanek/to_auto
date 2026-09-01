@@ -1,5 +1,6 @@
 import httpx
 import hashlib
+import json
 import datetime
 from typing import Optional, Dict, Any, List
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +14,17 @@ DEFAULT_STARLINE_SECRET = "sLH_ZdZNh13xPAS1_taVqeUF_uoGk1wP"
 STARLINE_ID_URL = "https://id.starline.ru/apiV3"
 STARLINE_DEV_URL = "https://developer.starline.ru"
 
+def _safe_json_parse(resp: httpx.Response, endpoint_name: str) -> dict:
+    text = (resp.text or "").strip()
+    if not text:
+        raise ValueError(f"Сервер StarLine ({endpoint_name}) вернул пустой ответ (HTTP {resp.status_code})")
+    try:
+        return resp.json()
+    except Exception:
+        # If HTML or non-JSON
+        clean_text = text[:150].replace("\n", " ").replace("\r", "")
+        raise ValueError(f"Ошибка ответа StarLine ({endpoint_name}): {clean_text}")
+
 class StarLineService:
     @staticmethod
     async def get_app_token(app_id: str = DEFAULT_STARLINE_APP_ID, secret: str = DEFAULT_STARLINE_SECRET) -> str:
@@ -20,14 +32,12 @@ class StarLineService:
         Performs StarLine ID v3 Application handshake (getCode -> getToken).
         """
         async with httpx.AsyncClient(timeout=15.0) as client:
-            sec_md5 = hashlib.md5(secret.encode('utf-8')).hexdigest()
+            sec_md5 = hashlib.md5(secret.strip().encode('utf-8')).hexdigest()
             # Step 1: getCode
-            code_url = f"{STARLINE_ID_URL}/application/getCode?appId={app_id}&secret={sec_md5}"
+            code_url = f"{STARLINE_ID_URL}/application/getCode?appId={app_id.strip()}&secret={sec_md5}"
             code_res = await client.get(code_url)
-            if code_res.status_code != 200:
-                raise ValueError(f"StarLine ID getCode error: HTTP {code_res.status_code}")
+            code_data = _safe_json_parse(code_res, "getCode")
             
-            code_data = code_res.json()
             if code_data.get("state") != 1 or "code" not in code_data.get("desc", {}):
                 err = code_data.get("desc", {}).get("message", "Неверный AppID или Secret приложения")
                 raise ValueError(f"Ошибка StarLine App Code: {err}")
@@ -35,13 +45,11 @@ class StarLineService:
             code = code_data["desc"]["code"]
 
             # Step 2: getToken
-            combined_hash = hashlib.md5((secret + code).encode('utf-8')).hexdigest()
-            token_url = f"{STARLINE_ID_URL}/application/getToken?appId={app_id}&secret={combined_hash}"
+            combined_hash = hashlib.md5((secret.strip() + code).encode('utf-8')).hexdigest()
+            token_url = f"{STARLINE_ID_URL}/application/getToken?appId={app_id.strip()}&secret={combined_hash}"
             token_res = await client.get(token_url)
-            if token_res.status_code != 200:
-                raise ValueError(f"StarLine ID getToken error: HTTP {token_res.status_code}")
+            token_data = _safe_json_parse(token_res, "getToken")
             
-            token_data = token_res.json()
             if token_data.get("state") != 1 or "token" not in token_data.get("desc", {}):
                 err = token_data.get("desc", {}).get("message", "Не удалось получить токен приложения")
                 raise ValueError(f"Ошибка StarLine App Token: {err}")
@@ -65,21 +73,20 @@ class StarLineService:
             async with httpx.AsyncClient(timeout=15.0) as client:
                 test_headers = {"Cookie": f"slnet={app_code.strip()}"}
                 res = await client.get(f"{STARLINE_DEV_URL}/json/v1/user_info", headers=test_headers)
-                if res.status_code == 200:
-                    data = res.json()
-                    user_id = str(data.get("user_id", ""))
-                    return {
-                        "user_id": user_id,
-                        "token": app_code.strip(),
-                        "user_info": data,
-                    }
+                data = _safe_json_parse(res, "user_info")
+                user_id = str(data.get("user_id", ""))
+                return {
+                    "user_id": user_id,
+                    "token": app_code.strip(),
+                    "user_info": data,
+                }
 
         # 2. Get Application Token
         app_token = await StarLineService.get_app_token(app_id=app_id, secret=secret)
 
         # 3. User Login via id.starline.ru
         async with httpx.AsyncClient(timeout=15.0) as client:
-            pass_sha1 = hashlib.sha1((password or "").encode('utf-8')).hexdigest()
+            pass_sha1 = hashlib.sha1((password or "").strip().encode('utf-8')).hexdigest()
             login_data = {
                 "token": app_token,
                 "login": login.strip(),
@@ -89,15 +96,15 @@ class StarLineService:
                 login_data["code"] = sms_code.strip()
 
             login_res = await client.post(f"{STARLINE_ID_URL}/user/login", data=login_data)
-            if login_res.status_code != 200:
-                raise ValueError(f"Ошибка сервиса авторизации StarLine (HTTP {login_res.status_code})")
+            login_json = _safe_json_parse(login_res, "user/login")
             
-            login_json = login_res.json()
             if login_json.get("state") != 1:
                 desc = login_json.get("desc", {})
                 msg = desc.get("message", "Неверный логин или пароль")
                 if "sms" in msg.lower() or "code" in msg.lower() or desc.get("code") == 2:
                     raise ValueError(f"Требуется SMS-код подтверждения: {msg}")
+                if "incorrect" in msg.lower():
+                    raise ValueError("Неверный логин или пароль от StarLine. Проверьте правильность ввода.")
                 raise ValueError(f"Ошибка входа StarLine: {msg}")
             
             user_slid_token = login_json["desc"].get("user_token")
@@ -107,27 +114,25 @@ class StarLineService:
                 raise ValueError("Не получен токен пользователя от StarLine ID")
 
             # 4. Exchange user_slid_token for SLNET session token on developer.starline.ru
-            slnet_res = await client.post(
-                f"{STARLINE_DEV_URL}/json/v1/auth.slid",
-                json={"slid_token": user_slid_token}
-            )
-            if slnet_res.status_code != 200:
-                # Try v2 endpoint
+            slnet_token = user_slid_token
+            try:
                 slnet_res = await client.post(
-                    f"{STARLINE_DEV_URL}/json/v2/auth.slid",
-                    json={"slid_token": user_slid_token}
+                    f"{STARLINE_DEV_URL}/json/v1/auth.slid",
+                    json={"slid_token": user_slid_token},
+                    headers={"Content-Type": "application/json"}
                 )
-
-            if slnet_res.status_code != 200:
-                raise ValueError(f"Ошибка создания сессии телематики StarLine (HTTP {slnet_res.status_code})")
-            
-            slnet_json = slnet_res.json()
-            slnet_token = slnet_json.get("token") or user_slid_token
+                if slnet_res.status_code == 200:
+                    slnet_data = _safe_json_parse(slnet_res, "auth.slid")
+                    if slnet_data.get("token"):
+                        slnet_token = slnet_data.get("token")
+            except Exception as e:
+                # If developer.starline.ru direct session failed, fallback to user_slid_token
+                pass
 
             return {
                 "user_id": user_id,
                 "token": slnet_token,
-                "user_info": slnet_json,
+                "user_info": login_json.get("desc", {}),
             }
 
     @staticmethod
@@ -141,10 +146,7 @@ class StarLineService:
             if resp.status_code != 200:
                 resp = await client.get(f"{STARLINE_DEV_URL}/json/v1/user_info", headers=headers)
 
-            if resp.status_code != 200:
-                raise ValueError(f"Не удалось получить список устройств StarLine (HTTP {resp.status_code})")
-
-            data = resp.json()
+            data = _safe_json_parse(resp, "user_info")
             devices_raw = data.get("devices", [])
             devices = []
             for d in devices_raw:
@@ -174,10 +176,7 @@ class StarLineService:
                 url = f"{STARLINE_DEV_URL}/json/v1/device/{device_id}"
                 resp = await client.get(url, headers=headers)
 
-            if resp.status_code != 200:
-                raise ValueError(f"Не удалось получить телеметрию с устройства StarLine (HTTP {resp.status_code})")
-
-            data = resp.json()
+            data = _safe_json_parse(resp, "device_state")
             state = data.get("state", data)
             obd = state.get("obd", {})
             common = state.get("common", {})
