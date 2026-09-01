@@ -76,8 +76,7 @@ def _extract_mileage(flat: Dict[str, Any]) -> Optional[float]:
     priority_keys = [
         "devices[0].common.rfull", "common.rfull", "devices[0].rfull", "rfull",
         "devices[0].obd.mileage", "obd.mileage", "devices[0].car_state.mileage", "car_state.mileage",
-        "devices[0].mileage", "mileage", "devices[0].odometer", "odometer",
-        "devices[0].state.mileage", "state.mileage", "devices[0].total_mileage", "total_mileage",
+        "devices[0].odometer", "devices[0].state.mileage", "devices[0].total_mileage", "total_mileage",
         "devices[0].can_mileage", "can_mileage", "devices[0].obd_mileage", "obd_mileage"
     ]
     for k in priority_keys:
@@ -86,22 +85,23 @@ def _extract_mileage(flat: Dict[str, Any]) -> Optional[float]:
                 val = float(flat[k])
                 if val > 1_000_000.0:
                     val = val / 1000.0
-                if val >= 50.0:  # Real total odometer
+                if val >= 100.0:  # Real total odometer
                     return val
             except (ValueError, TypeError):
                 pass
                 
     for k, v in flat.items():
         kl = k.lower()
-        if (kl.endswith("rfull") or kl.endswith("odometer") or kl.endswith(".mileage") or kl == "mileage") and "trip" not in kl and "day" not in kl:
-            try:
-                val = float(v)
-                if val > 1_000_000.0:
-                    val = val / 1000.0
-                if val >= 50.0:
-                    return val
-            except (ValueError, TypeError):
-                pass
+        if (kl.endswith(".rfull") or kl.endswith(".odometer") or kl.endswith(".mileage") or kl == "rfull" or kl == "odometer"):
+            if "trip" not in kl and "day" not in kl and "run" not in kl and "dist" not in kl:
+                try:
+                    val = float(v)
+                    if val > 1_000_000.0:
+                        val = val / 1000.0
+                    if val >= 100.0:
+                        return val
+                except (ValueError, TypeError):
+                    pass
                 
     return None
 
@@ -593,13 +593,22 @@ class StarLineService:
         now = datetime.datetime.utcnow()
         updated_fields = []
 
-        if telemetry.get("mileage") is not None and telemetry["mileage"] >= 10.0:
-            vehicle.current_odometer = telemetry["mileage"]
-            updated_fields.append(f"пробег: {int(telemetry['mileage']):,} км".replace(",", " "))
+        # 1. Monotonic Odometer Sync:
+        # Accept mileage only if it's a real total odometer (>= 100 km) AND >= vehicle's existing odometer
+        starline_odo = telemetry.get("mileage")
+        if starline_odo is not None and starline_odo >= 100.0:
+            cur_odo = vehicle.current_odometer or 0.0
+            if cur_odo <= 10.0 or starline_odo >= cur_odo:
+                vehicle.current_odometer = starline_odo
+                updated_fields.append(f"пробег: {int(starline_odo):,} км".replace(",", " "))
 
-        if telemetry.get("engine_hours") is not None and telemetry["engine_hours"] > 0:
-            vehicle.current_engine_hours = telemetry["engine_hours"]
-            updated_fields.append(f"моточасы: {telemetry['engine_hours']} м/ч")
+        # 2. Monotonic Engine Hours Sync:
+        starline_hrs = telemetry.get("engine_hours")
+        if starline_hrs is not None and starline_hrs > 0:
+            cur_hrs = vehicle.current_engine_hours or 0.0
+            if cur_hrs <= 1.0 or starline_hrs >= cur_hrs:
+                vehicle.current_engine_hours = starline_hrs
+                updated_fields.append(f"моточасы: {starline_hrs} м/ч")
 
         if telemetry.get("battery") is not None:
             vehicle.starline_battery = telemetry["battery"]
