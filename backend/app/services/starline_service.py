@@ -68,6 +68,75 @@ def _find_numeric_in_flat(flat: Dict[str, Any], substrings: tuple[str, ...], min
                     pass
     return None
 
+def _extract_temperatures(flat: Dict[str, Any]) -> tuple[Optional[float], Optional[float]]:
+    """
+    Specifically and strictly extracts (engine_temp, interior_temp) from StarLine telemetry.
+    Avoids key collisions where generic 'temp' matches 'ctemp' or 'itemp'.
+    """
+    engine_temp = None
+    interior_temp = None
+    
+    # 1. Engine / Coolant Temperature (ctemp / etemp / coolant_temp)
+    engine_keys = [
+        "devices[0].car_state.ctemp", "car_state.ctemp", "devices[0].ctemp", "ctemp",
+        "devices[0].car_state.etemp", "car_state.etemp", "devices[0].etemp", "etemp",
+        "devices[0].obd.coolant_temp", "obd.coolant_temp", "devices[0].obd.engine_temp", "obd.engine_temp",
+        "devices[0].obd.ctemp", "obd.ctemp", "devices[0].state.ctemp", "state.ctemp",
+        "devices[0].common.ctemp", "common.ctemp"
+    ]
+    for k in engine_keys:
+        if k in flat and flat[k] is not None:
+            try:
+                v = float(flat[k])
+                if -40.0 <= v <= 140.0 and v != 127.0 and v != -128.0:
+                    engine_temp = v
+                    break
+            except (ValueError, TypeError):
+                pass
+                
+    if engine_temp is None:
+        for k, v in flat.items():
+            kl = k.lower()
+            if any(s in kl for s in ("ctemp", "etemp", "coolant", "t_engine", "engine_temp")):
+                try:
+                    vf = float(v)
+                    if -40.0 <= vf <= 140.0 and vf != 127.0 and vf != -128.0:
+                        engine_temp = vf
+                        break
+                except (ValueError, TypeError):
+                    pass
+
+    # 2. Interior / Cabin Temperature (itemp / temp_in / central unit temp)
+    # Strictly check distinct interior keys first, excluding ctemp/etemp keys
+    interior_keys = [
+        "devices[0].car_state.itemp", "car_state.itemp", "devices[0].itemp", "itemp",
+        "devices[0].car_state.temp", "car_state.temp", "devices[0].temp", "devices[0].state.temp",
+        "devices[0].common.itemp", "common.itemp", "devices[0].common.temp", "common.temp"
+    ]
+    for k in interior_keys:
+        if k in flat and flat[k] is not None:
+            try:
+                v = float(flat[k])
+                if -40.0 <= v <= 85.0 and v != 127.0 and v != -128.0:
+                    interior_temp = v
+                    break
+            except (ValueError, TypeError):
+                pass
+
+    if interior_temp is None:
+        for k, v in flat.items():
+            kl = k.lower()
+            if "itemp" in kl or "cabin" in kl or "interior" in kl or (kl.endswith(".temp") and "ctemp" not in kl and "etemp" not in kl):
+                try:
+                    vf = float(v)
+                    if -40.0 <= vf <= 85.0 and vf != 127.0 and vf != -128.0:
+                        interior_temp = vf
+                        break
+                except (ValueError, TypeError):
+                    pass
+
+    return engine_temp, interior_temp
+
 def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Calculates great-circle distance between two GPS coordinates in kilometers."""
     R = 6371.0
@@ -337,17 +406,8 @@ class StarLineService:
             fuel_keys = ("fuel", "fuel_lvl", "fuel_percent", "gas_level", "fuel_litres", "fuel_val", "obd.fuel")
             fuel_percent = _find_numeric_in_flat(all_flat, fuel_keys, min_val=0.0, max_val=100.0)
 
-            # 5. Engine Temperature (ctemp / etemp)
-            engine_temp_keys = ("ctemp", "engine_temp", "t_engine", "temp_engine", "temp_eng", "state.ctemp")
-            engine_temp = _find_numeric_in_flat(all_flat, engine_temp_keys, min_val=-40.0, max_val=150.0)
-
-            # 6. Cabin / Interior Temperature (temp / itemp)
-            interior_temp_keys = (
-                "itemp", "temp_in", "t_interior", "t_in", "cabin_temp", "interior_temp",
-                "temp", "temp_val", "car_temp", "state.temp", "common.temp", "state.itemp",
-                "devices[0].state.temp", "devices[0].state.itemp"
-            )
-            interior_temp = _find_numeric_in_flat(all_flat, interior_temp_keys, min_val=-40.0, max_val=85.0)
+            # 5 & 6. Engine Temperature and Interior / Cabin Temperature (Strict Separation)
+            engine_temp, interior_temp = _extract_temperatures(all_flat)
 
             # 7. SIM Balance
             balance_keys = ("balance", "sim_balance", "balance_val", "common.balance", "devices[0].balance")
