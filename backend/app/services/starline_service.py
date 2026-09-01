@@ -269,6 +269,10 @@ class StarLineService:
                 f"{STARLINE_DEV_URL}/json/v2/user/{user_id}/user_info",
                 f"{STARLINE_DEV_URL}/json/v1/device/{device_id}",
                 f"{STARLINE_DEV_URL}/json/v2/device/{device_id}/state",
+                f"{STARLINE_DEV_URL}/json/v1/user/{user_id}/device/{device_id}/position",
+                f"{STARLINE_DEV_URL}/json/v2/user/{user_id}/device/{device_id}/position",
+                f"{STARLINE_DEV_URL}/json/v1/device/{device_id}/position",
+                f"{STARLINE_DEV_URL}/json/v2/device/{device_id}/position",
             ]
 
             all_flat: Dict[str, Any] = {}
@@ -373,8 +377,18 @@ class StarLineService:
                 gsm_level = int(gsm_level)
 
             # 13. GPS Latitude & Longitude
-            gps_lat = _find_numeric_in_flat(all_flat, ("devices[0].position.y", "position.y", "car_state.y", "y", "lat", "latitude", "devices[0].lat"), min_val=-90.0, max_val=90.0)
-            gps_lon = _find_numeric_in_flat(all_flat, ("devices[0].position.x", "position.x", "car_state.x", "x", "lon", "lng", "longitude", "devices[0].lon"), min_val=-180.0, max_val=180.0)
+            gps_lat_keys = (
+                "devices[0].position.y", "position.y", "car_state.y", "y", "lat", "latitude",
+                "devices[0].lat", "devices[0].geo.lat", "geo.lat", "devices[0].point.y", "point.y",
+                "devices[0].state.position.y", "state.position.y", "devices[0].state.y"
+            )
+            gps_lon_keys = (
+                "devices[0].position.x", "position.x", "car_state.x", "x", "lon", "lng", "longitude",
+                "devices[0].lon", "devices[0].lng", "devices[0].geo.lon", "geo.lon", "devices[0].point.x", "point.x",
+                "devices[0].state.position.x", "state.position.x", "devices[0].state.x"
+            )
+            gps_lat = _find_numeric_in_flat(all_flat, gps_lat_keys, min_val=-90.0, max_val=90.0)
+            gps_lon = _find_numeric_in_flat(all_flat, gps_lon_keys, min_val=-180.0, max_val=180.0)
 
             return {
                 "mileage": mileage,

@@ -791,39 +791,61 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
             )}
 
             {/* GPS Location & Parking Map Link */}
-            {!isTelematicsCollapsed && vehicle.starline_gps_lat && vehicle.starline_gps_lon && (
+            {!isTelematicsCollapsed && (
               <div className="p-3 rounded-xl bg-white/70 dark:bg-dark-800/70 border border-sky-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 animate-fadeIn">
                 <div className="flex items-center space-x-2 text-xs">
                   <div className="w-7 h-7 rounded-lg bg-sky-500/15 text-sky-600 dark:text-sky-400 flex items-center justify-center flex-shrink-0">
                     <MapPin className="w-4 h-4" />
                   </div>
                   <div>
-                    <span className="font-bold text-slate-900 dark:text-white">Парковка автомобиля (GPS):</span>
-                    <span className="text-slate-500 dark:text-slate-400 font-mono ml-1.5">
-                      {vehicle.starline_gps_lat.toFixed(4)}, {vehicle.starline_gps_lon.toFixed(4)}
-                    </span>
+                    <span className="font-bold text-slate-900 dark:text-white">Местоположение автомобиля (GPS):</span>
+                    {vehicle.starline_gps_lat && vehicle.starline_gps_lon ? (
+                      <span className="text-slate-500 dark:text-slate-400 font-mono ml-1.5 font-semibold">
+                        {vehicle.starline_gps_lat.toFixed(4)}, {vehicle.starline_gps_lon.toFixed(4)}
+                      </span>
+                    ) : (
+                      <span className="text-slate-400 ml-1.5 italic">
+                        Координаты обновятся при следующей синхронизации
+                      </span>
+                    )}
                   </div>
                 </div>
 
                 <div className="flex items-center space-x-2 self-end sm:self-center">
-                  <a
-                    href={`https://yandex.ru/maps/?pt=${vehicle.starline_gps_lon},${vehicle.starline_gps_lat}&z=17&l=map`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-yellow-500/15 hover:bg-yellow-500/25 text-yellow-700 dark:text-yellow-400 font-bold text-[11px] border border-yellow-500/30 transition"
-                  >
-                    <Navigation className="w-3 h-3" />
-                    <span>Яндекс.Карты</span>
-                  </a>
-                  <a
-                    href={`https://2gis.ru/geo/${vehicle.starline_gps_lon},${vehicle.starline_gps_lat}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-400 font-bold text-[11px] border border-emerald-500/30 transition"
-                  >
-                    <Navigation className="w-3 h-3" />
-                    <span>2ГИС</span>
-                  </a>
+                  {vehicle.starline_gps_lat && vehicle.starline_gps_lon ? (
+                    <>
+                      <a
+                        href={`https://yandex.ru/maps/?pt=${vehicle.starline_gps_lon},${vehicle.starline_gps_lat}&z=17&l=map`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-yellow-500/15 hover:bg-yellow-500/25 text-yellow-700 dark:text-yellow-400 font-bold text-[11px] border border-yellow-500/30 transition"
+                        title="Открыть точку стоянки в Яндекс.Картах"
+                      >
+                        <Navigation className="w-3 h-3" />
+                        <span>Яндекс.Карты</span>
+                      </a>
+                      <a
+                        href={`https://2gis.ru/geo/${vehicle.starline_gps_lon},${vehicle.starline_gps_lat}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-400 font-bold text-[11px] border border-emerald-500/30 transition"
+                        title="Открыть точку стоянки в 2ГИС"
+                      >
+                        <Navigation className="w-3 h-3" />
+                        <span>2ГИС</span>
+                      </a>
+                    </>
+                  ) : (
+                    <button
+                      onClick={handleSyncStarLine}
+                      disabled={isSyncingStarLine}
+                      className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 text-sky-600 dark:text-sky-400 font-bold text-[11px] border border-sky-500/30 transition active:scale-95 disabled:opacity-50"
+                      title="Запросить координаты GPS со StarLine"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${isSyncingStarLine ? 'animate-spin' : ''}`} />
+                      <span>Обновить GPS</span>
+                    </button>
+                  )}
                 </div>
               </div>
             )}
