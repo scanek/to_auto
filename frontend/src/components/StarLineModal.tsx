@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Satellite, CheckCircle2, RefreshCw, Smartphone, ShieldCheck, BatteryCharging, Gauge, Flame, AlertCircle, Trash2 } from 'lucide-react';
+import { X, Satellite, CheckCircle2, RefreshCw, Smartphone, ShieldCheck, BatteryCharging, Gauge, Flame, AlertCircle, Trash2, KeyRound } from 'lucide-react';
 import { Vehicle } from '../types';
 import { api } from '../services/api';
 
@@ -23,8 +23,11 @@ export const StarLineModal: React.FC<StarLineModalProps> = ({
   // Form state
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
-  const [appCode, setAppCode] = useState('');
-  const [useAppCode, setUseAppCode] = useState(false);
+  const [appId, setAppId] = useState('52429');
+  const [secret, setSecret] = useState('sLH_ZdZNh13xPAS1_taVqeUF_uoGk1wP');
+  const [smsCode, setSmsCode] = useState('');
+  const [needSms, setNeedSms] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Result state
   const [loading, setLoading] = useState(false);
@@ -46,8 +49,10 @@ export const StarLineModal: React.FC<StarLineModalProps> = ({
     try {
       const res = await api.authStarLine(vehicle.id, {
         login,
-        password: useAppCode ? undefined : password,
-        app_code: useAppCode ? appCode : undefined,
+        password,
+        app_id: appId.trim() || '52429',
+        secret: secret.trim() || 'sLH_ZdZNh13xPAS1_taVqeUF_uoGk1wP',
+        sms_code: needSms ? smsCode : undefined,
       });
 
       setAuthData({ user_id: res.user_id, token: res.token });
@@ -57,7 +62,13 @@ export const StarLineModal: React.FC<StarLineModalProps> = ({
       }
       setStep('select');
     } catch (err: any) {
-      setErrorMsg(err.message || 'Ошибка подключения к StarLine. Проверьте логин и пароль.');
+      const errStr = err.message || '';
+      if (errStr.toLowerCase().includes('sms') || errStr.toLowerCase().includes('код')) {
+        setNeedSms(true);
+        setErrorMsg('StarLine запросил SMS-код подтверждения. Введите код из SMS.');
+      } else {
+        setErrorMsg(errStr || 'Ошибка подключения к StarLine. Проверьте логин и пароль.');
+      }
     } finally {
       setLoading(false);
     }
@@ -185,7 +196,7 @@ export const StarLineModal: React.FC<StarLineModalProps> = ({
                 <div className="bg-white/80 dark:bg-dark-800/80 p-2.5 rounded-xl border border-slate-200 dark:border-dark-700 text-center">
                   <div className="text-[10px] text-slate-400 font-semibold">Пробег</div>
                   <div className="text-xs font-extrabold text-brand-600 dark:text-brand-400 mt-0.5">
-                    {vehicle.current_odometer ? `${vehicle.current_odometer.toLocaleString('ru-RU')} км` : '—'}
+                    {vehicle.current_odometer ? `${Math.round(vehicle.current_odometer).toLocaleString('ru-RU')} км` : '—'}
                   </div>
                 </div>
 
@@ -241,7 +252,7 @@ export const StarLineModal: React.FC<StarLineModalProps> = ({
         {step === 'auth' && (
           <form onSubmit={handleAuth} className="space-y-3.5">
             <div className="p-3 rounded-xl bg-slate-50 dark:bg-dark-800 border border-slate-200 dark:border-dark-700 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-              💡 Введите учетные данные от личного кабинета <strong>StarLine Онлайн</strong> (starline-online.ru или мобильного приложения), чтобы привязать сигнализацию.
+              💡 Введите ваш логин (телефон или email) и пароль от <strong>StarLine Онлайн</strong> (starline-online.ru или мобильного приложения).
             </div>
 
             <div className="space-y-3">
@@ -259,50 +270,74 @@ export const StarLineModal: React.FC<StarLineModalProps> = ({
                 />
               </div>
 
-              {!useAppCode ? (
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Пароль от приложения StarLine *
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 focus:outline-none"
-                  />
-                </div>
-              ) : (
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    App Code / SLNET Токен разработчика *
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Пароль от StarLine *
+                </label>
+                <input
+                  type="password"
+                  required
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                />
+              </div>
+
+              {needSms && (
+                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 space-y-1.5 animate-fadeIn">
+                  <label className="block text-xs font-bold text-amber-700 dark:text-amber-300">
+                    Код подтверждения из SMS *
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="Токен с developer.starline.ru"
-                    value={appCode}
-                    onChange={(e) => setAppCode(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                    placeholder="Например, 123456"
+                    value={smsCode}
+                    onChange={(e) => setSmsCode(e.target.value)}
+                    className="w-full px-3 py-2 bg-white dark:bg-dark-900 border border-amber-400 dark:border-amber-600 rounded-xl text-xs font-mono font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:outline-none"
                   />
                 </div>
               )}
 
-              <div className="flex items-center justify-between text-[11px] pt-1">
+              <div className="pt-1">
                 <button
                   type="button"
-                  onClick={() => setUseAppCode(!useAppCode)}
-                  className="text-sky-600 dark:text-sky-400 hover:underline font-semibold"
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                  className="text-[11px] text-slate-500 dark:text-slate-400 hover:underline flex items-center space-x-1"
                 >
-                  {useAppCode ? '← Войти по логину и паролю' : 'Использовать App Code разработчика'}
+                  <KeyRound className="w-3 h-3" />
+                  <span>{showAdvanced ? 'Скрыть параметры API' : 'Параметры StarLine API (AppId & Secret)'}</span>
                 </button>
+
+                {showAdvanced && (
+                  <div className="grid grid-cols-2 gap-2 mt-2 p-2.5 rounded-xl bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 text-xs animate-fadeIn">
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 mb-0.5">App ID</label>
+                      <input
+                        type="text"
+                        value={appId}
+                        onChange={(e) => setAppId(e.target.value)}
+                        className="w-full px-2 py-1 text-[11px] bg-white dark:bg-dark-800 border rounded font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Secret</label>
+                      <input
+                        type="text"
+                        value={secret}
+                        onChange={(e) => setSecret(e.target.value)}
+                        className="w-full px-2 py-1 text-[11px] bg-white dark:bg-dark-800 border rounded font-mono"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
             <button
               type="submit"
-              disabled={loading || !login}
+              disabled={loading || !login || !password}
               className="w-full py-2.5 px-4 bg-sky-500 hover:bg-sky-600 active:scale-95 text-white font-bold rounded-xl flex items-center justify-center space-x-2 shadow-md shadow-sky-500/20 text-xs transition disabled:opacity-50"
             >
               <Satellite className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />

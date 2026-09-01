@@ -19,6 +19,9 @@ class StarLineAuthRequest(BaseModel):
     login: str
     password: Optional[str] = None
     app_code: Optional[str] = None
+    app_id: Optional[str] = None
+    secret: Optional[str] = None
+    sms_code: Optional[str] = None
 
 class StarLineConnectRequest(BaseModel):
     login: str
@@ -52,6 +55,9 @@ async def authenticate_starline(
             login=payload.login,
             password=payload.password,
             app_code=payload.app_code,
+            app_id=payload.app_id or "52429",
+            secret=payload.secret or "sLH_ZdZNh13xPAS1_taVqeUF_uoGk1wP",
+            sms_code=payload.sms_code,
         )
         user_id = auth_res["user_id"]
         token = auth_res["token"]

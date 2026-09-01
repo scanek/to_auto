@@ -650,7 +650,10 @@ export const api = {
     });
   },
   // --- Telematics & StarLine S96 API ---
-  authStarLine: (vehicleId: number, data: { login: string; password?: string; app_code?: string }) =>
+  authStarLine: (
+    vehicleId: number,
+    data: { login: string; password?: string; app_code?: string; app_id?: string; secret?: string; sms_code?: string }
+  ) =>
     request<{ status: string; user_id: string; token: string; devices: any[]; message: string }>(
       `${API_BASE}/telematics/${vehicleId}/starline/auth`,
       {
