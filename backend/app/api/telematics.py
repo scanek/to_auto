@@ -97,6 +97,21 @@ async def connect_starline_device(
     """
     vehicle = await verify_vehicle_access(db, vehicle_id, current_user, require_owner=True)
 
+    # Security check: Ensure this device_id is not already bound to another user's car
+    existing_binding = await db.execute(
+        select(Vehicle).where(
+            Vehicle.starline_device_id == payload.device_id,
+            Vehicle.id != vehicle_id,
+            Vehicle.user_id != current_user.id
+        )
+    )
+    conflict = existing_binding.scalars().first()
+    if conflict:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Данное устройство StarLine уже привязано другим пользователем в системе."
+        )
+
     vehicle.telematics_provider = "starline"
     vehicle.starline_user_id = payload.user_id
     vehicle.starline_device_id = payload.device_id
