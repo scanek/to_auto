@@ -71,13 +71,16 @@ def _find_numeric_in_flat(flat: Dict[str, Any], substrings: tuple[str, ...], min
 def _extract_mileage(flat: Dict[str, Any]) -> Optional[float]:
     """
     Specifically extracts total odometer mileage (rfull / mileage / odometer) from StarLine.
-    Strictly ignores trip distance, run status flags, etc.
+    Strictly ignores trip distance, engine run status flags, etc.
     """
     priority_keys = [
         "devices[0].common.rfull", "common.rfull", "devices[0].rfull", "rfull",
-        "devices[0].obd.mileage", "obd.mileage", "devices[0].car_state.mileage", "car_state.mileage",
-        "devices[0].odometer", "devices[0].state.mileage", "devices[0].total_mileage", "total_mileage",
-        "devices[0].can_mileage", "can_mileage", "devices[0].obd_mileage", "obd_mileage"
+        "devices[0].obd.mileage", "obd.mileage", "devices[0].obd.rfull", "obd.rfull",
+        "devices[0].car_state.mileage", "car_state.mileage", "devices[0].car_state.rfull", "car_state.rfull",
+        "devices[0].mileage", "mileage", "devices[0].odometer", "odometer",
+        "devices[0].state.mileage", "state.mileage", "devices[0].total_mileage", "total_mileage",
+        "devices[0].car_mileage", "car_mileage", "devices[0].can_mileage", "can_mileage",
+        "devices[0].obd_mileage", "obd_mileage"
     ]
     for k in priority_keys:
         if k in flat and flat[k] is not None:
@@ -85,20 +88,20 @@ def _extract_mileage(flat: Dict[str, Any]) -> Optional[float]:
                 val = float(flat[k])
                 if val > 1_000_000.0:
                     val = val / 1000.0
-                if val >= 100.0:  # Real total odometer
+                if val >= 10.0:  # Real total odometer
                     return val
             except (ValueError, TypeError):
                 pass
                 
     for k, v in flat.items():
         kl = k.lower()
-        if (kl.endswith(".rfull") or kl.endswith(".odometer") or kl.endswith(".mileage") or kl == "rfull" or kl == "odometer"):
+        if (kl.endswith(".rfull") or kl.endswith(".odometer") or kl.endswith(".mileage") or kl.endswith(".car_mileage") or kl in ("rfull", "odometer", "mileage", "car_mileage", "total_mileage", "can_mileage")):
             if "trip" not in kl and "day" not in kl and "run" not in kl and "dist" not in kl:
                 try:
                     val = float(v)
                     if val > 1_000_000.0:
                         val = val / 1000.0
-                    if val >= 100.0:
+                    if val >= 10.0:
                         return val
                 except (ValueError, TypeError):
                     pass
@@ -593,22 +596,17 @@ class StarLineService:
         now = datetime.datetime.utcnow()
         updated_fields = []
 
-        # 1. Monotonic Odometer Sync:
-        # Accept mileage only if it's a real total odometer (>= 100 km) AND >= vehicle's existing odometer
+        # 1. Total Odometer Sync:
         starline_odo = telemetry.get("mileage")
-        if starline_odo is not None and starline_odo >= 100.0:
-            cur_odo = vehicle.current_odometer or 0.0
-            if cur_odo <= 10.0 or starline_odo >= cur_odo:
-                vehicle.current_odometer = starline_odo
-                updated_fields.append(f"пробег: {int(starline_odo):,} км".replace(",", " "))
+        if starline_odo is not None and starline_odo >= 10.0:
+            vehicle.current_odometer = starline_odo
+            updated_fields.append(f"пробег: {int(starline_odo):,} км".replace(",", " "))
 
-        # 2. Monotonic Engine Hours Sync:
+        # 2. Engine Hours Sync:
         starline_hrs = telemetry.get("engine_hours")
         if starline_hrs is not None and starline_hrs > 0:
-            cur_hrs = vehicle.current_engine_hours or 0.0
-            if cur_hrs <= 1.0 or starline_hrs >= cur_hrs:
-                vehicle.current_engine_hours = starline_hrs
-                updated_fields.append(f"моточасы: {starline_hrs} м/ч")
+            vehicle.current_engine_hours = starline_hrs
+            updated_fields.append(f"моточасы: {starline_hrs} м/ч")
 
         if telemetry.get("battery") is not None:
             vehicle.starline_battery = telemetry["battery"]
