@@ -39,6 +39,7 @@ class VehicleBase(BaseModel):
     starline_gsm_level: Optional[int] = None
     starline_gps_lat: Optional[float] = None
     starline_gps_lon: Optional[float] = None
+    starline_gps_type: Optional[str] = "gps"
     telematics_webhook_key: Optional[str] = None
     telematics_auto_sync: bool = False
 

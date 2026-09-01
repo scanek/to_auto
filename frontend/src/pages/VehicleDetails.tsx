@@ -790,7 +790,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
             </div>
             )}
 
-            {/* GPS Location & Parking Map Link */}
+            {/* GPS / LBS Location & Parking Map Link */}
             {!isTelematicsCollapsed && (
               <div className="p-3 rounded-xl bg-white/70 dark:bg-dark-800/70 border border-sky-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 animate-fadeIn">
                 <div className="flex items-center space-x-2 text-xs">
@@ -798,14 +798,28 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                     <MapPin className="w-4 h-4" />
                   </div>
                   <div>
-                    <span className="font-bold text-slate-900 dark:text-white">Местоположение автомобиля (GPS):</span>
-                    {vehicle.starline_gps_lat && vehicle.starline_gps_lon ? (
-                      <span className="text-slate-500 dark:text-slate-400 font-mono ml-1.5 font-semibold">
-                        {vehicle.starline_gps_lat.toFixed(4)}, {vehicle.starline_gps_lon.toFixed(4)}
+                    <div className="flex items-center space-x-1.5">
+                      <span className="font-bold text-slate-900 dark:text-white">Местоположение автомобиля:</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                        vehicle.starline_gps_type === 'lbs'
+                          ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
+                          : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                      }`}>
+                        {vehicle.starline_gps_type === 'lbs' ? '📶 По сотовым вышкам (LBS)' : '🛰️ Спутники (GPS)'}
                       </span>
+                    </div>
+                    {vehicle.starline_gps_lat && vehicle.starline_gps_lon ? (
+                      <div className="text-slate-500 dark:text-slate-400 font-mono text-[11px] mt-0.5">
+                        {vehicle.starline_gps_lat.toFixed(4)}, {vehicle.starline_gps_lon.toFixed(4)}
+                        {vehicle.starline_gps_type === 'lbs' && (
+                          <span className="text-[10px] text-amber-600 dark:text-amber-400 ml-1.5 font-sans">
+                            (сектор вышки GSM)
+                          </span>
+                        )}
+                      </div>
                     ) : (
-                      <span className="text-slate-400 ml-1.5 italic">
-                        Координаты обновятся при следующей синхронизации
+                      <span className="text-slate-400 italic text-[11px] block mt-0.5">
+                        Координаты обновятся при нажатии «Обновить со StarLine»
                       </span>
                     )}
                   </div>
@@ -815,7 +829,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                   {vehicle.starline_gps_lat && vehicle.starline_gps_lon ? (
                     <>
                       <a
-                        href={`https://yandex.ru/maps/?pt=${vehicle.starline_gps_lon},${vehicle.starline_gps_lat}&z=17&l=map`}
+                        href={`https://yandex.ru/maps/?pt=${vehicle.starline_gps_lon},${vehicle.starline_gps_lat}&z=16&l=map`}
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-yellow-500/15 hover:bg-yellow-500/25 text-yellow-700 dark:text-yellow-400 font-bold text-[11px] border border-yellow-500/30 transition"
@@ -840,7 +854,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                       onClick={handleSyncStarLine}
                       disabled={isSyncingStarLine}
                       className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 text-sky-600 dark:text-sky-400 font-bold text-[11px] border border-sky-500/30 transition active:scale-95 disabled:opacity-50"
-                      title="Запросить координаты GPS со StarLine"
+                      title="Запросить координаты GPS/LBS со StarLine"
                     >
                       <RefreshCw className={`w-3 h-3 ${isSyncingStarLine ? 'animate-spin' : ''}`} />
                       <span>Обновить GPS</span>

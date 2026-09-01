@@ -376,19 +376,32 @@ class StarLineService:
             if gsm_level is not None:
                 gsm_level = int(gsm_level)
 
-            # 13. GPS Latitude & Longitude
+            # 13. GPS / LBS Latitude & Longitude (supports GSM base stations when GPS is jammed)
             gps_lat_keys = (
                 "devices[0].position.y", "position.y", "car_state.y", "y", "lat", "latitude",
                 "devices[0].lat", "devices[0].geo.lat", "geo.lat", "devices[0].point.y", "point.y",
-                "devices[0].state.position.y", "state.position.y", "devices[0].state.y"
+                "devices[0].state.position.y", "state.position.y", "devices[0].state.y",
+                "devices[0].lbs.lat", "devices[0].lbs.y", "lbs.lat", "lbs.y"
             )
             gps_lon_keys = (
                 "devices[0].position.x", "position.x", "car_state.x", "x", "lon", "lng", "longitude",
                 "devices[0].lon", "devices[0].lng", "devices[0].geo.lon", "geo.lon", "devices[0].point.x", "point.x",
-                "devices[0].state.position.x", "state.position.x", "devices[0].state.x"
+                "devices[0].state.position.x", "state.position.x", "devices[0].state.x",
+                "devices[0].lbs.lon", "devices[0].lbs.lng", "devices[0].lbs.x", "lbs.lon", "lbs.x"
             )
             gps_lat = _find_numeric_in_flat(all_flat, gps_lat_keys, min_val=-90.0, max_val=90.0)
             gps_lon = _find_numeric_in_flat(all_flat, gps_lon_keys, min_val=-180.0, max_val=180.0)
+
+            # Check if source is LBS (Cellular base station) or Satellite GPS
+            gps_type = "gps"
+            sat_qty = _find_numeric_in_flat(all_flat, ("devices[0].position.sat_qty", "position.sat_qty", "sat_qty", "devices[0].sat_qty", "gps_lvl"), min_val=0.0, max_val=50.0)
+            is_lbs = False
+            for lbs_k in ("devices[0].position.lbs", "position.lbs", "lbs", "devices[0].lbs"):
+                if lbs_k in all_flat and all_flat[lbs_k]:
+                    is_lbs = True
+                    break
+            if is_lbs or (sat_qty is not None and sat_qty == 0):
+                gps_type = "lbs"
 
             return {
                 "mileage": mileage,
@@ -405,6 +418,7 @@ class StarLineService:
                 "gsm_level": gsm_level,
                 "gps_lat": gps_lat,
                 "gps_lon": gps_lon,
+                "gps_type": gps_type,
             }
 
     @staticmethod
@@ -466,6 +480,7 @@ class StarLineService:
         if telemetry.get("gps_lat") is not None and telemetry.get("gps_lon") is not None:
             vehicle.starline_gps_lat = telemetry["gps_lat"]
             vehicle.starline_gps_lon = telemetry["gps_lon"]
+            vehicle.starline_gps_type = telemetry.get("gps_type", "gps")
 
         vehicle.starline_last_sync = now
         await db.commit()

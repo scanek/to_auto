@@ -58,6 +58,7 @@ async def auto_migrate_sqlite(conn):
                 ("starline_gsm_level", "INTEGER"),
                 ("starline_gps_lat", "FLOAT"),
                 ("starline_gps_lon", "FLOAT"),
+                ("starline_gps_type", "VARCHAR(20) DEFAULT 'gps'"),
                 ("fuel_tank_capacity", "FLOAT DEFAULT 55.0"),
             ("telematics_auto_sync", "BOOLEAN DEFAULT 0"),
             ("telematics_webhook_key", "VARCHAR(100)"),
