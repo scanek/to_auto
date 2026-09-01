@@ -22,9 +22,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy Backend app & Pre-compiled production frontend
 COPY backend/app ./app
 COPY backend/static ./static
-COPY backend/entrypoint.sh ./entrypoint.sh
 
-RUN chmod +x ./entrypoint.sh && mkdir -p /app/data/uploads
+RUN mkdir -p /app/data/uploads
 
 EXPOSE 8000
 
@@ -34,4 +33,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 
 VOLUME ["/app/data"]
 
-ENTRYPOINT ["/bin/sh", "/app/entrypoint.sh"]
+CMD ["/bin/sh", "-c", "mkdir -p /app/data/uploads && chmod -R 777 /app/data 2>/dev/null || true; exec uvicorn app.main:app --host 0.0.0.0 --port 8000"]
