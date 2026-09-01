@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { QuickMileageModal } from '../components/QuickMileageModal';
 import {
   Wrench,
   Fuel,
@@ -25,6 +26,7 @@ import {
   Globe,
   Lock,
   User as UserIcon,
+  Search,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -218,7 +220,35 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   };
 
   // Filter service records by tab
-  const displayedServiceRecords = serviceRecords.filter((r) => {
+  const baseFilteredServiceRecords = serviceRecords.filter(
+    (r) =>
+      activeTab === 'all' ||
+      (activeTab === 'service' && r.record_type === 'service') ||
+      (activeTab === 'repairs' && r.record_type === 'repair') ||
+      (activeTab === 'upgrades' && r.record_type === 'upgrade')
+  );
+
+  const displayedServiceRecords = useMemo(() => {
+    if (!recordsSearchQuery.trim()) return baseFilteredServiceRecords;
+    const q = recordsSearchQuery.toLowerCase().trim();
+    return baseFilteredServiceRecords.filter((rec) => {
+      const inTitle = rec.title?.toLowerCase().includes(q);
+      const inTag = rec.to_tag?.toLowerCase().includes(q);
+      const inStore = rec.store?.toLowerCase().includes(q);
+      const inDesc = rec.description?.toLowerCase().includes(q);
+      const inNotes = rec.notes?.toLowerCase().includes(q);
+      const inItems = rec.items?.some(
+        (it) =>
+          it.name?.toLowerCase().includes(q) ||
+          it.brand?.toLowerCase().includes(q) ||
+          it.part_number?.toLowerCase().includes(q) ||
+          it.store?.toLowerCase().includes(q)
+      );
+      return inTitle || inTag || inStore || inDesc || inNotes || inItems;
+    });
+  }, [baseFilteredServiceRecords, recordsSearchQuery]);
+
+  const _unused = serviceRecords.filter((r) => {
     if (activeTab === 'service') return r.record_type === 'service';
     if (activeTab === 'repairs') return r.record_type === 'repair';
     if (activeTab === 'upgrades') return r.record_type === 'upgrade';
@@ -429,30 +459,15 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
             )}
           </div>
 
-          {/* Engine Hours Quick Editor */}
-          <div className="bg-slate-50 dark:bg-dark-900/80 p-2.5 sm:p-3 rounded-xl border border-slate-200 dark:border-dark-750">
-            <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block mb-0.5">
-              Моточасы
-            </span>
-            {editingHours && isOwner ? (
-              <div className="flex items-center space-x-1 mt-1">
-                <input
-                  type="number"
-                  value={newHoursVal}
-                  onChange={(e) => setNewHoursVal(parseFloat(e.target.value) || 0)}
-                  className="w-full bg-white dark:bg-dark-800 border border-brand-500 rounded px-1.5 py-0.5 text-xs text-slate-900 dark:text-white font-mono"
-                />
-                <button
-                  onClick={handleUpdateHours}
-                  className="p-1 bg-brand-500 text-white rounded hover:bg-brand-600 text-xs flex-shrink-0"
-                >
-                  <Check className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ) : (
+          {/* Engine Hours / Ownership Stat */}
+          {vehicle.track_engine_hours !== false ? (
+            <div className="bg-slate-50 dark:bg-dark-900/80 p-2.5 sm:p-3 rounded-xl border border-slate-200 dark:border-dark-750">
+              <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block mb-0.5">
+                Моточасы
+              </span>
               <div
-                onClick={() => isOwner && setEditingHours(true)}
-                className={`flex items-center space-x-1.5 ${isOwner ? 'cursor-pointer group' : ''}`}
+                onClick={() => isOwner && setIsQuickMileageOpen(true)}
+                className={`flex items-center space-x-1.5 mt-1 ${isOwner ? 'cursor-pointer group' : ''}`}
               >
                 <span className={`text-sm sm:text-base font-extrabold text-slate-900 dark:text-white font-mono ${isOwner ? 'group-hover:text-brand-500 transition-colors' : ''}`}>
                   {vehicle.current_engine_hours ? `${Math.round(vehicle.current_engine_hours)} м/ч` : '0 м/ч'}
@@ -461,8 +476,17 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                   <Edit2 className="w-3 h-3 text-slate-400 group-hover:text-brand-500 flex-shrink-0" />
                 )}
               </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="bg-slate-50 dark:bg-dark-900/80 p-2.5 sm:p-3 rounded-xl border border-slate-200 dark:border-dark-750">
+              <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block mb-0.5">
+                Записей в истории
+              </span>
+              <span className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white font-mono">
+                {serviceRecords.length} ТО / работ
+              </span>
+            </div>
+          )}
 
           <div className="bg-slate-50 dark:bg-dark-900/80 p-2.5 sm:p-3 rounded-xl border border-slate-200 dark:border-dark-750">
             <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block mb-0.5">
@@ -653,19 +677,48 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
         {/* Service / Repairs / Upgrades Tabs */}
         {['service', 'repairs', 'upgrades'].includes(activeTab) && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                История записей ({displayedServiceRecords.length})
-              </span>
-              {isOwner && (
-                <button
-                  onClick={() => onOpenServiceModal(activeTab as any)}
-                  className="flex items-center space-x-1.5 text-xs font-bold text-brand-500 hover:text-brand-600 bg-brand-500/10 border border-brand-500/20 px-3 py-1.5 rounded-lg transition-colors"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Добавить запись</span>
-                </button>
-              )}
+            {/* Search and Action Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="flex items-center space-x-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  История записей ({displayedServiceRecords.length})
+                </span>
+                {recordsSearchQuery && (
+                  <span className="text-[11px] text-brand-600 dark:text-brand-400 font-semibold">
+                    (найдено по фильтру)
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <div className="relative flex-1 sm:w-64">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+                  <input
+                    type="text"
+                    value={recordsSearchQuery}
+                    onChange={(e) => setRecordsSearchQuery(e.target.value)}
+                    placeholder="Поиск по названию, артикулу..."
+                    className="w-full bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-xl pl-8 pr-7 py-1.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-brand-500 shadow-sm"
+                  />
+                  {recordsSearchQuery && (
+                    <button
+                      onClick={() => setRecordsSearchQuery('')}
+                      className="absolute right-2 top-2 text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+                {isOwner && (
+                  <button
+                    onClick={() => onOpenServiceModal(activeTab as any)}
+                    className="flex items-center space-x-1.5 text-xs font-bold text-brand-500 hover:text-brand-600 bg-brand-500/10 border border-brand-500/20 px-3 py-1.5 rounded-lg transition-colors flex-shrink-0"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Добавить запись</span>
+                  </button>
+                )}
+              </div>
             </div>
 
             {displayedServiceRecords.length === 0 ? (
@@ -852,18 +905,38 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
         {/* Reminders / Planner Tab */}
         {activeTab === 'reminders' && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 План регламентов ТО и износа ({reminders.length})
               </span>
               {isOwner && (
-                <button
-                  onClick={() => onOpenReminderModal()}
-                  className="flex items-center space-x-1.5 text-xs font-bold text-amber-600 dark:text-amber-400 hover:text-amber-500 bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-lg transition-colors"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Новый регламент</span>
-                </button>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={async () => {
+                      if (window.confirm('Применить пакет стандартных регламентов (масло ДВС, фильтры, свечи, трансмиссия, антифриз, тормозная жидкость)?')) {
+                        try {
+                          const updated = await api.applyDefaultReminders(vehicle.id);
+                          setReminders(updated);
+                          await onRefreshVehicle();
+                          alert('Пакет регламентов ТО успешно добавлен!');
+                        } catch (err) {
+                          alert('Ошибка применения регламентов');
+                        }
+                      }
+                    }}
+                    className="flex items-center space-x-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 bg-slate-100 dark:bg-dark-800 hover:bg-slate-200 dark:hover:bg-dark-750 border border-slate-200 dark:border-dark-700 px-3 py-1.5 rounded-xl transition-all shadow-sm"
+                    title="Создать стандартные регламенты ТО"
+                  >
+                    <span>📋 Стандартный пакет ТО</span>
+                  </button>
+                  <button
+                    onClick={() => onOpenReminderModal()}
+                    className="flex items-center space-x-1.5 text-xs font-bold text-amber-600 dark:text-amber-400 hover:text-amber-500 bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-xl transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Новый регламент</span>
+                  </button>
+                </div>
               )}
             </div>
 
@@ -1351,6 +1424,45 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
         {/* Analytics Tab (All Costs Breakdown & History) */}
         {activeTab === 'analytics' && analytics && (
           <div className="space-y-4 sm:space-y-6">
+            {/* Cost per 1 km Breakdown Banner */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="bg-emerald-500/10 border border-emerald-500/25 p-3.5 rounded-2xl">
+                <span className="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-300 block">
+                  ⛽ Топливо / 1 км
+                </span>
+                <div className="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400 font-mono mt-0.5">
+                  {analytics.fuel_cost_per_distance ? `${analytics.fuel_cost_per_distance} ${vehicle.currency}/км` : '—'}
+                </div>
+                <span className="text-[11px] text-emerald-600/80 dark:text-emerald-400/80 block mt-0.5">
+                  Только прямые затраты на топливо
+                </span>
+              </div>
+
+              <div className="bg-brand-500/10 border border-brand-500/25 p-3.5 rounded-2xl">
+                <span className="text-[10px] uppercase font-bold text-brand-700 dark:text-brand-300 block">
+                  🔧 ТО и запчасти / 1 км
+                </span>
+                <div className="text-base sm:text-lg font-black text-brand-600 dark:text-brand-400 font-mono mt-0.5">
+                  {analytics.service_cost_per_distance ? `${analytics.service_cost_per_distance} ${vehicle.currency}/км` : '—'}
+                </div>
+                <span className="text-[11px] text-brand-600/80 dark:text-brand-400/80 block mt-0.5">
+                  Обслуживание, расходники и ремонты
+                </span>
+              </div>
+
+              <div className="bg-amber-500/10 border border-amber-500/25 p-3.5 rounded-2xl">
+                <span className="text-[10px] uppercase font-bold text-amber-700 dark:text-amber-300 block">
+                  💰 Полная себестоимость / 1 км
+                </span>
+                <div className="text-base sm:text-lg font-black text-amber-600 dark:text-amber-400 font-mono mt-0.5">
+                  {analytics.cost_per_distance_unit ? `${analytics.cost_per_distance_unit} ${vehicle.currency}/км` : '—'}
+                </div>
+                <span className="text-[11px] text-amber-700/80 dark:text-amber-400/80 block mt-0.5">
+                  Все расходы: топливо, ТО, шины, страховки
+                </span>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3.5">
               <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 p-3.5 sm:p-4 rounded-2xl shadow-sm">
                 <span className="text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400 block">
@@ -1591,6 +1703,23 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
           </div>
         )}
       </div>
+
+      {/* Quick Mileage Update Modal */}
+      {isQuickMileageOpen && (
+        <QuickMileageModal
+          isOpen={isQuickMileageOpen}
+          onClose={() => setIsQuickMileageOpen(false)}
+          vehicle={vehicle}
+          onSave={async (odo, hours) => {
+            await api.updateVehicle(vehicle.id, {
+              current_odometer: odo,
+              current_engine_hours: hours,
+            });
+            await onRefreshVehicle();
+            await loadData();
+          }}
+        />
+      )}
     </div>
   );
 };

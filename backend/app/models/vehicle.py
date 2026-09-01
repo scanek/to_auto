@@ -19,6 +19,7 @@ class Vehicle(Base):
     starting_odometer = Column(Float, default=0.0)
     current_odometer = Column(Float, default=0.0)
     current_engine_hours = Column(Float, default=0.0) # Моточасы
+    track_engine_hours = Column(Boolean, default=True, nullable=False)
     purchase_date = Column(DateTime, nullable=True) # Дата покупки / начала эксплуатации
     oil_spec = Column(String(200), nullable=True) # e.g. "SAE 0W-20 SP / C5 (4.2 - 4.5 л)"
     distance_unit = Column(String(10), default="km") # "km" or "mi"

@@ -34,6 +34,8 @@ class VehicleAnalytics(BaseModel):
     total_tyre_spend: float = 0.0
     total_document_spend: float = 0.0
     cost_per_distance_unit: float
+    fuel_cost_per_distance: float = 0.0
+    service_cost_per_distance: float = 0.0
     avg_fuel_consumption: Optional[float] = None
     avg_fuel_price: Optional[float] = None
     total_fuel_liters: float = 0.0

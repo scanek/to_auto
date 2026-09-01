@@ -4,7 +4,7 @@
 
 Автор: **Александр Щеголев** ([@scanek](https://github.com/scanek))  
 Репозиторий: **[https://github.com/scanek/to_auto](https://github.com/scanek/to_auto)**  
-Текущая версия: **v1.4.0**
+Текущая версия: **v1.5.0**
 
 ---
 

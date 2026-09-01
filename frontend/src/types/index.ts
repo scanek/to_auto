@@ -10,6 +10,7 @@ export interface Vehicle {
   starting_odometer: number;
   current_odometer: number;
   current_engine_hours: number;
+  track_engine_hours?: boolean;
   purchase_date?: string;
   oil_spec?: string;
   distance_unit: string;
@@ -230,6 +231,8 @@ export interface VehicleAnalytics {
   total_tyre_spend: number;
   total_document_spend: number;
   cost_per_distance_unit: number;
+  fuel_cost_per_distance?: number;
+  service_cost_per_distance?: number;
   avg_fuel_consumption?: number | null;
   avg_fuel_price?: number | null;
   total_fuel_liters: number;

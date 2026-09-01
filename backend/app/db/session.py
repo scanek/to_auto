@@ -39,6 +39,7 @@ async def auto_migrate_sqlite(conn):
             ("current_engine_hours", "FLOAT DEFAULT 0.0"),
             ("purchase_date", "DATETIME"),
             ("oil_spec", "VARCHAR(200)"),
+            ("track_engine_hours", "BOOLEAN DEFAULT 1"),
         ],
         "service_records": [
             ("to_tag", "VARCHAR(50)"),

@@ -158,6 +158,8 @@ async def compute_vehicle_analytics(session: AsyncSession, vehicle: Vehicle) -> 
         total_tyre_spend=round(tyre_spend, 2),
         total_document_spend=round(document_spend, 2),
         cost_per_distance_unit=cost_per_distance,
+        fuel_cost_per_distance=round(fuel_spend / effective_dist, 2) if effective_dist > 0 else 0.0,
+        service_cost_per_distance=round((service_spend + repair_spend) / effective_dist, 2) if effective_dist > 0 else 0.0,
         avg_fuel_consumption=avg_consumption,
         avg_fuel_price=avg_fuel_price,
         total_fuel_liters=round(total_fuel_liters, 1),

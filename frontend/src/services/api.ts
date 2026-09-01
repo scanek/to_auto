@@ -408,6 +408,11 @@ export const api = {
         entityType: 'reminder',
       }
     ),
+  applyDefaultReminders: (vehicleId: number) =>
+    request<MaintenancePlan[]>(
+      `${API_BASE}/reminders/apply-default-pack?vehicle_id=${vehicleId}`,
+      { method: 'POST' }
+    ),
   markReminderDone: (id: number, odo?: number, hours?: number) => {
     const url = new URL(`${window.location.origin}${API_BASE}/reminders/${id}/mark-done`);
     if (odo !== undefined) url.searchParams.set('odometer', String(odo));

@@ -30,6 +30,7 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
     starting_odometer: 0,
     current_odometer: 0,
     current_engine_hours: 0,
+        track_engine_hours: true,
     distance_unit: 'km',
     fuel_unit: 'L',
     currency: 'RUB',
@@ -56,6 +57,7 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
         starting_odometer: vehicle.starting_odometer ?? 0,
         current_odometer: vehicle.current_odometer ?? 0,
         current_engine_hours: vehicle.current_engine_hours ?? 0,
+        track_engine_hours: vehicle.track_engine_hours ?? true,
         distance_unit: vehicle.distance_unit || 'km',
         fuel_unit: vehicle.fuel_unit || 'L',
         currency: vehicle.currency || 'RUB',
@@ -78,6 +80,7 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
         starting_odometer: 0,
         current_odometer: 0,
         current_engine_hours: 0,
+        track_engine_hours: true,
         distance_unit: 'km',
         fuel_unit: 'L',
         currency: 'RUB',
@@ -320,24 +323,51 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
                 className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-300 dark:border-dark-750 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-mono font-bold"
               />
             </div>
+            {formData.track_engine_hours ? (
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Текущие моточасы (м/ч)
+                </label>
+                <input
+                  type="number"
+                  step="any"
+                  placeholder="Например 800"
+                  value={formData.current_engine_hours || ''}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      current_engine_hours: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                  className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-300 dark:border-dark-750 rounded-xl px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-mono"
+                />
+              </div>
+            ) : (
+              <div className="flex items-center">
+                <span className="text-xs text-slate-400 italic">Учет моточасов отключен</span>
+              </div>
+            )}
+          </div>
+
+          {/* ENGINE HOURS TOGGLE */}
+          <div className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-dark-900/90 rounded-2xl border border-slate-200 dark:border-dark-750">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Текущие моточасы (м/ч)
-              </label>
-              <input
-                type="number"
-                step="any"
-                placeholder="809"
-                value={formData.current_engine_hours || ''}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    current_engine_hours: parseFloat(e.target.value) || 0,
-                  })
-                }
-                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-300 dark:border-dark-750 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-mono"
-              />
+              <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
+                Учитывать моточасы двигателя (м/ч)
+              </span>
+              <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                Включает учет наработки в карточке, ТО и регламентах обслуживания
+              </span>
             </div>
+            <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
+              <input
+                type="checkbox"
+                checked={formData.track_engine_hours}
+                onChange={(e) => setFormData({ ...formData, track_engine_hours: e.target.checked })}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-dark-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-brand-500"></div>
+            </label>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
