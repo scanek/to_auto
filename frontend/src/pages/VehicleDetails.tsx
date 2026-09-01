@@ -1874,6 +1874,19 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
           records={serviceRecords}
         />
       )}
+
+      {/* StarLine S96 Telematics Modal */}
+      {isStarLineModalOpen && (
+        <StarLineModal
+          isOpen={isStarLineModalOpen}
+          onClose={() => setIsStarLineModalOpen(false)}
+          vehicle={vehicle}
+          onSuccess={async () => {
+            await onRefreshVehicle();
+            await loadData();
+          }}
+        />
+      )}
     </div>
   );
 };
