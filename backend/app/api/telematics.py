@@ -181,7 +181,7 @@ async def telemetry_webhook(
 
     updated = []
     if payload.odometer is not None and payload.odometer > 0:
-        vehicle.odometer = payload.odometer
+        vehicle.current_odometer = payload.odometer
         updated.append(f"пробег: {payload.odometer} км")
     if payload.engine_hours is not None and payload.engine_hours > 0:
         vehicle.current_engine_hours = payload.engine_hours

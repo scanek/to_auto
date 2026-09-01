@@ -313,7 +313,7 @@ class StarLineService:
         updated_fields = []
 
         if telemetry.get("mileage") is not None and telemetry["mileage"] > 0:
-            vehicle.odometer = telemetry["mileage"]
+            vehicle.current_odometer = telemetry["mileage"]
             updated_fields.append(f"пробег: {int(telemetry['mileage']):,} км".replace(",", " "))
 
         if telemetry.get("engine_hours") is not None and telemetry["engine_hours"] > 0:
@@ -333,7 +333,7 @@ class StarLineService:
 
         return {
             "vehicle_id": vehicle.id,
-            "odometer": vehicle.odometer,
+            "odometer": vehicle.current_odometer,
             "engine_hours": vehicle.current_engine_hours,
             "battery": vehicle.starline_battery,
             "fuel_percent": vehicle.starline_fuel_percent,
