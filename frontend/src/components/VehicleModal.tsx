@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Car, Upload, Image as ImageIcon, Globe, Lock, Calendar, Gauge } from 'lucide-react';
+import { X, Car, Upload, Image as ImageIcon, Globe, Lock, Calendar, Gauge, Fuel } from 'lucide-react';
 import { Vehicle } from '../types';
 import { api } from '../services/api';
 
