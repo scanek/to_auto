@@ -19,9 +19,18 @@ class VehicleBase(BaseModel):
     oil_spec: Optional[str] = None
     distance_unit: str = "km"
     fuel_unit: str = "L"
-    currency: str = "RUB"
     photo_url: Optional[str] = None
     notes: Optional[str] = None
+
+    # Telematics fields
+    telematics_provider: Optional[str] = "none"
+    starline_device_alias: Optional[str] = None
+    starline_last_sync: Optional[datetime] = None
+    starline_battery: Optional[float] = None
+    starline_fuel_percent: Optional[float] = None
+    starline_engine_temp: Optional[float] = None
+    telematics_webhook_key: Optional[str] = None
+    telematics_auto_sync: bool = False
 
 class VehicleCreate(VehicleBase):
     pass

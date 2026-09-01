@@ -380,12 +380,6 @@ class StarLineService:
         await db.refresh(vehicle)
 
         summary = ", ".join(updated_fields) if updated_fields else "Телеметрия обновлена"
-        
-        if telemetry.get("engine_hours") is None and telemetry.get("discovered_keys"):
-            # Show the top numeric keys found in StarLine
-            sample_keys = [x for x in telemetry["discovered_keys"] if not x.endswith("=None") and not x.endswith("=0")][:4]
-            if sample_keys:
-                summary += f" [CAN-ключи: {', '.join(sample_keys)}]"
 
         return {
             "vehicle_id": vehicle.id,
