@@ -93,18 +93,21 @@ def _extract_mileage(flat: Dict[str, Any]) -> Optional[float]:
 def _extract_temperatures(flat: Dict[str, Any]) -> tuple[Optional[float], Optional[float]]:
     """
     Specifically and strictly extracts (engine_temp, interior_temp) from StarLine telemetry.
-    Avoids key collisions where generic 'temp' matches 'ctemp' or 'itemp'.
+    In StarLine protocol:
+      - etemp = Engine Temp (ДВС / Двигатель)
+      - ctemp / itemp = Cabin / Interior Temp (Салон)
+      - obd.coolant_temp / obd.engine_temp = Engine Temp (ДВС)
     """
     engine_temp = None
     interior_temp = None
     
-    # 1. Engine / Coolant Temperature (ctemp / etemp / coolant_temp)
+    # 1. Engine / Coolant Temperature (ДВС):
+    # etemp (Engine temp), obd coolant/engine temp
     engine_keys = [
-        "devices[0].car_state.ctemp", "car_state.ctemp", "devices[0].ctemp", "ctemp",
         "devices[0].car_state.etemp", "car_state.etemp", "devices[0].etemp", "etemp",
         "devices[0].obd.coolant_temp", "obd.coolant_temp", "devices[0].obd.engine_temp", "obd.engine_temp",
-        "devices[0].obd.ctemp", "obd.ctemp", "devices[0].state.ctemp", "state.ctemp",
-        "devices[0].common.ctemp", "common.ctemp"
+        "devices[0].obd.etemp", "obd.etemp", "devices[0].state.etemp", "state.etemp",
+        "devices[0].common.etemp", "common.etemp"
     ]
     for k in engine_keys:
         if k in flat and flat[k] is not None:
@@ -119,7 +122,7 @@ def _extract_temperatures(flat: Dict[str, Any]) -> tuple[Optional[float], Option
     if engine_temp is None:
         for k, v in flat.items():
             kl = k.lower()
-            if any(s in kl for s in ("ctemp", "etemp", "coolant", "t_engine", "engine_temp")):
+            if any(s in kl for s in ("etemp", "coolant", "t_engine", "engine_temp")) and "ctemp" not in kl:
                 try:
                     vf = float(v)
                     if -40.0 <= vf <= 140.0 and vf != 127.0 and vf != -128.0:
@@ -128,12 +131,13 @@ def _extract_temperatures(flat: Dict[str, Any]) -> tuple[Optional[float], Option
                 except (ValueError, TypeError):
                     pass
 
-    # 2. Interior / Cabin Temperature (itemp / temp_in / central unit temp)
-    # Strictly check distinct interior keys first, excluding ctemp/etemp keys
+    # 2. Interior / Cabin Temperature (Салон):
+    # ctemp (Cabin temp) and itemp (Interior temp)
     interior_keys = [
+        "devices[0].car_state.ctemp", "car_state.ctemp", "devices[0].ctemp", "ctemp",
         "devices[0].car_state.itemp", "car_state.itemp", "devices[0].itemp", "itemp",
-        "devices[0].car_state.temp", "car_state.temp", "devices[0].temp", "devices[0].state.temp",
-        "devices[0].common.itemp", "common.itemp", "devices[0].common.temp", "common.temp"
+        "devices[0].common.ctemp", "common.ctemp", "devices[0].common.itemp", "common.itemp",
+        "devices[0].state.ctemp", "state.ctemp", "devices[0].state.itemp", "state.itemp"
     ]
     for k in interior_keys:
         if k in flat and flat[k] is not None:
@@ -146,13 +150,28 @@ def _extract_temperatures(flat: Dict[str, Any]) -> tuple[Optional[float], Option
                 pass
 
     if interior_temp is None:
-        for k, v in flat.items():
-            kl = k.lower()
-            if "itemp" in kl or "cabin" in kl or "interior" in kl or (kl.endswith(".temp") and "ctemp" not in kl and "etemp" not in kl):
+        unit_keys = [
+            "devices[0].car_state.temp", "car_state.temp", "devices[0].temp", "devices[0].state.temp",
+            "devices[0].common.temp", "common.temp"
+        ]
+        for k in unit_keys:
+            if k in flat and flat[k] is not None:
                 try:
-                    vf = float(v)
-                    if -40.0 <= vf <= 85.0 and vf != 127.0 and vf != -128.0:
-                        interior_temp = vf
+                    v = float(flat[k])
+                    if -40.0 <= v <= 85.0 and v != 127.0 and v != -128.0 and (engine_temp is None or v != engine_temp):
+                        interior_temp = v
+                        break
+                except (ValueError, TypeError):
+                    pass
+
+    # If engine_temp is still None and we have unit temp that is not interior_temp:
+    if engine_temp is None:
+        for k in ("devices[0].car_state.temp", "car_state.temp", "devices[0].temp", "temp"):
+            if k in flat and flat[k] is not None:
+                try:
+                    vf = float(flat[k])
+                    if -40.0 <= vf <= 140.0 and vf != 127.0 and (interior_temp is None or vf != interior_temp):
+                        engine_temp = vf
                         break
                 except (ValueError, TypeError):
                     pass
