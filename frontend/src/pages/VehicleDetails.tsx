@@ -693,19 +693,52 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                     className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 hover:border-slate-300 dark:hover:border-dark-700 rounded-2xl p-4 sm:p-5 shadow-sm transition-all space-y-3"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div className="flex items-start sm:items-center space-x-3">
-                        <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-dark-800 border border-slate-200 dark:border-dark-700 flex items-center justify-center text-brand-500 font-bold text-sm flex-shrink-0 mt-0.5 sm:mt-0">
-                          {rec.to_tag ? (
-                            <span className="font-mono text-xs font-extrabold">{rec.to_tag}</span>
-                          ) : (
+                      <div className="flex items-center space-x-3 min-w-0">
+                        {/* Thematic Icon Box */}
+                        {rec.record_type === 'upgrade' ? (
+                          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-500/15 to-purple-500/15 border border-amber-500/25 flex items-center justify-center text-amber-600 dark:text-amber-400 flex-shrink-0 shadow-sm">
+                            <Sparkles className="w-5 h-5" />
+                          </div>
+                        ) : rec.record_type === 'repair' ? (
+                          <div className="w-10 h-10 rounded-2xl bg-rose-500/10 dark:bg-rose-500/15 border border-rose-500/25 flex items-center justify-center text-rose-600 dark:text-rose-400 flex-shrink-0 shadow-sm">
                             <Wrench className="w-5 h-5" />
-                          )}
-                        </div>
-                        <div className="min-w-0">
+                          </div>
+                        ) : (rec.to_tag && /^ТО-\d+$/i.test(rec.to_tag.trim())) ? (
+                          <div className="w-10 h-10 rounded-2xl bg-brand-500/10 dark:bg-brand-500/20 border border-brand-500/30 flex items-center justify-center text-brand-600 dark:text-brand-400 flex-shrink-0 shadow-sm">
+                            <span className="font-mono text-xs font-black tracking-tight">{rec.to_tag.trim()}</span>
+                          </div>
+                        ) : (
+                          <div className="w-10 h-10 rounded-2xl bg-brand-500/10 dark:bg-brand-500/20 border border-brand-500/30 flex items-center justify-center text-brand-600 dark:text-brand-400 flex-shrink-0 shadow-sm">
+                            <Wrench className="w-5 h-5" />
+                          </div>
+                        )}
+
+                        {/* Title & Tags */}
+                        <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-1.5">
+                            {rec.to_tag && (
+                              rec.to_tag.trim().toLowerCase() === 'вне то' ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-dark-750 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-dark-700">
+                                  Вне ТО
+                                </span>
+                              ) : rec.record_type === 'upgrade' ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/25">
+                                  <Sparkles className="w-2.5 h-2.5" />
+                                  <span>{rec.to_tag}</span>
+                                </span>
+                              ) : rec.record_type === 'repair' ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/25">
+                                  <span>{rec.to_tag}</span>
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-md bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/25">
+                                  <span>{rec.to_tag}</span>
+                                </span>
+                              )
+                            )}
                             <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">{rec.title}</h4>
                           </div>
-                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-mono">
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400 mt-1 font-mono">
                             <span>📅 {new Date(rec.date).toLocaleDateString('ru-RU')}</span>
                             <span>🛣️ {Math.round(rec.odometer).toLocaleString('ru-RU')} {vehicle.distance_unit}</span>
                             {rec.engine_hours && (

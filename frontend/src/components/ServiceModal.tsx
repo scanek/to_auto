@@ -330,16 +330,54 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Тег ТО (опция)
+                {formData.record_type === 'service'
+                  ? 'Тег ТО (опция)'
+                  : formData.record_type === 'upgrade'
+                  ? 'Категория тюнинга'
+                  : 'Категория ремонта'}
               </label>
               <input
                 type="text"
-                placeholder="ТО-1, ТО-2, ТО-3..."
+                placeholder={
+                  formData.record_type === 'service'
+                    ? 'ТО-1, ТО-2...'
+                    : formData.record_type === 'upgrade'
+                    ? 'Стайлинг, Допы...'
+                    : 'Ходовая, Тормоза...'
+                }
                 value={formData.to_tag}
                 onChange={(e) => setFormData({ ...formData, to_tag: e.target.value })}
                 className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white font-mono focus:outline-none focus:border-brand-500"
               />
             </div>
+          </div>
+
+          {/* Quick Tag Presets */}
+          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 mr-1">Быстрый тег:</span>
+            {(formData.record_type === 'service'
+              ? ['ТО-0', 'ТО-1', 'ТО-2', 'ТО-3', 'ТО-4', 'ТО-5', 'ТО-6', 'Вне ТО']
+              : formData.record_type === 'upgrade'
+              ? ['Допы', 'Стайлинг', 'Шумоизоляция', 'Свет', 'Салон', 'Защита', 'Аудио', 'Вне ТО']
+              : ['Ходовая', 'Тормоза', 'ДВС', 'Электрика', 'Кузов', 'Вне ТО']
+            ).map((tag) => (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => setFormData({ ...formData, to_tag: formData.to_tag === tag ? '' : tag })}
+                className={`text-[10px] font-semibold px-2 py-0.5 rounded-lg transition-all ${
+                  formData.to_tag === tag
+                    ? formData.record_type === 'upgrade'
+                      ? 'bg-amber-500 text-white shadow-sm'
+                      : formData.record_type === 'repair'
+                      ? 'bg-rose-500 text-white shadow-sm'
+                      : 'bg-brand-500 text-white shadow-sm'
+                    : 'bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-dark-700 border border-slate-200 dark:border-dark-700'
+                }`}
+              >
+                {tag}
+              </button>
+            ))}
           </div>
 
           {/* MAIN SECTION: PARTS, CONSUMABLES & DETAILS */}
