@@ -652,9 +652,9 @@ export const api = {
   // --- Telematics & StarLine S96 API ---
   authStarLine: (
     vehicleId: number,
-    data: { login: string; password?: string; app_code?: string; app_id?: string; secret?: string; sms_code?: string }
+    data: { login: string; password?: string; app_code?: string; app_id?: string; secret?: string; sms_code?: string; captcha_sid?: string; captcha_code?: string }
   ) =>
-    request<{ status: string; user_id: string; token: string; devices: any[]; message: string }>(
+    request<{ status: string; user_id: string; token: string; devices: any[]; message: string; captcha_sid?: string; captcha_img?: string }>(
       `${API_BASE}/telematics/${vehicleId}/starline/auth`,
       {
         method: 'POST',

@@ -22,6 +22,8 @@ class StarLineAuthRequest(BaseModel):
     app_id: Optional[str] = None
     secret: Optional[str] = None
     sms_code: Optional[str] = None
+    captcha_sid: Optional[str] = None
+    captcha_code: Optional[str] = None
 
 class StarLineConnectRequest(BaseModel):
     login: str
@@ -58,7 +60,13 @@ async def authenticate_starline(
             app_id=payload.app_id or "52429",
             secret=payload.secret or "sLH_ZdZNh13xPAS1_taVqeUF_uoGk1wP",
             sms_code=payload.sms_code,
+            captcha_sid=payload.captcha_sid,
+            captcha_code=payload.captcha_code,
         )
+
+        if auth_res.get("status") == "captcha_needed":
+            return auth_res
+
         user_id = auth_res["user_id"]
         token = auth_res["token"]
 

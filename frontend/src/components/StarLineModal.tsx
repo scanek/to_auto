@@ -27,6 +27,9 @@ export const StarLineModal: React.FC<StarLineModalProps> = ({
   const [secret, setSecret] = useState('sLH_ZdZNh13xPAS1_taVqeUF_uoGk1wP');
   const [smsCode, setSmsCode] = useState('');
   const [needSms, setNeedSms] = useState(false);
+  const [captchaSid, setCaptchaSid] = useState<string | null>(null);
+  const [captchaImg, setCaptchaImg] = useState<string | null>(null);
+  const [captchaCode, setCaptchaCode] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Result state
@@ -53,11 +56,23 @@ export const StarLineModal: React.FC<StarLineModalProps> = ({
         app_id: appId.trim() || '52429',
         secret: secret.trim() || 'sLH_ZdZNh13xPAS1_taVqeUF_uoGk1wP',
         sms_code: needSms ? smsCode : undefined,
+        captcha_sid: captchaSid || undefined,
+        captcha_code: captchaCode || undefined,
       });
 
+      if (res.status === 'captcha_needed' || res.captcha_sid) {
+        setCaptchaSid(res.captcha_sid || null);
+        setCaptchaImg(res.captcha_img || null);
+        setCaptchaCode('');
+        setErrorMsg('StarLine запросил ввод капчи. Введите символы с картинки.');
+        return;
+      }
+
+      setCaptchaSid(null);
+      setCaptchaImg(null);
       setAuthData({ user_id: res.user_id, token: res.token });
-      setDevices(res.devices);
-      if (res.devices.length > 0) {
+      setDevices(res.devices || []);
+      if (res.devices && res.devices.length > 0) {
         setSelectedDeviceId(res.devices[0].device_id);
       }
       setStep('select');
@@ -283,6 +298,30 @@ export const StarLineModal: React.FC<StarLineModalProps> = ({
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 focus:outline-none"
                 />
               </div>
+
+              {/* CAPTCHA SECTION */}
+              {captchaImg && (
+                <div className="p-3 rounded-xl bg-sky-500/10 border border-sky-500/20 space-y-2 animate-fadeIn">
+                  <label className="block text-xs font-bold text-sky-800 dark:text-sky-200">
+                    Код с картинки (Captcha) *
+                  </label>
+                  <div className="flex items-center space-x-3">
+                    <img
+                      src={captchaImg}
+                      alt="StarLine Captcha"
+                      className="h-10 rounded-lg border border-slate-300 bg-white p-1 shadow-sm"
+                    />
+                    <input
+                      type="text"
+                      required
+                      placeholder="Символы"
+                      value={captchaCode}
+                      onChange={(e) => setCaptchaCode(e.target.value)}
+                      className="flex-1 px-3 py-2 bg-white dark:bg-dark-900 border border-sky-400 rounded-xl text-xs font-bold font-mono tracking-wider text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              )}
 
               {needSms && (
                 <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 space-y-1.5 animate-fadeIn">

@@ -102,6 +102,8 @@ class StarLineService:
         app_id: str = DEFAULT_STARLINE_APP_ID,
         secret: str = DEFAULT_STARLINE_SECRET,
         sms_code: Optional[str] = None,
+        captcha_sid: Optional[str] = None,
+        captcha_code: Optional[str] = None,
     ) -> Dict[str, Any]:
         if app_code and not password:
             async with httpx.AsyncClient(timeout=15.0) as client:
@@ -125,6 +127,9 @@ class StarLineService:
             }
             if sms_code:
                 login_data["code"] = sms_code.strip()
+            if captcha_sid and captcha_code:
+                login_data["captchaSid"] = captcha_sid.strip()
+                login_data["captchaCode"] = captcha_code.strip()
 
             login_res = await client.post(f"{STARLINE_ID_URL}/user/login", data=login_data)
             login_json = _safe_json_parse(login_res, "user/login")
@@ -132,6 +137,16 @@ class StarLineService:
             if login_json.get("state") != 1:
                 desc = login_json.get("desc", {})
                 msg = desc.get("message", "Неверный логин или пароль")
+                if "captcha" in msg.lower() or desc.get("captchaSid"):
+                    return {
+                        "status": "captcha_needed",
+                        "user_id": "",
+                        "token": "",
+                        "captcha_sid": desc.get("captchaSid"),
+                        "captcha_img": desc.get("captchaImg") or f"https://id.starline.ru/apiV3/captcha/{desc.get('captchaSid')}",
+                        "message": "Введите символы с картинки (Captcha)",
+                        "devices": [],
+                    }
                 if "sms" in msg.lower() or "code" in msg.lower() or desc.get("code") == 2:
                     raise ValueError(f"Требуется SMS-код подтверждения: {msg}")
                 if "incorrect" in msg.lower():
