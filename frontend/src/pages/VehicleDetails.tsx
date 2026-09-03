@@ -48,6 +48,7 @@ import {
   Signal,
   Navigation,
   Key,
+  Folder,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -100,8 +101,10 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   onOpenTyreModal,
 }) => {
   const [activeTab, setActiveTab] = useState<
-    'service' | 'repairs' | 'upgrades' | 'fuel' | 'reminders' | 'tyres' | 'analytics' | 'documents'
+    'service' | 'repairs' | 'upgrades' | 'fuel' | 'reminders' | 'tyres' | 'analytics' | 'documents' | 'more'
   >('service');
+  const [moreSubTab, setMoreSubTab] = useState<'tyres' | 'documents' | 'tools'>('tyres');
+  const [serviceFilter, setServiceFilter] = useState<'all' | 'service' | 'repair' | 'upgrade'>('all');
 
   const isOwner = isAuthenticated && vehicle.is_owner !== false;
 
@@ -338,19 +341,14 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
     await loadData();
   };
 
-  // Filter service records safely by tab
+  // Filter service records safely by tab and service filter
   const baseFilteredServiceRecords = useMemo(() => {
     if (!Array.isArray(serviceRecords)) return [];
-    return serviceRecords.filter(
-      (r) =>
-        r && (
-          (activeTab === 'service' && r.record_type === 'service') ||
-          (activeTab === 'repairs' && r.record_type === 'repair') ||
-          (activeTab === 'upgrades' && r.record_type === 'upgrade') ||
-          (!['service', 'repairs', 'upgrades'].includes(activeTab))
-        )
-    );
-  }, [serviceRecords, activeTab]);
+    if (activeTab === 'repairs') return serviceRecords.filter((r) => r && r.record_type === 'repair');
+    if (activeTab === 'upgrades') return serviceRecords.filter((r) => r && r.record_type === 'upgrade');
+    if (serviceFilter === 'all') return serviceRecords;
+    return serviceRecords.filter((r) => r && r.record_type === serviceFilter);
+  }, [serviceRecords, activeTab, serviceFilter]);
 
   const displayedServiceRecords = useMemo(() => {
     if (!recordsSearchQuery || !recordsSearchQuery.trim()) return baseFilteredServiceRecords;
@@ -438,16 +436,11 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   };
 
   const navTabs = [
-    { id: 'service', label: 'ТО', icon: Wrench, count: Array.isArray(serviceRecords) ? serviceRecords.filter(r => r?.record_type === 'service').length : 0 },
-    { id: 'repairs', label: 'Ремонт', icon: AlertTriangle, count: Array.isArray(serviceRecords) ? serviceRecords.filter(r => r?.record_type === 'repair').length : 0 },
-    { id: 'upgrades', label: 'Тюнинг', icon: Sparkles,
-  Satellite,
-  BatteryCharging, count: Array.isArray(serviceRecords) ? serviceRecords.filter(r => r?.record_type === 'upgrade').length : 0 },
+    { id: 'service', label: 'ТО и работы', icon: Wrench, count: Array.isArray(serviceRecords) ? serviceRecords.length : 0 },
     { id: 'fuel', label: 'Топливо', icon: Fuel, count: Array.isArray(fuelLogs) ? fuelLogs.length : 0 },
     { id: 'reminders', label: 'Регламент', icon: CalendarClock, count: Array.isArray(reminders) ? reminders.length : 0 },
-    { id: 'tyres', label: 'Шины', icon: Disc, count: Array.isArray(tyres) ? tyres.length : 0 },
     { id: 'analytics', label: 'Аналитика', icon: BarChart3 },
-    { id: 'documents', label: 'Документы', icon: FileText, count: Array.isArray(documents) ? documents.length : 0 },
+    { id: 'more', label: 'Ещё', icon: Folder, count: (Array.isArray(tyres) ? tyres.length : 0) + (Array.isArray(documents) ? documents.length : 0) },
   ];
 
   return (
@@ -1044,140 +1037,28 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
             </span>
           </div>
         </div>
-
-        {/* Quick Status Widgets Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-          {/* Widget 1: Active Tyres & 1-Click Season Swap */}
-          <div className="bg-slate-50 dark:bg-dark-900/90 border border-slate-200 dark:border-dark-750 rounded-xl p-3.5 flex flex-col justify-between space-y-2.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center flex-shrink-0">
-                  <Disc className="w-4 h-4" />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400">
-                    Установленные шины
-                  </div>
-                  <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
-                    {activeTyre ? (
-                      <span>
-                        {activeTyre.season === 'summer' ? '☀️' : '❄️'} {activeTyre.name}{' '}
-                        {activeTyre.size && <span className="font-mono text-xs text-slate-400 font-normal">({activeTyre.size})</span>}
-                      </span>
-                    ) : (
-                      <span className="text-slate-400 italic">Комплект не выбран</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {isOwner && (
-                <div className="flex items-center space-x-1 flex-shrink-0">
-                  <button
-                    onClick={() => handleSeasonSwap('summer')}
-                    className="px-2 py-1 rounded-lg text-[11px] font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 transition-all"
-                    title="Поставить летний комплект"
-                  >
-                    ☀️ Лето
-                  </button>
-                  <button
-                    onClick={() => handleSeasonSwap('winter')}
-                    className="px-2 py-1 rounded-lg text-[11px] font-bold bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30 transition-all"
-                    title="Поставить зимний комплект"
-                  >
-                    ❄️ Зима
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {activeTyre && (
-              <div className="flex items-center justify-between text-xs pt-1.5 border-t border-slate-200 dark:border-dark-750 font-mono">
-                <span className="text-slate-500 dark:text-slate-400 text-[11px]">
-                  Накат:{' '}
-                  <strong className="text-brand-600 dark:text-brand-400">
-                    {Math.round(activeTyre.current_km).toLocaleString('ru-RU')} км
-                  </strong>
-                </span>
-                <span className="text-slate-500 dark:text-slate-400 text-[11px]">
-                  Остаток:{' '}
-                  <strong className="text-emerald-600 dark:text-emerald-400">
-                    {activeTyre.tread_depth_mm} мм
-                  </strong>
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Widget 2: Active Insurances */}
-          <div className="bg-slate-50 dark:bg-dark-900/90 border border-slate-200 dark:border-dark-750 rounded-xl p-3.5 flex flex-col justify-between space-y-2.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center flex-shrink-0">
-                  <ShieldCheck className="w-4 h-4" />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400">
-                    Страховые полисы ({activeInsurances.length})
-                  </div>
-                  <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
-                    {activeInsurances.length > 0 ? (
-                      activeInsurances.map((d) => d?.title || '').filter(Boolean).join(' • ')
-                    ) : (
-                      <span className="text-slate-400 italic">Нет активных полисов</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {isOwner && (
-                <button
-                  onClick={() => onOpenDocModal()}
-                  className="px-2 py-1 rounded-lg text-[11px] font-bold bg-slate-200 dark:bg-dark-800 hover:bg-brand-500 hover:text-white text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-dark-700 transition-all flex-shrink-0"
-                >
-                  + Полис
-                </button>
-              )}
-            </div>
-
-            {activeInsurances.length > 0 && (
-              <div className="flex flex-wrap items-center gap-2 text-xs pt-1.5 border-t border-slate-200 dark:border-dark-750">
-                {activeInsurances.map((ins) => (
-                  <span key={ins.id} className="text-slate-600 dark:text-slate-400 text-[11px] truncate max-w-[200px]">
-                    <strong>{ins.title}:</strong> до {ins.expiration_date ? new Date(ins.expiration_date).toLocaleDateString('ru-RU') : '—'}{' '}
-                    {ins.days_until_expiration !== null && ins.days_until_expiration !== undefined && (
-                      <span className="text-emerald-500 font-semibold font-mono">
-                        ({ins.days_until_expiration} дн.)
-                      </span>
-                    )}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
       </div>
 
-      {/* Modern Compact Segmented Tabs (Fits on 1 line on desktop, clean 4x2 on mobile) */}
-      <div className="grid grid-cols-4 sm:grid-cols-8 gap-1 p-1 bg-slate-200/70 dark:bg-dark-800 border border-slate-200 dark:border-dark-750 rounded-2xl">
+      {/* Modern 5-Column Segmented Tab Bar (Fits on 1 line on mobile and desktop) */}
+      <div className="grid grid-cols-5 gap-1 p-1 bg-slate-200/70 dark:bg-dark-800 border border-slate-200 dark:border-dark-750 rounded-2xl">
         {navTabs.map((tab) => {
           const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
+          const isActive = activeTab === tab.id || (tab.id === 'more' && ['tyres', 'documents', 'more'].includes(activeTab)) || (tab.id === 'service' && ['service', 'repairs', 'upgrades'].includes(activeTab));
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 py-2 sm:py-2.5 px-1 rounded-xl text-[11px] sm:text-xs font-bold transition-all ${
+              className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 py-2 sm:py-2.5 px-0.5 sm:px-1 rounded-xl text-[10px] sm:text-xs font-bold transition-all ${
                 isActive
                   ? 'bg-brand-500 text-white shadow-md shadow-brand-500/25 scale-[1.02]'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-dark-750/50'
               }`}
             >
-              <Icon className="w-4 h-4 flex-shrink-0" />
+              <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
               <span className="truncate">{tab.label}</span>
               {tab.count !== undefined && tab.count > 0 && (
                 <span
-                  className={`text-[9px] px-1 py-0.1 rounded-full font-mono font-extrabold ${
+                  className={`text-[8.5px] sm:text-[9px] px-1 py-0.1 rounded-full font-mono font-extrabold ${
                     isActive
                       ? 'bg-white/25 text-white'
                       : 'bg-slate-300 dark:bg-dark-700 text-slate-700 dark:text-slate-300'
@@ -1193,24 +1074,58 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
 
       {/* Tab Content */}
       <div className="space-y-4">
-        {/* Service / Repairs / Upgrades Tabs */}
+        {/* Service / Repairs / Upgrades Combined Tab */}
         {['service', 'repairs', 'upgrades'].includes(activeTab) && (
-          <div className="space-y-4">
-            {/* Search and Action Bar */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-              <div className="flex items-center space-x-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  История записей ({displayedServiceRecords.length})
-                </span>
-                {recordsSearchQuery && (
-                  <span className="text-[11px] text-brand-600 dark:text-brand-400 font-semibold">
-                    (найдено по фильтру)
-                  </span>
-                )}
+          <div className="space-y-3.5">
+            {/* Filter Chips + Search and Action Bar */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5">
+              {/* Filter Chips */}
+              <div className="flex items-center space-x-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+                <button
+                  onClick={() => setServiceFilter('all')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                    serviceFilter === 'all'
+                      ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm'
+                      : 'bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  Все ({serviceRecords.length})
+                </button>
+                <button
+                  onClick={() => setServiceFilter('service')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                    serviceFilter === 'service'
+                      ? 'bg-brand-500 text-white shadow-sm'
+                      : 'bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  ТО ({serviceRecords.filter(r => r?.record_type === 'service').length})
+                </button>
+                <button
+                  onClick={() => setServiceFilter('repair')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                    serviceFilter === 'repair'
+                      ? 'bg-rose-500 text-white shadow-sm'
+                      : 'bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  Ремонт ({serviceRecords.filter(r => r?.record_type === 'repair').length})
+                </button>
+                <button
+                  onClick={() => setServiceFilter('upgrade')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                    serviceFilter === 'upgrade'
+                      ? 'bg-amber-500 text-white shadow-sm'
+                      : 'bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  Тюнинг ({serviceRecords.filter(r => r?.record_type === 'upgrade').length})
+                </button>
               </div>
 
+              {/* Search & Add Record */}
               <div className="flex items-center space-x-2">
-                <div className="relative flex-1 sm:w-64">
+                <div className="relative flex-1 md:w-60">
                   <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
                   <input
                     type="text"
@@ -1230,11 +1145,12 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 </div>
                 {isOwner && (
                   <button
-                    onClick={() => onOpenServiceModal(activeTab as any)}
+                    onClick={() => onOpenServiceModal(serviceFilter === 'all' ? 'service' : serviceFilter as any)}
                     className="flex items-center space-x-1.5 text-xs font-bold text-brand-500 hover:text-brand-600 bg-brand-500/10 border border-brand-500/20 px-3 py-1.5 rounded-lg transition-colors flex-shrink-0"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    <span>Добавить запись</span>
+                    <span className="hidden sm:inline">Добавить запись</span>
+                    <span className="sm:hidden">Запись</span>
                   </button>
                 )}
               </div>
@@ -1633,209 +1549,6 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
           </div>
         )}
 
-        {/* Tyres & Wheels Tab */}
-        {activeTab === 'tyres' && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                Комплекты шин и дисков ({tyres.length})
-              </span>
-              {isOwner && (
-                <button
-                  onClick={() => onOpenTyreModal()}
-                  className="flex items-center space-x-1.5 text-xs font-bold text-brand-500 hover:text-brand-600 bg-brand-500/10 border border-brand-500/20 px-3 py-1.5 rounded-lg transition-colors"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Добавить комплект</span>
-                </button>
-              )}
-            </div>
-
-            {/* Quick Season Swap Banner */}
-            {isOwner && (
-              <div className="bg-white dark:bg-dark-850 border border-blue-500/30 rounded-2xl p-3.5 sm:p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                <div className="flex items-center space-x-2">
-                  <RefreshCw className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                  <span className="text-xs font-bold text-slate-900 dark:text-white">
-                    Сезонная переобувка в 1 клик:
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 sm:flex items-center gap-2">
-                  <button
-                    onClick={() => handleSeasonSwap('summer')}
-                    className="px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex items-center justify-center space-x-1 shadow-sm transition"
-                  >
-                    <span>☀️ Летний комплект</span>
-                  </button>
-                  <button
-                    onClick={() => handleSeasonSwap('winter')}
-                    className="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center space-x-1 shadow-sm transition"
-                  >
-                    <span>❄️ Зимний комплект</span>
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {tyres.length === 0 ? (
-              <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-8 sm:p-10 text-center space-y-3">
-                <Disc className="w-10 h-10 text-slate-400 dark:text-slate-600 mx-auto" />
-                <div className="text-sm font-bold text-slate-900 dark:text-white">Комплекты шин не добавлены</div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
-                  Ведите учет летнего и зимнего комплектов резины, глубины остатка протектора в мм и пробега.
-                </p>
-                {isOwner && (
-                  <button
-                    onClick={() => onOpenTyreModal()}
-                    className="inline-flex items-center space-x-1.5 bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-xl text-xs font-bold"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Добавить комплект</span>
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-                {tyres.map((t) => (
-                  <div
-                    key={t.id}
-                    className={`bg-white dark:bg-dark-850 border rounded-2xl p-4 sm:p-5 shadow-sm space-y-3.5 transition-all ${
-                      t.is_active ? 'border-brand-500/60 bg-brand-500/5 dark:bg-dark-850/90' : 'border-slate-200 dark:border-dark-750'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <h4 className="text-sm font-bold text-slate-900 dark:text-white">{t.name}</h4>
-                          <span
-                            className={`text-[10px] font-bold px-2 py-0.5 rounded ${
-                              t.season === 'summer'
-                                ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
-                                : 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20'
-                            }`}
-                          >
-                            {t.season === 'summer' ? '☀️ Летние' : '❄️ Зимние'}
-                          </span>
-                          {t.is_active && (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-                              На авто
-                            </span>
-                          )}
-                        </div>
-                        {t.brand_model && (
-                          <div className="text-xs text-slate-700 dark:text-slate-300 font-semibold mt-1 truncate">
-                            {t.brand_model} {t.size && <span className="font-mono text-slate-400">({t.size})</span>}
-                          </div>
-                        )}
-                        {(t.purchase_date || t.dot_code) && (
-                          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 flex flex-wrap items-center gap-1.5 font-medium">
-                            {t.purchase_date && (
-                              <span>📅 Куплены: {new Date(t.purchase_date).toLocaleDateString('ru-RU')}</span>
-                            )}
-                            {t.dot_code && (
-                              <span className="font-mono text-slate-400">• DOT {t.dot_code}</span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      {isOwner && (
-                        <div className="flex items-center space-x-1 flex-shrink-0">
-                          <button
-                            onClick={() => onOpenTyreModal(t)}
-                            className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-dark-750"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteTyre(t.id)}
-                            className="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg hover:bg-rose-500/10"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Wheel Rims Info (if set) */}
-                    {t.has_separate_rims && (
-                      <div className="bg-slate-100 dark:bg-dark-900/60 p-2 sm:p-2.5 rounded-xl border border-slate-200 dark:border-dark-750 text-xs space-y-1">
-                        <div className="flex items-center justify-between text-slate-800 dark:text-slate-200 font-semibold text-[11px]">
-                          <span className="flex items-center gap-1 truncate mr-2">
-                            <CircleDot className="w-3 h-3 text-amber-500 flex-shrink-0" />
-                            Диски: {t.rims_brand_model || 'Отдельные диски'}
-                            {t.rims_size && <span className="font-mono text-slate-500 font-normal"> ({t.rims_size})</span>}
-                          </span>
-                          {t.rims_price > 0 && (
-                            <span className="font-mono font-bold text-amber-600 dark:text-amber-400 flex-shrink-0">
-                              {t.rims_price.toLocaleString('ru-RU')} {vehicle.currency || '₽'}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2 text-[10.5px] text-slate-500 dark:text-slate-400">
-                          {t.rims_purchase_date && (
-                            <span>📅 Покупка: {new Date(t.rims_purchase_date).toLocaleDateString('ru-RU')}</span>
-                          )}
-                          {t.tpms_sensors && (
-                            <span className="text-cyan-600 dark:text-cyan-400 font-medium">📡 {t.tpms_sensors}</span>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-2 gap-2 bg-slate-50 dark:bg-dark-900/80 p-2.5 sm:p-3 rounded-xl border border-slate-200 dark:border-dark-750 text-xs">
-                      <div>
-                        <span className="text-[10px] text-slate-500 uppercase font-bold block">
-                          Пробег
-                        </span>
-                        <span className="font-mono font-bold text-slate-900 dark:text-white text-sm">
-                          {Math.round(t.current_km).toLocaleString('ru-RU')} км
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-slate-500 uppercase font-bold block">
-                          Протектор
-                        </span>
-                        <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm">
-                          {t.tread_depth_mm} мм
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-2.5 border-t border-slate-200 dark:border-dark-750/70 text-xs">
-                      <div className="text-slate-500 dark:text-slate-400 truncate mr-2">
-                        {t.storage_location && <span>📍 {t.storage_location}</span>}
-                        {(t.total_price > 0 || (t.rims_price && t.rims_price > 0)) && (
-                          <span className="block font-mono text-brand-600 dark:text-brand-400 font-bold text-[11px]" title={`Шины: ${t.total_price || 0} ${vehicle.currency || '₽'}${t.rims_price ? ` + Диски: ${t.rims_price} ${vehicle.currency || '₽'}` : ''}`}>
-                            Итого: {(t.total_price + (t.rims_price || 0)).toLocaleString('ru-RU')} {vehicle.currency || '₽'}
-                          </span>
-                        )}
-                      </div>
-
-                      {!t.is_active ? (
-                        isOwner ? (
-                          <button
-                            onClick={() => handleActivateTyre(t.id)}
-                            className="flex items-center space-x-1 bg-slate-100 dark:bg-dark-800 hover:bg-brand-500 hover:text-white text-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-lg text-xs font-semibold border border-slate-200 dark:border-dark-700 transition-all flex-shrink-0"
-                          >
-                            <Disc className="w-3.5 h-3.5" />
-                            <span>На авто</span>
-                          </button>
-                        ) : null
-                      ) : (
-                        <span className="text-emerald-600 dark:text-emerald-400 font-bold text-[11px] flex items-center gap-1 flex-shrink-0">
-                          <CheckCircle className="w-3.5 h-3.5" />
-                          Активен
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
         {/* Fuel Logs Tab */}
         {activeTab === 'fuel' && (
           <div className="space-y-4">
@@ -2120,126 +1833,399 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
           </div>
         )}
 
-        {/* Documents & Insurance Tab */}
-        {activeTab === 'documents' && (
+        {/* Unified "More / Ещё" Tab (Tyres, Documents/Insurance, Tools) */}
+        {['more', 'tyres', 'documents'].includes(activeTab) && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                Документы, страховки и сроки ({documents.length})
-              </span>
-              {isOwner && (
-                <button
-                  onClick={() => onOpenDocModal()}
-                  className="flex items-center space-x-1.5 text-xs font-bold text-brand-500 hover:text-brand-600 bg-brand-500/10 border border-brand-500/20 px-3 py-1.5 rounded-lg transition-colors"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Добавить документ</span>
-                </button>
-              )}
+            {/* Sub-tab Navigation */}
+            <div className="flex items-center space-x-1.5 p-1 bg-slate-200/70 dark:bg-dark-800 rounded-xl border border-slate-200 dark:border-dark-750 max-w-full overflow-x-auto scrollbar-none">
+              <button
+                onClick={() => { setActiveTab('more'); setMoreSubTab('tyres'); }}
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                  (activeTab === 'tyres' || (activeTab === 'more' && moreSubTab === 'tyres'))
+                    ? 'bg-brand-500 text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Disc className="w-3.5 h-3.5" />
+                <span>Шины и диски</span>
+                {tyres.length > 0 && <span className="text-[10px] opacity-80">({tyres.length})</span>}
+              </button>
+
+              <button
+                onClick={() => { setActiveTab('more'); setMoreSubTab('documents'); }}
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                  (activeTab === 'documents' || (activeTab === 'more' && moreSubTab === 'documents'))
+                    ? 'bg-brand-500 text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>Документы и полисы</span>
+                {documents.length > 0 && <span className="text-[10px] opacity-80">({documents.length})</span>}
+              </button>
+
+              <button
+                onClick={() => { setActiveTab('more'); setMoreSubTab('tools'); }}
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                  activeTab === 'more' && moreSubTab === 'tools'
+                    ? 'bg-brand-500 text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <QrCode className="w-3.5 h-3.5" />
+                <span>Бирка ТО и QR-книжка</span>
+              </button>
             </div>
 
-            {documents.length === 0 ? (
-              <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-8 sm:p-10 text-center space-y-3">
-                <FileText className="w-10 h-10 text-slate-400 dark:text-slate-600 mx-auto" />
-                <div className="text-sm font-bold text-slate-900 dark:text-white">Документы не добавлены</div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
-                  Сохраняйте полисы ОСАГО/КАСКО, диагностические карты техосмотра и важные заметки с напоминанием о сроках окончания.
-                </p>
+            {/* Sub-tab 1: Tyres */}
+            {(activeTab === 'tyres' || (activeTab === 'more' && moreSubTab === 'tyres')) && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    Комплекты шин и дисков ({tyres.length})
+                  </span>
+                  {isOwner && (
+                    <button
+                      onClick={() => onOpenTyreModal()}
+                      className="flex items-center space-x-1.5 text-xs font-bold text-brand-500 hover:text-brand-600 bg-brand-500/10 border border-brand-500/20 px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Добавить комплект</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Quick Season Swap Banner */}
                 {isOwner && (
-                  <button
-                    onClick={() => onOpenDocModal()}
-                    className="inline-flex items-center space-x-1.5 bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-xl text-xs font-bold"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Добавить документ</span>
-                  </button>
+                  <div className="bg-white dark:bg-dark-850 border border-blue-500/30 rounded-2xl p-3.5 sm:p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                    <div className="flex items-center space-x-2">
+                      <RefreshCw className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                      <span className="text-xs font-bold text-slate-900 dark:text-white">
+                        Сезонная переобувка в 1 клик:
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:flex items-center gap-2">
+                      <button
+                        onClick={() => handleSeasonSwap('summer')}
+                        className="px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex items-center justify-center space-x-1 shadow-sm transition"
+                      >
+                        <span>☀️ Летний комплект</span>
+                      </button>
+                      <button
+                        onClick={() => handleSeasonSwap('winter')}
+                        className="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center space-x-1 shadow-sm transition"
+                      >
+                        <span>❄️ Зимний комплект</span>
+                      </button>
+                    </div>
+                  </div>
                 )}
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-                {documents.map((doc) => (
-                  <div
-                    key={doc.id}
-                    className={`bg-white dark:bg-dark-850 border rounded-2xl p-4 sm:p-5 shadow-sm space-y-3 ${
-                      doc.is_expired
-                        ? 'border-rose-500/50'
-                        : doc.days_until_expiration && doc.days_until_expiration <= 30
-                        ? 'border-amber-500/50'
-                        : 'border-slate-200 dark:border-dark-750'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <h4 className="text-sm font-bold text-slate-900 dark:text-white">{doc.title}</h4>
-                          {doc.company && (
-                            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-dark-800 text-brand-600 dark:text-brand-400 border border-slate-200 dark:border-brand-500/20">
-                              {doc.company}
+
+                {tyres.length === 0 ? (
+                  <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-8 sm:p-10 text-center space-y-3">
+                    <Disc className="w-10 h-10 text-slate-400 dark:text-slate-600 mx-auto" />
+                    <div className="text-sm font-bold text-slate-900 dark:text-white">Комплекты шин не добавлены</div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+                      Ведите учет летнего и зимнего комплектов резины, глубины остатка протектора в мм и пробега.
+                    </p>
+                    {isOwner && (
+                      <button
+                        onClick={() => onOpenTyreModal()}
+                        className="inline-flex items-center space-x-1.5 bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-xl text-xs font-bold"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>Добавить комплект</span>
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                    {tyres.map((t) => (
+                      <div
+                        key={t.id}
+                        className={`bg-white dark:bg-dark-850 border rounded-2xl p-4 sm:p-5 shadow-sm space-y-3.5 transition-all ${
+                          t.is_active ? 'border-brand-500/60 bg-brand-500/5 dark:bg-dark-850/90' : 'border-slate-200 dark:border-dark-750'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <h4 className="text-sm font-bold text-slate-900 dark:text-white">{t.name}</h4>
+                              <span
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                                  t.season === 'summer'
+                                    ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                                    : 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20'
+                                }`}
+                              >
+                                {t.season === 'summer' ? '☀️ Летние' : '❄️ Зимние'}
+                              </span>
+                              {t.is_active && (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                                  На авто
+                                </span>
+                              )}
+                            </div>
+                            {t.brand_model && (
+                              <div className="text-xs text-slate-700 dark:text-slate-300 font-semibold mt-1 truncate">
+                                {t.brand_model} {t.size && <span className="font-mono text-slate-400">({t.size})</span>}
+                              </div>
+                            )}
+                            {(t.purchase_date || t.dot_code) && (
+                              <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 flex flex-wrap items-center gap-1.5 font-medium">
+                                {t.purchase_date && (
+                                  <span>📅 Куплены: {new Date(t.purchase_date).toLocaleDateString('ru-RU')}</span>
+                                )}
+                                {t.dot_code && (
+                                  <span className="font-mono text-slate-400">• DOT {t.dot_code}</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+
+                          {isOwner && (
+                            <div className="flex items-center space-x-1 flex-shrink-0">
+                              <button
+                                onClick={() => onOpenTyreModal(t)}
+                                className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-dark-750"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteTyre(t.id)}
+                                className="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg hover:bg-rose-500/10"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Wheel Rims Info (if set) */}
+                        {t.has_separate_rims && (
+                          <div className="bg-slate-100 dark:bg-dark-900/60 p-2 sm:p-2.5 rounded-xl border border-slate-200 dark:border-dark-750 text-xs space-y-1">
+                            <div className="flex items-center justify-between text-slate-800 dark:text-slate-200 font-semibold text-[11px]">
+                              <span className="flex items-center gap-1 truncate mr-2">
+                                <CircleDot className="w-3 h-3 text-amber-500 flex-shrink-0" />
+                                Диски: {t.rims_brand_model || 'Отдельные диски'}
+                                {t.rims_size && <span className="font-mono text-slate-500 font-normal"> ({t.rims_size})</span>}
+                              </span>
+                              {t.rims_price > 0 && (
+                                <span className="font-mono font-bold text-amber-600 dark:text-amber-400 flex-shrink-0">
+                                  {t.rims_price.toLocaleString('ru-RU')} {vehicle.currency || '₽'}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2 text-[10.5px] text-slate-500 dark:text-slate-400">
+                              {t.rims_purchase_date && (
+                                <span>📅 Покупка: {new Date(t.rims_purchase_date).toLocaleDateString('ru-RU')}</span>
+                              )}
+                              {t.tpms_sensors && (
+                                <span className="text-cyan-600 dark:text-cyan-400 font-medium">📡 {t.tpms_sensors}</span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-2 gap-2 bg-slate-50 dark:bg-dark-900/80 p-2.5 sm:p-3 rounded-xl border border-slate-200 dark:border-dark-750 text-xs">
+                          <div>
+                            <span className="text-[10px] text-slate-500 uppercase font-bold block">
+                              Пробег
+                            </span>
+                            <span className="font-mono font-bold text-slate-900 dark:text-white text-sm">
+                              {Math.round(t.current_km).toLocaleString('ru-RU')} км
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-slate-500 uppercase font-bold block">
+                              Протектор
+                            </span>
+                            <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm">
+                              {t.tread_depth_mm} мм
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-2.5 border-t border-slate-200 dark:border-dark-750/70 text-xs">
+                          <div className="text-slate-500 dark:text-slate-400 truncate mr-2">
+                            {t.storage_location && <span>📍 {t.storage_location}</span>}
+                            {(t.total_price > 0 || (t.rims_price && t.rims_price > 0)) && (
+                              <span className="block font-mono text-brand-600 dark:text-brand-400 font-bold text-[11px]" title={`Шины: ${t.total_price || 0} ${vehicle.currency || '₽'}${t.rims_price ? ` + Диски: ${t.rims_price} ${vehicle.currency || '₽'}` : ''}`}>
+                                Итого: {(t.total_price + (t.rims_price || 0)).toLocaleString('ru-RU')} {vehicle.currency || '₽'}
+                              </span>
+                            )}
+                          </div>
+
+                          {!t.is_active ? (
+                            isOwner ? (
+                              <button
+                                onClick={() => handleActivateTyre(t.id)}
+                                className="flex items-center space-x-1 bg-slate-100 dark:bg-dark-800 hover:bg-brand-500 hover:text-white text-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-lg text-xs font-semibold border border-slate-200 dark:border-dark-700 transition-all flex-shrink-0"
+                              >
+                                <Disc className="w-3.5 h-3.5" />
+                                <span>На авто</span>
+                              </button>
+                            ) : null
+                          ) : (
+                            <span className="text-emerald-600 dark:text-emerald-400 font-bold text-[11px] flex items-center gap-1 flex-shrink-0">
+                              <CheckCircle className="w-3.5 h-3.5" />
+                              Активен
                             </span>
                           )}
                         </div>
-                        {doc.document_number && (
-                          <span className="text-xs text-slate-500 dark:text-slate-400 font-mono block mt-0.5">
-                            № {doc.document_number}
-                          </span>
-                        )}
                       </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
-                      {isOwner && (
-                        <div className="flex items-center space-x-1 flex-shrink-0">
-                          <button
-                            onClick={() => onOpenDocModal(doc)}
-                            className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-dark-750"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteDoc(doc.id)}
-                            className="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg hover:bg-rose-500/10"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
+            {/* Sub-tab 2: Documents */}
+            {(activeTab === 'documents' || (activeTab === 'more' && moreSubTab === 'documents')) && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    Документы, страховки и сроки ({documents.length})
+                  </span>
+                  {isOwner && (
+                    <button
+                      onClick={() => onOpenDocModal()}
+                      className="flex items-center space-x-1.5 text-xs font-bold text-brand-500 hover:text-brand-600 bg-brand-500/10 border border-brand-500/20 px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Добавить документ</span>
+                    </button>
+                  )}
+                </div>
 
-                    {doc.expiration_date && (
-                      <div className="flex items-center justify-between bg-slate-50 dark:bg-dark-900/80 p-2.5 sm:p-3 rounded-xl border border-slate-200 dark:border-dark-750">
-                        <span className="text-xs text-slate-600 dark:text-slate-400">
-                          Действует до: {new Date(doc.expiration_date).toLocaleDateString('ru-RU')}
-                        </span>
-                        {doc.is_expired ? (
-                          <span className="text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20">
-                            Истёк!
-                          </span>
-                        ) : (
-                          <span
-                            className={`text-xs font-bold px-2 py-0.5 rounded ${
-                              doc.days_until_expiration && doc.days_until_expiration <= 30
-                                ? 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20'
-                                : 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20'
-                            }`}
-                          >
-                            Осталось {doc.days_until_expiration} дн.
-                          </span>
-                        )}
-                      </div>
+                {documents.length === 0 ? (
+                  <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-8 sm:p-10 text-center space-y-3">
+                    <FileText className="w-10 h-10 text-slate-400 dark:text-slate-600 mx-auto" />
+                    <div className="text-sm font-bold text-slate-900 dark:text-white">Документы не добавлены</div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+                      Сохраняйте полисы ОСАГО/КАСКО, диагностические карты техосмотра и важные заметки с напоминанием о сроках окончания.
+                    </p>
+                    {isOwner && (
+                      <button
+                        onClick={() => onOpenDocModal()}
+                        className="inline-flex items-center space-x-1.5 bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-xl text-xs font-bold"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>Добавить документ</span>
+                      </button>
                     )}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                    {documents.map((doc) => (
+                      <div
+                        key={doc.id}
+                        className={`bg-white dark:bg-dark-850 border rounded-2xl p-4 sm:p-5 shadow-sm space-y-3 ${
+                          doc.is_expired
+                            ? 'border-rose-500/50'
+                            : doc.days_until_expiration && doc.days_until_expiration <= 30
+                            ? 'border-amber-500/50'
+                            : 'border-slate-200 dark:border-dark-750'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <h4 className="text-sm font-bold text-slate-900 dark:text-white">{doc.title}</h4>
+                              {doc.company && (
+                                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-dark-800 text-brand-600 dark:text-brand-400 border border-slate-200 dark:border-brand-500/20">
+                                  {doc.company}
+                                </span>
+                              )}
+                            </div>
+                            {doc.document_number && (
+                              <span className="text-xs text-slate-500 dark:text-slate-400 font-mono block mt-0.5">
+                                № {doc.document_number}
+                              </span>
+                            )}
+                          </div>
 
-                    <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-200 dark:border-dark-750/60">
-                      {doc.price > 0 && (
-                        <span className="font-mono text-brand-600 dark:text-brand-400 font-bold">
-                          {doc.price.toLocaleString('ru-RU')} {vehicle.currency || '₽'}
-                        </span>
-                      )}
-                      {doc.notes && (
-                        <span className="text-slate-500 dark:text-slate-400 italic text-[11px] truncate max-w-[180px]">
-                          {doc.notes}
-                        </span>
-                      )}
+                          {isOwner && (
+                            <div className="flex items-center space-x-1 flex-shrink-0">
+                              <button
+                                onClick={() => onOpenDocModal(doc)}
+                                className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-dark-750"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteDoc(doc.id)}
+                                className="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg hover:bg-rose-500/10"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {doc.expiration_date && (
+                          <div className="flex items-center justify-between bg-slate-50 dark:bg-dark-900/80 p-2.5 sm:p-3 rounded-xl border border-slate-200 dark:border-dark-750">
+                            <span className="text-xs text-slate-600 dark:text-slate-400">
+                              Действует до: {new Date(doc.expiration_date).toLocaleDateString('ru-RU')}
+                            </span>
+                            {doc.is_expired ? (
+                              <span className="text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20">
+                                Истёк!
+                              </span>
+                            ) : (
+                              <span
+                                className={`text-xs font-bold px-2 py-0.5 rounded ${
+                                  doc.days_until_expiration && doc.days_until_expiration <= 30
+                                    ? 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20'
+                                    : 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20'
+                                }`}
+                              >
+                                Осталось {doc.days_until_expiration} дн.
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-200 dark:border-dark-750/60">
+                          {doc.price > 0 && (
+                            <span className="font-mono text-brand-600 dark:text-brand-400 font-bold">
+                              {doc.price.toLocaleString('ru-RU')} {vehicle.currency || '₽'}
+                            </span>
+                          )}
+                          {doc.notes && (
+                            <span className="text-slate-500 dark:text-slate-400 italic text-[11px] truncate max-w-[180px]">
+                              {doc.notes}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Sub-tab 3: Tools */}
+            {activeTab === 'more' && moreSubTab === 'tools' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-5 shadow-sm space-y-3">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 rounded-xl bg-brand-500/10 text-brand-500 flex items-center justify-center flex-shrink-0">
+                      <QrCode className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white">QR-код и Бирка ТО под капот</h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Печать сервисной наклейки о замене масла и быстрый доступ по QR-коду.</p>
                     </div>
                   </div>
-                ))}
+                  <button
+                    onClick={() => setIsQrModalOpen(true)}
+                    className="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-2 transition shadow-md shadow-brand-500/20"
+                  >
+                    <Printer className="w-4 h-4" />
+                    <span>Открыть генератор бирки и QR-кода</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>
