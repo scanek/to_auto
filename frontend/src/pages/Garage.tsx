@@ -17,6 +17,7 @@ import {
   EyeOff,
   RotateCcw,
   Sparkles,
+  Fuel,
 } from 'lucide-react';
 import { Vehicle } from '../types';
 
@@ -180,22 +181,13 @@ export const Garage: React.FC<GarageProps> = ({
             </p>
           </div>
           {isAuthenticated && (
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={onOpenImportModal}
-                className="flex items-center space-x-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm"
-              >
-                <UploadCloud className="w-4 h-4" />
-                <span>Импорт бэкапа</span>
-              </button>
-              <button
-                onClick={onAddVehicle}
-                className="flex items-center space-x-1.5 bg-brand-500 hover:bg-brand-600 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-md shadow-brand-500/20 active:scale-95"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Добавить авто</span>
-              </button>
-            </div>
+            <button
+              onClick={onAddVehicle}
+              className="flex items-center space-x-1.5 bg-brand-500 hover:bg-brand-600 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-md shadow-brand-500/20 active:scale-95"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Добавить авто</span>
+            </button>
           )}
         </div>
 
@@ -415,24 +407,45 @@ export const Garage: React.FC<GarageProps> = ({
                         )}
                       </div>
 
-                      {/* Clean Metric Row */}
-                      <div className="flex items-center justify-between pt-3 mt-3 border-t border-slate-100 dark:border-dark-750/80 text-xs">
+                      {/* Clean Metric Row (Пробег, Топливо, Расходы) */}
+                      <div className="grid grid-cols-3 gap-1.5 sm:gap-2 pt-3 mt-3 border-t border-slate-100 dark:border-dark-750/80 text-xs">
                         <div>
-                          <span className="text-[10px] text-slate-400 uppercase font-bold block">Пробег</span>
-                          <span className="font-mono font-bold text-slate-900 dark:text-white text-sm">
-                            {Math.round(v.current_odometer).toLocaleString('ru-RU')} {v.distance_unit || 'км'}
+                          <span className="text-[10px] text-slate-400 uppercase font-bold block truncate">Пробег</span>
+                          <span className="font-mono font-bold text-slate-900 dark:text-white text-xs sm:text-sm block truncate">
+                            {Math.round(v.current_odometer).toLocaleString('ru-RU')}{' '}
+                            <span className="text-[10px] text-slate-500 font-sans">{v.distance_unit || 'км'}</span>
                           </span>
                           {v.current_engine_hours > 0 && (
-                            <span className="text-[11px] text-cyan-600 dark:text-cyan-400 font-mono block">
+                            <span className="text-[10.5px] text-cyan-600 dark:text-cyan-400 font-mono block truncate">
                               {Math.round(v.current_engine_hours)} м/ч
                             </span>
                           )}
                         </div>
 
+                        <div className="text-center">
+                          <span className="text-[10px] text-slate-400 uppercase font-bold block truncate">Топливо</span>
+                          {v.starline_fuel_percent !== null && v.starline_fuel_percent !== undefined ? (
+                            <>
+                              <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-xs sm:text-sm flex items-center justify-center space-x-0.5">
+                                <Fuel className="w-3 h-3 flex-shrink-0" />
+                                <span>{Math.round(v.starline_fuel_percent)}%</span>
+                              </span>
+                              {v.fuel_tank_capacity && (
+                                <span className="text-[10.5px] text-slate-400 font-mono block truncate">
+                                  ~{Math.round((v.starline_fuel_percent / 100) * v.fuel_tank_capacity)} л
+                                </span>
+                              )}
+                            </>
+                          ) : (
+                            <span className="font-mono text-slate-400 text-xs sm:text-sm block mt-0.5">—</span>
+                          )}
+                        </div>
+
                         <div className="text-right">
-                          <span className="text-[10px] text-slate-400 uppercase font-bold block">Расходы</span>
-                          <span className="font-mono font-bold text-brand-600 dark:text-brand-400 text-sm">
-                            {Math.round(v.total_cost || 0).toLocaleString('ru-RU')} {v.currency || '₽'}
+                          <span className="text-[10px] text-slate-400 uppercase font-bold block truncate">Расходы</span>
+                          <span className="font-mono font-bold text-brand-600 dark:text-brand-400 text-xs sm:text-sm block truncate">
+                            {Math.round(v.total_cost || 0).toLocaleString('ru-RU')}{' '}
+                            <span className="text-[10px] text-slate-500 font-sans">{v.currency || '₽'}</span>
                           </span>
                         </div>
                       </div>
