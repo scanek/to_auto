@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Vehicle, ServiceRecord, FuelLog, MaintenancePlan, DocumentNote, TyreSet, User } from './types';
+import { Vehicle, ServiceRecord, FuelLog, MaintenancePlan, DocumentNote, TyreSet, User, SystemAnnouncement } from './types';
 import { api, removeAuthToken } from './services/api';
 import { offlineStorage } from './services/offlineStorage';
 import { notificationService } from './services/notificationService';
@@ -17,7 +17,7 @@ import { InstallAppModal } from './components/InstallAppModal';
 import { AuthModal } from './components/AuthModal';
 import { NotificationSettingsModal } from './components/NotificationSettingsModal';
 import { SettingsModal } from './components/SettingsModal';
-import { Github, ZapOff, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { Github, ZapOff, RefreshCw, CheckCircle2, AlertTriangle, ShieldAlert, Info, X } from 'lucide-react';
 
 export function App() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -35,6 +35,27 @@ export function App() {
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
   const [pendingSyncCount, setPendingSyncCount] = useState<number>(0);
   const [syncToast, setSyncToast] = useState<{ message: string; type: 'success' | 'info' | 'warning' } | null>(null);
+
+  // System Announcement Banner state
+  const [announcement, setAnnouncement] = useState<SystemAnnouncement | null>(null);
+  const [isAnnouncementDismissed, setIsAnnouncementDismissed] = useState<boolean>(false);
+
+  const loadAnnouncement = useCallback(async () => {
+    try {
+      const data = await api.getSystemAnnouncement();
+      setAnnouncement(data);
+      if (data && data.is_active && data.text) {
+        const lastDismissed = sessionStorage.getItem('dismissed_announcement_time');
+        if (lastDismissed && lastDismissed === (data.updated_at || 'dismissed')) {
+          setIsAnnouncementDismissed(true);
+        } else {
+          setIsAnnouncementDismissed(false);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load system announcement', err);
+    }
+  }, []);
 
   const loadVehicles = async () => {
     try {
@@ -60,7 +81,7 @@ export function App() {
         const user = await api.getMe();
         setCurrentUser(user);
         setIsAuthenticated(true);
-        await loadVehicles();
+        await Promise.all([loadVehicles(), loadAnnouncement()]);
         return;
       } catch (err) {
         console.warn('Invalid or expired token', err);
@@ -70,13 +91,22 @@ export function App() {
 
     setCurrentUser(null);
     setIsAuthenticated(false);
-    await loadVehicles();
+    await Promise.all([loadVehicles(), loadAnnouncement()]);
     setLoading(false);
-  }, []);
+  }, [loadAnnouncement]);
 
   useEffect(() => {
     checkAuthStatus();
   }, [checkAuthStatus]);
+
+  // Listen to custom announcement update event from Admin modal
+  useEffect(() => {
+    const handleUpdate = () => {
+      loadAnnouncement();
+    };
+    window.addEventListener('system_announcement_updated', handleUpdate);
+    return () => window.removeEventListener('system_announcement_updated', handleUpdate);
+  }, [loadAnnouncement]);
 
   // Subscribe to Offline Storage Engine events
   useEffect(() => {
@@ -447,6 +477,66 @@ export function App() {
       )}
 
       <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 flex-1 w-full">
+        {/* System Announcement Banner (e.g. Server Maintenance, Updates) */}
+        {announcement && announcement.is_active && announcement.text && !isAnnouncementDismissed && (
+          <div
+            className={`mb-4 sm:mb-5 p-3.5 sm:p-4 rounded-2xl border flex items-start justify-between gap-3 shadow-sm animate-fadeIn ${
+              announcement.type === 'danger'
+                ? 'bg-rose-500/10 border-rose-500/30 text-rose-950 dark:text-rose-200'
+                : announcement.type === 'warning'
+                ? 'bg-amber-500/10 border-amber-500/30 text-amber-950 dark:text-amber-200'
+                : announcement.type === 'success'
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-950 dark:text-emerald-200'
+                : 'bg-sky-500/10 border-sky-500/30 text-sky-950 dark:text-sky-200'
+            }`}
+          >
+            <div className="flex items-start space-x-3 min-w-0">
+              <div
+                className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                  announcement.type === 'danger'
+                    ? 'bg-rose-500 text-white'
+                    : announcement.type === 'warning'
+                    ? 'bg-amber-500 text-white'
+                    : announcement.type === 'success'
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-sky-500 text-white'
+                }`}
+              >
+                {announcement.type === 'danger' ? (
+                  <ShieldAlert className="w-4 h-4" />
+                ) : announcement.type === 'warning' ? (
+                  <AlertTriangle className="w-4 h-4" />
+                ) : announcement.type === 'success' ? (
+                  <CheckCircle2 className="w-4 h-4" />
+                ) : (
+                  <Info className="w-4 h-4" />
+                )}
+              </div>
+              <div className="min-w-0">
+                {announcement.title && (
+                  <div className="font-extrabold text-xs sm:text-sm tracking-tight mb-0.5">
+                    {announcement.title}
+                  </div>
+                )}
+                <div className="text-xs font-medium leading-relaxed whitespace-pre-line text-slate-800 dark:text-slate-200">
+                  {announcement.text}
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                setIsAnnouncementDismissed(true);
+                sessionStorage.setItem('dismissed_announcement_time', announcement.updated_at || 'dismissed');
+              }}
+              className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition flex-shrink-0"
+              title="Скрыть объявление на время сессии"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
         {loading ? (
           <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-3">
             <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin"></div>

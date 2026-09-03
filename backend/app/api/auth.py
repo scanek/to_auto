@@ -1,6 +1,7 @@
 from fastapi import Request
 from app.core.rate_limiter import limiter, get_client_ip
 import os
+import json
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Header
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,6 +9,7 @@ from sqlalchemy import select, func, or_
 from app.db.session import get_db
 from app.models.user import User, UserRole
 from app.models.vehicle import Vehicle
+from app.models.setting import Setting
 from app.schemas.user import (
     UserCreate,
     UserLogin,
@@ -279,3 +281,78 @@ async def delete_user_by_admin(
     await db.commit()
 
     return {"message": f"Пользователь '{username}' и все его автомобили успешно удалены"}
+
+from pydantic import BaseModel
+
+class SystemAnnouncementPayload(BaseModel):
+    is_active: bool = False
+    title: Optional[str] = "Технические работы"
+    text: Optional[str] = ""
+    type: Optional[str] = "warning"  # 'warning' | 'danger' | 'info' | 'success'
+
+@router.get("/announcement")
+async def get_system_announcement(
+    db: AsyncSession = Depends(get_db),
+):
+    """Public endpoint to get the current system announcement (if active)."""
+    res = await db.execute(select(Setting).where(Setting.key == "system_announcement"))
+    setting = res.scalars().first()
+    if not setting or not setting.value:
+        return {
+            "is_active": False,
+            "title": "Технические работы",
+            "text": "",
+            "type": "warning",
+            "updated_at": None,
+        }
+    try:
+        data = json.loads(setting.value)
+        return data
+    except Exception:
+        return {
+            "is_active": False,
+            "title": "Технические работы",
+            "text": "",
+            "type": "warning",
+            "updated_at": None,
+        }
+
+@router.put("/announcement")
+async def update_system_announcement(
+    payload: SystemAnnouncementPayload,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Admin only: update system announcement banner on the main page."""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Доступ разрешен только администраторам",
+        )
+
+    res = await db.execute(select(Setting).where(Setting.key == "system_announcement"))
+    setting = res.scalars().first()
+    import datetime
+    now_str = datetime.datetime.utcnow().isoformat() + "Z"
+
+    data = {
+        "is_active": payload.is_active,
+        "title": (payload.title or "Технические работы").strip(),
+        "text": (payload.text or "").strip(),
+        "type": payload.type or "warning",
+        "updated_at": now_str,
+        "updated_by": current_user.username,
+    }
+
+    if not setting:
+        setting = Setting(key="system_announcement", value=json.dumps(data, ensure_ascii=False))
+        db.add(setting)
+    else:
+        setting.value = json.dumps(data, ensure_ascii=False)
+
+    await db.commit()
+    return {
+        "status": "success",
+        "message": "Объявление успешно обновлено",
+        "data": data,
+    }

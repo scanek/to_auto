@@ -263,3 +263,12 @@ export interface VehicleAnalytics {
   monthly_costs: MonthlyCost[];
   fuel_trend: FuelEconomyPoint[];
 }
+
+export interface SystemAnnouncement {
+  is_active: boolean;
+  title?: string;
+  text: string;
+  type: 'warning' | 'danger' | 'info' | 'success';
+  updated_at?: string;
+  updated_by?: string;
+}

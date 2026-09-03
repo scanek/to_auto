@@ -710,4 +710,21 @@ export const api = {
         body: JSON.stringify(data),
       }
     ),
+
+  // -------------------------------------------------------------
+  // System Announcements (Admin)
+  // -------------------------------------------------------------
+  getSystemAnnouncement: () =>
+    request<import('../types').SystemAnnouncement>(`${API_BASE}/auth/announcement`, undefined, {
+      fallbackMock: () => ({ is_active: false, title: 'Технические работы', text: '', type: 'warning' }),
+    }),
+
+  updateSystemAnnouncement: (data: Partial<import('../types').SystemAnnouncement>) =>
+    request<{ status: string; message: string; data: import('../types').SystemAnnouncement }>(
+      `${API_BASE}/auth/announcement`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }
+    ),
 };

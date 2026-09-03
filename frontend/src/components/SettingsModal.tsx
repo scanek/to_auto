@@ -17,11 +17,15 @@ import {
   Trash2,
   AlertTriangle,
   KeyRound,
+  ShieldAlert,
   Users,
   Car,
   Lock,
   Globe,
   RefreshCw,
+  Megaphone,
+  Info,
+  CheckCircle2,
 } from 'lucide-react';
 import { User, AdminUser, Vehicle } from '../types';
 import { api, removeAuthToken } from '../services/api';
@@ -73,8 +77,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [adminVehicles, setAdminVehicles] = useState<Vehicle[]>([]);
   const [loadingAdminData, setLoadingAdminData] = useState(false);
-  const [adminSubTab, setAdminSubTab] = useState<'users' | 'vehicles'>('users');
+  const [adminSubTab, setAdminSubTab] = useState<'users' | 'vehicles' | 'announcement'>('users');
   const [adminMsg, setAdminMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  // Admin announcement state
+  const [announcementActive, setAnnouncementActive] = useState(false);
+  const [announcementTitle, setAnnouncementTitle] = useState('Технические работы');
+  const [announcementText, setAnnouncementText] = useState('');
+  const [announcementType, setAnnouncementType] = useState<'warning' | 'danger' | 'info' | 'success'>('warning');
+  const [isSavingAnnouncement, setIsSavingAnnouncement] = useState(false);
 
   const isAdmin = currentUser?.role === 'admin';
 
@@ -99,8 +110,41 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       } catch (err: any) {
         console.error('Failed to load admin vehicles', err);
       }
+      try {
+        const annData = await api.getSystemAnnouncement();
+        if (annData) {
+          setAnnouncementActive(annData.is_active || false);
+          setAnnouncementTitle(annData.title || 'Технические работы');
+          setAnnouncementText(annData.text || '');
+          setAnnouncementType(annData.type || 'warning');
+        }
+      } catch (err: any) {
+        console.error('Failed to load announcement', err);
+      }
     } finally {
       setLoadingAdminData(false);
+    }
+  };
+
+  const handleSaveAnnouncement = async (activeState?: boolean) => {
+    setIsSavingAnnouncement(true);
+    setAdminMsg(null);
+    const shouldBeActive = activeState !== undefined ? activeState : announcementActive;
+    try {
+      const res = await api.updateSystemAnnouncement({
+        is_active: shouldBeActive,
+        title: announcementTitle,
+        text: announcementText,
+        type: announcementType,
+      });
+      setAnnouncementActive(shouldBeActive);
+      setAdminMsg({ text: res.message || 'Объявление успешно сохранено', type: 'success' });
+      // Notify parent/app to update live banner
+      window.dispatchEvent(new CustomEvent('system_announcement_updated'));
+    } catch (err: any) {
+      setAdminMsg({ text: err.message || 'Ошибка сохранения объявления', type: 'error' });
+    } finally {
+      setIsSavingAnnouncement(false);
     }
   };
 
@@ -608,6 +652,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <Car className="w-3.5 h-3.5 inline mr-1" />
                     Реестр авто ({adminVehicles.length})
                   </button>
+                  <button
+                    onClick={() => setAdminSubTab('announcement')}
+                    className={`px-3 py-1.5 rounded-lg transition ${
+                      adminSubTab === 'announcement'
+                        ? 'bg-white dark:bg-dark-750 text-slate-900 dark:text-white shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                    }`}
+                  >
+                    <Megaphone className="w-3.5 h-3.5 inline mr-1 text-amber-500" />
+                    Объявление {announcementActive && <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block ml-0.5 animate-pulse" />}
+                  </button>
                 </div>
 
                 <button
@@ -756,6 +811,156 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           ))}
                         </tbody>
                       </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Subtab: Announcement Management */}
+              {adminSubTab === 'announcement' && (
+                <div className="space-y-4 bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-750 p-4 sm:p-5 rounded-2xl animate-fadeIn">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-dark-750">
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                        <Megaphone className="w-4 h-4 text-amber-500" />
+                        <span>Баннер объявлений на главной странице</span>
+                      </h4>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        Оповещение о технических работах, важных обновлениях или новостях для всех пользователей.
+                      </p>
+                    </div>
+
+                    <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={announcementActive}
+                        onChange={(e) => setAnnouncementActive(e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-dark-750 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                      <span className="ml-2 text-xs font-bold text-slate-700 dark:text-slate-300 hidden sm:inline">
+                        {announcementActive ? 'Активно' : 'Выключено'}
+                      </span>
+                    </label>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                          Тип объявления
+                        </label>
+                        <select
+                          value={announcementType}
+                          onChange={(e) => setAnnouncementType(e.target.value as any)}
+                          className="w-full px-3 py-2 bg-slate-50 dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:outline-none cursor-pointer"
+                        >
+                          <option value="warning">🟡 Предупреждение (Тех. работы)</option>
+                          <option value="danger">🔴 Срочно / Критично (Авария / Сервер)</option>
+                          <option value="info">🔵 Информация (Обновление / Новость)</option>
+                          <option value="success">🟢 Успех / Завершено</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                          Заголовок баннера
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Например: Технические работы на сервере"
+                          value={announcementTitle}
+                          onChange={(e) => setAnnouncementTitle(e.target.value)}
+                          className="w-full px-3 py-2 bg-slate-50 dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Текст сообщения *
+                      </label>
+                      <textarea
+                        rows={3}
+                        required
+                        placeholder="Например: 05.09 с 02:00 до 04:00 по МСК запланированы технические работы на сервере. Сервис может быть временно недоступен."
+                        value={announcementText}
+                        onChange={(e) => setAnnouncementText(e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-50 dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:outline-none leading-relaxed"
+                      />
+                    </div>
+
+                    {/* Live Preview */}
+                    <div className="space-y-1.5 pt-1">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block">
+                        Предпросмотр баннера на главной:
+                      </span>
+                      <div
+                        className={`p-3.5 rounded-2xl border flex items-start space-x-3 text-xs shadow-sm ${
+                          announcementType === 'danger'
+                            ? 'bg-rose-500/15 border-rose-500/40 text-rose-950 dark:text-rose-200'
+                            : announcementType === 'warning'
+                            ? 'bg-amber-500/15 border-amber-500/40 text-amber-950 dark:text-amber-200'
+                            : announcementType === 'success'
+                            ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-950 dark:text-emerald-200'
+                            : 'bg-sky-500/15 border-sky-500/40 text-sky-950 dark:text-sky-200'
+                        }`}
+                      >
+                        <div
+                          className={`w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                            announcementType === 'danger'
+                              ? 'bg-rose-500 text-white'
+                              : announcementType === 'warning'
+                              ? 'bg-amber-500 text-white'
+                              : announcementType === 'success'
+                              ? 'bg-emerald-500 text-white'
+                              : 'bg-sky-500 text-white'
+                          }`}
+                        >
+                          {announcementType === 'danger' ? (
+                            <ShieldAlert className="w-3.5 h-3.5" />
+                          ) : announcementType === 'warning' ? (
+                            <AlertTriangle className="w-3.5 h-3.5" />
+                          ) : announcementType === 'success' ? (
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                          ) : (
+                            <Info className="w-3.5 h-3.5" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          {announcementTitle && (
+                            <div className="font-extrabold text-xs tracking-tight mb-0.5">
+                              {announcementTitle}
+                            </div>
+                          )}
+                          <div className="leading-relaxed whitespace-pre-line">
+                            {announcementText || 'Текст объявления...'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => handleSaveAnnouncement(true)}
+                        disabled={isSavingAnnouncement || !announcementText.trim()}
+                        className="px-4 py-2 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-bold rounded-xl text-xs flex items-center space-x-1.5 shadow-md shadow-amber-500/20 transition disabled:opacity-50"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>{isSavingAnnouncement ? 'Сохранение...' : 'Опубликовать объявление'}</span>
+                      </button>
+
+                      {announcementActive && (
+                        <button
+                          type="button"
+                          onClick={() => handleSaveAnnouncement(false)}
+                          disabled={isSavingAnnouncement}
+                          className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs transition"
+                        >
+                          Снять с публикации
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
