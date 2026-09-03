@@ -125,49 +125,17 @@ export const Garage: React.FC<GarageProps> = ({
           </button>
         </div>
       )}
-      {/* Slim Single-Row Stats Bar */}
-      <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-3 sm:px-5 sm:py-3.5 shadow-sm flex flex-wrap items-center justify-between gap-3 text-xs">
-        <div className="flex items-center space-x-2">
-          <div className="w-7 h-7 rounded-lg bg-brand-500/10 text-brand-500 flex items-center justify-center font-bold">
-            <Car className="w-4 h-4" />
-          </div>
-          <div>
-            <span className="text-slate-500 dark:text-slate-400 font-medium">Авто в гараже: </span>
-            <span className="font-bold text-slate-900 dark:text-white font-mono text-sm">{myVehicles.length}</span>
-            {visibleSharedVehicles.length > 0 && (
-              <span className="text-[11px] text-slate-400 ml-1">(+{visibleSharedVehicles.length} общих)</span>
-            )}
-          </div>
-        </div>
-
-        <div className="h-4 w-px bg-slate-200 dark:border-dark-750 hidden sm:block" />
-
-        <div className="flex items-center space-x-2">
-          <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${totalOverdueReminders > 0 ? 'bg-rose-500/10 text-rose-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
-            <CalendarClock className="w-4 h-4" />
-          </div>
-          <div>
-            <span className="text-slate-500 dark:text-slate-400 font-medium">Регламент ТО: </span>
-            <span className={`font-bold font-mono text-sm ${totalOverdueReminders > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
-              {totalOverdueReminders > 0 ? `${totalOverdueReminders} требует внимания` : 'В норме'}
+      {/* Overdue Reminders Alert Banner (if any) */}
+      {totalOverdueReminders > 0 && (
+        <div className="bg-rose-500/10 border border-rose-500/30 text-rose-800 dark:text-rose-300 p-3.5 rounded-2xl text-xs flex items-center justify-between shadow-sm animate-fadeIn">
+          <div className="flex items-center space-x-2.5">
+            <AlertTriangle className="w-4 h-4 text-rose-500 flex-shrink-0" />
+            <span className="font-semibold">
+              У вас есть {totalOverdueReminders} {totalOverdueReminders === 1 ? 'регламент ТО, требующий' : 'регламента ТО, требующих'} внимания!
             </span>
           </div>
         </div>
-
-        <div className="h-4 w-px bg-slate-200 dark:border-dark-750 hidden sm:block" />
-
-        <div className="flex items-center space-x-2">
-          <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center">
-            <TrendingUp className="w-4 h-4" />
-          </div>
-          <div>
-            <span className="text-slate-500 dark:text-slate-400 font-medium">Всего расходов: </span>
-            <span className="font-bold text-slate-900 dark:text-white font-mono text-sm">
-              {totalSpendMy.toLocaleString('ru-RU')} ₽
-            </span>
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* Vehicles Section */}
       <div className="space-y-4">
