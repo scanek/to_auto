@@ -568,25 +568,25 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
 
         {/* StarLine S96 Live Telematics Dashboard */}
         {vehicle.telematics_provider === 'starline' ? (
-          <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-sky-500/10 via-brand-500/5 to-slate-900/5 dark:to-dark-900/40 border border-sky-500/30 dark:border-sky-500/20 shadow-lg shadow-sky-500/5 space-y-3.5 transition-all">
+          <div className="p-3 sm:p-5 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-sky-500/10 via-brand-500/5 to-slate-900/5 dark:to-dark-900/40 border border-sky-500/30 dark:border-sky-500/20 shadow-lg shadow-sky-500/5 space-y-2.5 sm:space-y-3.5 transition-all">
             {/* Header: Device Info & Sync Actions */}
-            <div className="flex flex-wrap items-center justify-between gap-3 pb-2.5 border-b border-sky-500/15 dark:border-dark-750">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-600 to-sky-400 text-white flex items-center justify-center flex-shrink-0 shadow-md shadow-sky-500/20">
-                  <Satellite className="w-5 h-5 animate-pulse" />
+            <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 pb-2 border-b border-sky-500/15 dark:border-dark-750">
+              <div className="flex items-center space-x-2.5 sm:space-x-3 min-w-0">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-sky-600 to-sky-400 text-white flex items-center justify-center flex-shrink-0 shadow-md shadow-sky-500/20">
+                  <Satellite className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse" />
                 </div>
-                <div>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm font-black text-slate-900 dark:text-white tracking-tight">
-                      {vehicle.starline_device_alias || 'StarLine S96 Онлайн'}
+                <div className="min-w-0">
+                  <div className="flex items-center space-x-1.5 sm:space-x-2">
+                    <span className="text-xs sm:text-sm font-black text-slate-900 dark:text-white tracking-tight truncate">
+                      {vehicle.starline_device_alias || 'StarLine S96'}
                     </span>
-                    <span className="inline-flex items-center space-x-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                    <span className="inline-flex items-center space-x-1 text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex-shrink-0">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
-                      <span>CAN/OBD Активен</span>
+                      <span>CAN/OBD</span>
                     </span>
                   </div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center space-x-2 mt-0.5">
-                    <span>Синхронизация:</span>
+                  <div className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 flex items-center space-x-1.5 mt-0.5">
+                    <span className="hidden sm:inline">Синхронизация:</span>
                     <strong className="text-slate-700 dark:text-slate-200">
                       {formatSyncTime(vehicle.starline_last_sync)}
                     </strong>
@@ -596,19 +596,20 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
 
               {/* Actions */}
               {isOwner && (
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-1.5 sm:space-x-2 flex-shrink-0">
                   <button
                     onClick={handleSyncStarLine}
                     disabled={isSyncingStarLine}
-                    className="px-3.5 py-2 bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 active:scale-95 text-white font-bold rounded-xl text-xs flex items-center space-x-2 shadow-md shadow-sky-500/25 transition disabled:opacity-50"
+                    className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 active:scale-95 text-white font-bold rounded-xl text-xs flex items-center space-x-1.5 shadow-md shadow-sky-500/25 transition disabled:opacity-50"
                     title="Запросить актуальный пробег и состояние авто со StarLine"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${isSyncingStarLine ? 'animate-spin' : ''}`} />
-                    <span>{isSyncingStarLine ? 'Синхронизация...' : 'Обновить со StarLine'}</span>
+                    <span className="hidden sm:inline">{isSyncingStarLine ? 'Синхронизация...' : 'Обновить со StarLine'}</span>
+                    <span className="sm:hidden">{isSyncingStarLine ? '...' : 'Обновить'}</span>
                   </button>
                   <button
                     onClick={() => setIsStarLineModalOpen(true)}
-                    className="p-2 bg-white/80 dark:bg-dark-800 hover:bg-slate-100 dark:hover:bg-dark-750 text-slate-600 dark:text-slate-300 rounded-xl text-xs transition border border-slate-200 dark:border-dark-700 shadow-sm"
+                    className="p-1.5 sm:p-2 bg-white/80 dark:bg-dark-800 hover:bg-slate-100 dark:hover:bg-dark-750 text-slate-600 dark:text-slate-300 rounded-xl text-xs transition border border-slate-200 dark:border-dark-700 shadow-sm"
                     title="Настройки телематики StarLine"
                   >
                     <Edit2 className="w-3.5 h-3.5" />
@@ -619,7 +620,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                       setIsTelematicsCollapsed(next);
                       localStorage.setItem(`collapse_telematics_${vehicle.id}`, String(next));
                     }}
-                    className="p-2 bg-white/80 dark:bg-dark-800 hover:bg-slate-100 dark:hover:bg-dark-750 text-slate-600 dark:text-slate-300 rounded-xl text-xs transition border border-slate-200 dark:border-dark-700 shadow-sm"
+                    className="p-1.5 sm:p-2 bg-white/80 dark:bg-dark-800 hover:bg-slate-100 dark:hover:bg-dark-750 text-slate-600 dark:text-slate-300 rounded-xl text-xs transition border border-slate-200 dark:border-dark-700 shadow-sm"
                     title={isTelematicsCollapsed ? 'Развернуть виджет StarLine' : 'Свернуть виджет StarLine'}
                   >
                     {isTelematicsCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
@@ -630,97 +631,97 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
 
             {/* Live State Badges */}
             {!isTelematicsCollapsed && (
-              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 pt-1">
+              <div className="flex flex-wrap items-center gap-1 sm:gap-2 pt-0.5">
                 {/* Security Arm Status */}
                 {vehicle.starline_is_armed !== null && vehicle.starline_is_armed !== undefined ? (
                   vehicle.starline_is_armed ? (
-                    <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-xl bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-bold text-xs border border-emerald-500/30 shadow-sm">
-                      <Lock className="w-3.5 h-3.5 text-emerald-500" />
+                    <span className="inline-flex items-center space-x-1 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg sm:rounded-xl bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-bold text-[11px] sm:text-xs border border-emerald-500/30 shadow-sm">
+                      <Lock className="w-3 h-3 text-emerald-500" />
                       <span>В охране</span>
                     </span>
                   ) : (
-                    <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-xl bg-amber-500/15 text-amber-700 dark:text-amber-300 font-bold text-xs border border-amber-500/30 shadow-sm">
-                      <Unlock className="w-3.5 h-3.5 text-amber-500" />
+                    <span className="inline-flex items-center space-x-1 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg sm:rounded-xl bg-amber-500/15 text-amber-700 dark:text-amber-300 font-bold text-[11px] sm:text-xs border border-amber-500/30 shadow-sm">
+                      <Unlock className="w-3 h-3 text-amber-500" />
                       <span>Снята с охраны</span>
                     </span>
                   )
                 ) : (
-                  <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-slate-300 font-semibold text-xs border border-slate-200 dark:border-dark-700">
-                    <Lock className="w-3.5 h-3.5 text-slate-400" />
+                  <span className="inline-flex items-center space-x-1 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg sm:rounded-xl bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-slate-300 font-semibold text-[11px] sm:text-xs border border-slate-200 dark:border-dark-700">
+                    <Lock className="w-3 h-3 text-slate-400" />
                     <span>Охрана StarLine</span>
                   </span>
                 )}
 
                 {/* Engine Running Status */}
                 {vehicle.starline_is_running ? (
-                  <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-xl bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-bold text-xs border border-emerald-500/30 shadow-sm animate-pulse">
-                    <Power className="w-3.5 h-3.5 text-emerald-500" />
+                  <span className="inline-flex items-center space-x-1 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg sm:rounded-xl bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-bold text-[11px] sm:text-xs border border-emerald-500/30 shadow-sm animate-pulse">
+                    <Power className="w-3 h-3 text-emerald-500" />
                     <span>ДВС Работает</span>
                   </span>
                 ) : (
-                  <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-slate-400 font-medium text-xs border border-slate-200 dark:border-dark-700">
-                    <Power className="w-3.5 h-3.5 text-slate-400" />
+                  <span className="inline-flex items-center space-x-1 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg sm:rounded-xl bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-slate-400 font-medium text-[11px] sm:text-xs border border-slate-200 dark:border-dark-700">
+                    <Power className="w-3 h-3 text-slate-400" />
                     <span>ДВС Заглушен</span>
                   </span>
                 )}
 
                 {/* Handbrake */}
                 {vehicle.starline_is_handbrake !== null && vehicle.starline_is_handbrake !== undefined && (
-                  <span className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-xl font-bold text-xs border shadow-sm ${
+                  <span className={`inline-flex items-center space-x-1 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg sm:rounded-xl font-bold text-[11px] sm:text-xs border shadow-sm ${
                     vehicle.starline_is_handbrake 
                       ? 'bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30'
                       : 'bg-slate-100 dark:bg-dark-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-dark-700'
                   }`}>
-                    <span>{vehicle.starline_is_handbrake ? '🛑 Ручник затянут' : '⚪ Ручник опущен'}</span>
+                    <span>{vehicle.starline_is_handbrake ? '🛑 Ручник' : '⚪ Ручник опущен'}</span>
                   </span>
                 )}
 
                 {/* Perimeter / Doors */}
                 {vehicle.starline_is_doors_closed !== null && vehicle.starline_is_doors_closed !== undefined && (
-                  <span className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-xl font-bold text-xs border shadow-sm ${
+                  <span className={`inline-flex items-center space-x-1 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg sm:rounded-xl font-bold text-[11px] sm:text-xs border shadow-sm ${
                     vehicle.starline_is_doors_closed === false
                       ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30 animate-pulse'
                       : 'bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-dark-700'
                   }`}>
                     {vehicle.starline_is_doors_closed === false ? (
-                      <><ShieldAlert className="w-3.5 h-3.5 text-rose-500" /><span>Дверь открыта</span></>
+                      <><ShieldAlert className="w-3 h-3 text-rose-500" /><span>Дверь</span></>
                     ) : (
-                      <><ShieldCheck className="w-3.5 h-3.5 text-emerald-500" /><span>Периметр закрыт</span></>
+                      <><ShieldCheck className="w-3 h-3 text-emerald-500" /><span>Периметр</span></>
                     )}
                   </span>
                 )}
 
                 {/* GSM Signal */}
-                <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-slate-400 font-mono text-xs border border-slate-200 dark:border-dark-700 ml-auto">
-                  <Signal className="w-3.5 h-3.5 text-sky-500" />
-                  <span>GSM: {vehicle.starline_gsm_level || 28}/31</span>
+                <span className="inline-flex items-center space-x-1 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg sm:rounded-xl bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-slate-400 font-mono text-[11px] sm:text-xs border border-slate-200 dark:border-dark-700 ml-auto">
+                  <Signal className="w-3 h-3 text-sky-500" />
+                  <span>{vehicle.starline_gsm_level || 28}/31</span>
                 </span>
               </div>
             )}
 
-            {/* Telemetry Metric Cards Grid */}
+            {/* Telemetry Metric Cards: Horizontal Momentum Scroll on Mobile, Full Grid on Desktop */}
             {!isTelematicsCollapsed && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2 sm:gap-2.5 animate-fadeIn">
+              <div className="flex overflow-x-auto sm:grid sm:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-2.5 pb-1 sm:pb-0 scrollbar-none snap-x snap-mandatory animate-fadeIn">
               {/* Odometer */}
               <div
                 onClick={handleQuickChangeOdometer}
-                className="cursor-pointer bg-white/80 dark:bg-dark-800/90 hover:bg-sky-50/50 dark:hover:bg-dark-750 backdrop-blur-md p-2.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm transition group select-none"
+                className="flex-shrink-0 w-[114px] sm:w-auto snap-start cursor-pointer bg-white/80 dark:bg-dark-800/90 hover:bg-sky-50/50 dark:hover:bg-dark-750 backdrop-blur-md p-2.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm transition group select-none"
                 title="Нажмите для быстрой корректировки общего пробега"
               >
                 <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 flex items-center justify-between">
-                  <span className="group-hover:text-sky-500 transition-colors">Пробег {vehicle.telematics_provider === 'starline' ? 'CAN' : ''}</span>
+                  <span className="group-hover:text-sky-500 transition-colors">Пробег</span>
                   <Disc className="w-3 h-3 text-sky-500" />
                 </div>
                 <div className="text-sm sm:text-base font-black text-slate-900 dark:text-white font-mono mt-1 flex items-baseline space-x-1">
                   <span>{Math.round(vehicle.current_odometer).toLocaleString('ru-RU')}</span>
-                  <span className="text-xs font-semibold text-slate-500">{vehicle.distance_unit || 'км'}</span>
+                  <span className="text-[10px] sm:text-xs font-semibold text-slate-500">{vehicle.distance_unit || 'км'}</span>
                 </div>
               </div>
 
               {/* Engine Hours */}
               <div
                 onClick={handleQuickChangeEngineHours}
-                className="cursor-pointer bg-white/80 dark:bg-dark-800/90 hover:bg-amber-50/50 dark:hover:bg-dark-750 backdrop-blur-md p-2.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm transition group select-none"
+                className="flex-shrink-0 w-[114px] sm:w-auto snap-start cursor-pointer bg-white/80 dark:bg-dark-800/90 hover:bg-amber-50/50 dark:hover:bg-dark-750 backdrop-blur-md p-2.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm transition group select-none"
                 title="Нажмите для быстрой корректировки моточасов"
               >
                 <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 flex items-center justify-between">
@@ -731,7 +732,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                   {vehicle.current_engine_hours > 0 ? (
                     <>
                       <span>{vehicle.current_engine_hours}</span>
-                      <span className="text-xs font-semibold text-slate-500">м/ч</span>
+                      <span className="text-[10px] sm:text-xs font-semibold text-slate-500">м/ч</span>
                     </>
                   ) : (
                     <span className="text-xs text-slate-400">В норме</span>
@@ -740,21 +741,21 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               </div>
 
               {/* Battery Voltage */}
-              <div className="bg-white/80 dark:bg-dark-800/90 backdrop-blur-md p-2.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm">
+              <div className="flex-shrink-0 w-[114px] sm:w-auto snap-start bg-white/80 dark:bg-dark-800/90 backdrop-blur-md p-2.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm">
                 <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 flex items-center justify-between">
                   <span>АКБ</span>
                   <BatteryCharging className="w-3 h-3 text-emerald-500" />
                 </div>
                 <div className="text-sm sm:text-base font-black font-mono mt-1 text-emerald-600 dark:text-emerald-400 flex items-baseline space-x-1">
                   <span>{vehicle.starline_battery ? vehicle.starline_battery.toFixed(1) : '12.4'}</span>
-                  <span className="text-xs font-semibold text-slate-500">В</span>
+                  <span className="text-[10px] sm:text-xs font-semibold text-slate-500">В</span>
                 </div>
               </div>
 
               {/* Fuel Level with Clean Interactive Litres / Percent Toggle */}
               <div
                 onClick={() => setShowFuelInLitres(!showFuelInLitres)}
-                className="cursor-pointer bg-white/80 dark:bg-dark-800/90 hover:bg-sky-50/50 dark:hover:bg-dark-750 backdrop-blur-md p-2.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm transition group select-none"
+                className="flex-shrink-0 w-[114px] sm:w-auto snap-start cursor-pointer bg-white/80 dark:bg-dark-800/90 hover:bg-sky-50/50 dark:hover:bg-dark-750 backdrop-blur-md p-2.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm transition group select-none"
                 title="Нажмите, чтобы переключить Литры / Проценты"
               >
                 <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 flex items-center justify-between">
@@ -766,14 +767,14 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                     <span className="text-sm sm:text-base font-black text-sky-600 dark:text-sky-400 font-mono">
                       {vehicle.starline_fuel_percent !== null && vehicle.starline_fuel_percent !== undefined ? (
                         showFuelInLitres ? (
-                          <>{((vehicle.fuel_tank_capacity || 55) * (vehicle.starline_fuel_percent / 100)).toFixed(1)} <span className="text-xs font-semibold text-slate-500">л</span></>
+                          <>{((vehicle.fuel_tank_capacity || 55) * (vehicle.starline_fuel_percent / 100)).toFixed(1)} <span className="text-[10px] sm:text-xs font-semibold text-slate-500">л</span></>
                         ) : (
                           `${Math.round(vehicle.starline_fuel_percent)}%`
                         )
                       ) : '—'}
                     </span>
                     {vehicle.starline_fuel_percent !== null && vehicle.starline_fuel_percent !== undefined && (
-                      <span className="text-[10px] text-slate-400 font-mono font-bold">
+                      <span className="text-[9px] sm:text-[10px] text-slate-400 font-mono font-bold">
                         {showFuelInLitres
                           ? `${Math.round(vehicle.starline_fuel_percent)}%`
                           : `${((vehicle.fuel_tank_capacity || 55) * (vehicle.starline_fuel_percent / 100)).toFixed(1)} л`}
@@ -798,7 +799,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               </div>
 
               {/* Engine Temp */}
-              <div className="bg-white/80 dark:bg-dark-800/90 backdrop-blur-md p-2.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm">
+              <div className="flex-shrink-0 w-[114px] sm:w-auto snap-start bg-white/80 dark:bg-dark-800/90 backdrop-blur-md p-2.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm">
                 <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 flex items-center justify-between">
                   <span>ДВС</span>
                   <Thermometer className="w-3 h-3 text-rose-500" />
@@ -811,7 +812,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               </div>
 
               {/* Cabin / Interior Temp */}
-              <div className="bg-white/80 dark:bg-dark-800/90 backdrop-blur-md p-2.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm">
+              <div className="flex-shrink-0 w-[114px] sm:w-auto snap-start bg-white/80 dark:bg-dark-800/90 backdrop-blur-md p-2.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm">
                 <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 flex items-center justify-between">
                   <span>Салон</span>
                   <Thermometer className="w-3 h-3 text-sky-500" />
@@ -824,7 +825,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               </div>
 
               {/* SIM Balance */}
-              <div className="bg-white/80 dark:bg-dark-800/90 backdrop-blur-md p-2.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm">
+              <div className="flex-shrink-0 w-[114px] sm:w-auto snap-start bg-white/80 dark:bg-dark-800/90 backdrop-blur-md p-2.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm">
                 <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 flex items-center justify-between">
                   <span>SIM Баланс</span>
                   <CreditCard className="w-3 h-3 text-brand-500" />
@@ -840,54 +841,41 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
 
             {/* GPS / LBS Location & Parking Map Link */}
             {!isTelematicsCollapsed && (
-              <div className="p-3 rounded-xl bg-white/70 dark:bg-dark-800/70 border border-sky-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 animate-fadeIn">
-                <div className="flex items-center space-x-2 text-xs">
-                  <div className="w-7 h-7 rounded-lg bg-sky-500/15 text-sky-600 dark:text-sky-400 flex items-center justify-center flex-shrink-0">
-                    <MapPin className="w-4 h-4" />
+              <div className="p-2.5 sm:p-3 rounded-xl bg-white/70 dark:bg-dark-800/70 border border-sky-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 animate-fadeIn">
+                <div className="flex items-center space-x-2 text-xs min-w-0">
+                  <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-sky-500/15 text-sky-600 dark:text-sky-400 flex items-center justify-center flex-shrink-0">
+                    <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="font-bold text-slate-900 dark:text-white">Местоположение автомобиля:</span>
+                      <span className="font-bold text-slate-900 dark:text-white text-[11px] sm:text-xs">Парковка:</span>
                       {vehicle.starline_is_spoofed ? (
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30 flex items-center space-x-1" title="Спутники GPS передают ложные координаты (глушение). Сервер автоматически применил координаты сотовой вышки.">
-                          <span>🛡️ Спуфинг GPS устранен (LBS)</span>
+                        <span className="px-1.5 py-0.2 rounded text-[9px] sm:text-[10px] font-bold bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30 flex items-center space-x-1" title="Спутники GPS передают ложные координаты (глушение). Сервер автоматически применил координаты сотовой вышки.">
+                          <span>🛡️ Анти-спуфинг (LBS)</span>
                         </span>
                       ) : (
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                        <span className={`px-1.5 py-0.2 rounded text-[9px] sm:text-[10px] font-bold ${
                           vehicle.starline_gps_type === 'lbs'
                             ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
                             : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
                         }`}>
-                          {vehicle.starline_gps_type === 'lbs' ? '📶 Сотовые вышки (LBS)' : '🛰️ Спутники (GPS)'}
+                          {vehicle.starline_gps_type === 'lbs' ? '📶 Вышка LBS' : '🛰️ GPS'}
                         </span>
                       )}
                     </div>
                     {vehicle.starline_gps_lat && vehicle.starline_gps_lon ? (
-                      <div className="text-slate-500 dark:text-slate-400 font-mono text-[11px] mt-0.5 flex items-center space-x-1">
+                      <div className="text-slate-500 dark:text-slate-400 font-mono text-[10px] sm:text-[11px] mt-0.5 truncate">
                         <span>{vehicle.starline_gps_lat.toFixed(4)}, {vehicle.starline_gps_lon.toFixed(4)}</span>
-                        {vehicle.starline_is_spoofed ? (
-                          <span className="text-[10px] text-rose-600 dark:text-rose-400 font-sans font-medium">
-                            (сверено по вышке сотовой сети)
-                          </span>
-                        ) : vehicle.starline_gps_type === 'lbs' ? (
-                          <span className="text-[10px] text-amber-600 dark:text-amber-400 font-sans font-medium">
-                            (сектор вышки GSM)
-                          </span>
-                        ) : (
-                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-sans font-medium">
-                            (сверено с сотовой сетью)
-                          </span>
-                        )}
                       </div>
                     ) : (
-                      <span className="text-slate-400 italic text-[11px] block mt-0.5">
-                        Координаты обновятся при нажатии «Обновить со StarLine»
+                      <span className="text-slate-400 italic text-[10px] sm:text-[11px] block mt-0.5">
+                        Нажмите «Обновить»
                       </span>
                     )}
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-2 self-end sm:self-center">
+                <div className="flex items-center space-x-1.5 self-end sm:self-center flex-shrink-0">
                   {vehicle.starline_gps_lat && vehicle.starline_gps_lon ? (
                     <>
                       <a
@@ -897,8 +885,8 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                         className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-yellow-500/15 hover:bg-yellow-500/25 text-yellow-700 dark:text-yellow-400 font-bold text-[11px] border border-yellow-500/30 transition"
                         title="Открыть точку стоянки в Яндекс.Картах"
                       >
-                        <Navigation className="w-3 h-3" />
-                        <span>Яндекс.Карты</span>
+                        <Navigation className="w-3 h-3 text-red-500" />
+                        <span>Яндекс</span>
                       </a>
                       <a
                         href={`https://2gis.ru/search/${vehicle.starline_gps_lat}%2C${vehicle.starline_gps_lon}`}
@@ -907,7 +895,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                         className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-400 font-bold text-[11px] border border-emerald-500/30 transition"
                         title="Открыть точку стоянки в 2ГИС"
                       >
-                        <Navigation className="w-3 h-3" />
+                        <Navigation className="w-3 h-3 text-emerald-500" />
                         <span>2ГИС</span>
                       </a>
                     </>
