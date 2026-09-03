@@ -6,52 +6,58 @@ from app.models.vehicle import Vehicle
 async def recalculate_fuel_logs(session: AsyncSession, vehicle_id: int):
     """
     Recalculates fuel consumption for all fuel logs of a vehicle in chronological order.
-    When filling full tank to full tank:
-    The fuel consumed between prev_fill and current_fill is the amount added at current_fill.
-    If there were partial fills in between, their amounts are accumulated until the next full tank fill.
-    If this is the first log and starting_odometer is known, uses baseline delta.
+    Rules:
+    1. The very first fuel log in history (or any log marked as missed/gap) acts as the INITIAL ANCHOR / BASELINE.
+       Consumption cannot be calculated for the first log because previous fuel consumption is unknown.
+       distance_traveled = None, consumption = None.
+    2. Subsequent fuel logs:
+       dist = current_log.odometer - last_full_log.odometer
+       accumulated_fuel += current_log.fuel_amount
+       If current_log.is_full_tank:
+           consumption = round((accumulated_fuel / dist) * 100.0, 2)
+           accumulated_fuel = 0.0
+       Else (partial fill):
+           consumption = None
     """
     query = select(FuelLog).where(FuelLog.vehicle_id == vehicle_id).order_by(FuelLog.odometer.asc(), FuelLog.date.asc())
     result = await session.execute(query)
     logs = result.scalars().all()
 
-    veh_res = await session.execute(select(Vehicle).where(Vehicle.id == vehicle_id))
-    vehicle = veh_res.scalar_one_or_none()
-
     prev_log = None
+    last_full_log = None
     accumulated_fuel = 0.0
 
     for log in logs:
         if prev_log is None or log.is_missed:
-            # First log in series
-            if vehicle and vehicle.starting_odometer and log.odometer > vehicle.starting_odometer:
-                base_dist = log.odometer - vehicle.starting_odometer
-                log.distance_traveled = base_dist
-                if log.is_full_tank and base_dist > 0:
-                    log.consumption = round((log.fuel_amount / base_dist) * 100.0, 2)
-                    accumulated_fuel = 0.0
-                else:
-                    log.consumption = None
-                    accumulated_fuel = log.fuel_amount
+            # First log in series / gap -> acts as baseline anchor
+            log.distance_traveled = None
+            log.consumption = None
+            if log.is_full_tank:
+                last_full_log = log
+                accumulated_fuel = 0.0
             else:
-                log.distance_traveled = None
-                log.consumption = None
-                accumulated_fuel = 0.0 if log.is_full_tank else log.fuel_amount
+                last_full_log = None
+                accumulated_fuel = (log.fuel_amount or 0.0)
         else:
-            dist = log.odometer - prev_log.odometer
-            if dist > 0:
-                log.distance_traveled = dist
-                accumulated_fuel += log.fuel_amount
-                if log.is_full_tank:
-                    # Calculate consumption for the distance since last full tank
-                    log.consumption = round((accumulated_fuel / dist) * 100.0, 2)
-                    accumulated_fuel = 0.0
-                else:
-                    log.consumption = None
+            dist_since_prev = log.odometer - prev_log.odometer
+            log.distance_traveled = dist_since_prev if dist_since_prev > 0 else None
+            accumulated_fuel += (log.fuel_amount or 0.0)
+
+            if log.is_full_tank and last_full_log and log.odometer > last_full_log.odometer:
+                total_dist = log.odometer - last_full_log.odometer
+                log.consumption = round((accumulated_fuel / total_dist) * 100.0, 2)
+                accumulated_fuel = 0.0
+                last_full_log = log
+            elif log.is_full_tank:
+                # First full tank after partials with no prior full anchor
+                log.consumption = None
+                accumulated_fuel = 0.0
+                last_full_log = log
             else:
-                log.distance_traveled = None
+                # Partial tank fill
                 log.consumption = None
 
         prev_log = log
 
     await session.commit()
+

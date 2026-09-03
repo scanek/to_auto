@@ -1687,7 +1687,9 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                                 {f.consumption} л/100км
                               </span>
                             ) : (
-                              <span className="text-slate-400">—</span>
+                              <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-dark-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-dark-700" title="Первая заправка является точкой отсчета. Расход будет рассчитан на следующей заправке.">
+                                Точка отсчёта
+                              </span>
                             )}
                           </td>
                           <td className="p-3 font-mono font-extrabold text-brand-600 dark:text-brand-400 whitespace-nowrap">

@@ -205,6 +205,21 @@ async def assign_legacy_vehicles_if_needed():
         except Exception as e:
             print(f"Vehicle assignment note: {e}")
 
+async def heal_fuel_logs():
+    """Recalculates fuel logs consumption for all vehicles using the proper baseline logic."""
+    from app.models.vehicle import Vehicle
+    from app.services.fuel_service import recalculate_fuel_logs
+    from sqlalchemy import select
+
+    async with AsyncSessionLocal() as session:
+        try:
+            res = await session.execute(select(Vehicle.id))
+            vehicle_ids = res.scalars().all()
+            for vid in vehicle_ids:
+                await recalculate_fuel_logs(session, vid)
+        except Exception as e:
+            print(f"Fuel logs healing note: {e}")
+
 async def init_db():
     async with engine.begin() as conn:
         # 1. Create tables if they don't exist
@@ -215,3 +230,5 @@ async def init_db():
     # 3. Heal any existing service records costs
     await heal_service_records_totals()
     await assign_legacy_vehicles_if_needed()
+    # 4. Heal fuel logs baseline consumption
+    await heal_fuel_logs()
