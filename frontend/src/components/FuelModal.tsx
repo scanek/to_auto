@@ -233,19 +233,19 @@ export const FuelModal: React.FC<FuelModalProps> = ({
                 type="checkbox"
                 checked={formData.is_full_tank}
                 onChange={(e) => setFormData({ ...formData, is_full_tank: e.target.checked })}
-                className="rounded bg-white dark:bg-dark-800 border-slate-300 dark:border-dark-700 text-brand-500 focus:ring-0 w-4 h-4"
+                className="rounded bg-white dark:bg-dark-800 border-slate-300 dark:border-dark-750 text-brand-500 focus:ring-0 w-4 h-4"
               />
-              <span>Полный бак (для точного расчета л/100км)</span>
+              <span>Полный бак (для расчета л/100км)</span>
             </label>
 
-            <label className="flex items-center space-x-2 text-xs font-semibold text-slate-500 dark:text-slate-400 cursor-pointer">
+            <label className="flex items-center space-x-2 text-xs font-semibold text-slate-600 dark:text-slate-400 cursor-pointer" title="Отметьте, если это первая заправка или вы пропустили прошлые чеки. Расход начнется заново с этой точки.">
               <input
                 type="checkbox"
                 checked={formData.is_missed}
                 onChange={(e) => setFormData({ ...formData, is_missed: e.target.checked })}
-                className="rounded bg-white dark:bg-dark-800 border-slate-300 dark:border-dark-700 text-brand-500 focus:ring-0 w-4 h-4"
+                className="rounded bg-white dark:bg-dark-800 border-slate-300 dark:border-dark-750 text-brand-500 focus:ring-0 w-4 h-4"
               />
-              <span>Пропустил прошлую</span>
+              <span>Точка отсчёта (сброс / первая)</span>
             </label>
           </div>
 
