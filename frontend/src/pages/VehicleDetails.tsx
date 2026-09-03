@@ -49,6 +49,7 @@ import {
   Navigation,
   Key,
   Folder,
+  MoreHorizontal,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -94,6 +95,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   isAuthenticated,
   onBack,
   onRefreshVehicle,
+  onEditVehicle,
   onOpenServiceModal,
   onOpenFuelModal,
   onOpenReminderModal,
@@ -124,6 +126,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   const [isQuickMileageOpen, setIsQuickMileageOpen] = useState(false);
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [isStarLineModalOpen, setIsStarLineModalOpen] = useState(false);
+  const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
   const [isSyncingStarLine, setIsSyncingStarLine] = useState(false);
   const [showFuelInLitres, setShowFuelInLitres] = useState(true);
   const [recordsSearchQuery, setRecordsSearchQuery] = useState('');
@@ -448,7 +451,8 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
       {/* Top Navigation & Vehicle Header */}
       <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-4 sm:p-6 shadow-md dark:shadow-xl space-y-4 sm:space-y-6 transition-colors">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
-          <div className="flex items-center space-x-3">
+          {/* Left: Car Title & Clean Passport Info */}
+          <div className="flex items-center space-x-3 min-w-0">
             <button
               onClick={onBack}
               className="p-2 bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl transition-colors border border-slate-200 dark:border-dark-700 flex-shrink-0"
@@ -458,82 +462,128 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
             </button>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight truncate">
+                <h1 className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight truncate">
                   {vehicle.name || `${vehicle.make} ${vehicle.model}`}
                 </h1>
-                {vehicle.year && (
-                  <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-dark-750 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-dark-700">
-                    {vehicle.year}
-                  </span>
-                )}
                 {vehicle.license_plate && (
-                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-amber-50 dark:bg-dark-900 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60">
+                  <span className="text-[11px] sm:text-xs font-mono font-black px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30 tracking-wider flex-shrink-0">
                     {vehicle.license_plate}
                   </span>
                 )}
-                {vehicle.engine && (
-                  <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-dark-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-dark-700">
-                    {vehicle.engine}
-                  </span>
-                )}
+              </div>
+              <div className="text-xs text-slate-500 dark:text-slate-400 flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5 font-medium">
+                {vehicle.year && <span>{vehicle.year} г.</span>}
+                {vehicle.engine && <span>• {vehicle.engine}</span>}
                 {vehicle.purchase_date && (
-                  <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-blue-50 dark:bg-dark-900 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60" title={`Куплен: ${new Date(vehicle.purchase_date).toLocaleDateString('ru-RU')}${vehicle.starting_odometer ? ` (с пробегом ${vehicle.starting_odometer} ${vehicle.distance_unit || 'км'})` : ''}`}>
-                    📅 Куплен: {new Date(vehicle.purchase_date).toLocaleDateString('ru-RU')}
+                  <span title={`Куплен: ${new Date(vehicle.purchase_date).toLocaleDateString('ru-RU')}${vehicle.starting_odometer ? ` (с пробегом ${vehicle.starting_odometer} ${vehicle.distance_unit || 'км'})` : ''}`}>
+                    • Владение с {new Date(vehicle.purchase_date).toLocaleDateString('ru-RU')}
                   </span>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Header Action Buttons */}
-          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-            <button
-              onClick={() => setIsQrModalOpen(true)}
-              className="flex items-center justify-center space-x-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-200 px-2.5 sm:px-3 py-2 rounded-xl text-xs font-bold border border-slate-200 dark:border-dark-700 transition-all shadow-sm active:scale-95"
-              title="QR-код сервисной книжки, бирка ТО под капот и напоминания в календарь"
-            >
-              <QrCode className="w-4 h-4 text-brand-500 flex-shrink-0" />
-              <span>QR и Бирка ТО</span>
-            </button>
-
+          {/* Right: Primary Action Buttons (2 buttons + ••• Menu) */}
+          <div className="flex items-center space-x-1.5 sm:space-x-2 flex-shrink-0">
             {isOwner && (
               <>
                 <button
                   onClick={() => onOpenServiceModal('service')}
-                  className="flex items-center justify-center space-x-1 bg-brand-500 hover:bg-brand-600 active:scale-95 text-white px-2.5 sm:px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-brand-500/20"
+                  className="px-3 sm:px-3.5 py-2 bg-brand-500 hover:bg-brand-600 active:scale-95 text-white font-bold rounded-xl text-xs flex items-center space-x-1.5 shadow-md shadow-brand-500/20 transition"
+                  title="Добавить выполненное ТО или ремонт"
                 >
-                  <Plus className="w-4 h-4 flex-shrink-0" />
+                  <Plus className="w-3.5 h-3.5 flex-shrink-0" />
                   <span>Запись ТО</span>
                 </button>
 
                 <button
                   onClick={() => onOpenFuelModal()}
-                  className="flex items-center justify-center space-x-1 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-2.5 sm:px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-600/20"
+                  className="px-3 sm:px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold rounded-xl text-xs flex items-center space-x-1.5 shadow-md shadow-emerald-600/20 transition"
+                  title="Добавить новую заправку"
                 >
-                  <Fuel className="w-4 h-4 flex-shrink-0" />
+                  <Fuel className="w-3.5 h-3.5 flex-shrink-0" />
                   <span>Заправка</span>
                 </button>
-
-                <button
-                  onClick={() => onOpenReminderModal()}
-                  className="flex items-center justify-center space-x-1 bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-200 px-2.5 sm:px-3.5 py-2 rounded-xl text-xs font-semibold border border-slate-200 dark:border-dark-700 transition-all"
-                >
-                  <CalendarClock className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                  <span>Регламент</span>
-                </button>
-
-                {vehicle.telematics_provider !== 'starline' && (
-                  <button
-                    onClick={() => setIsStarLineModalOpen(true)}
-                    className="flex items-center justify-center space-x-1 bg-sky-500/10 hover:bg-sky-500/20 text-sky-600 dark:text-sky-400 px-2.5 sm:px-3 py-2 rounded-xl text-xs font-bold border border-sky-500/30 transition-all active:scale-95"
-                    title="Подключить сигнализацию StarLine S96"
-                  >
-                    <Satellite className="w-4 h-4 flex-shrink-0" />
-                    <span>StarLine</span>
-                  </button>
-                )}
               </>
             )}
+
+            {/* Actions Dropdown Menu (•••) */}
+            <div className="relative">
+              <button
+                onClick={() => setIsActionMenuOpen(!isActionMenuOpen)}
+                className={`p-2 rounded-xl text-xs transition border shadow-sm ${
+                  isActionMenuOpen
+                    ? 'bg-brand-500 text-white border-brand-500 shadow-brand-500/20'
+                    : 'bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-dark-700'
+                }`}
+                title="Дополнительные инструменты"
+              >
+                <MoreHorizontal className="w-4 h-4" />
+              </button>
+
+              {isActionMenuOpen && (
+                <>
+                  {/* Backdrop */}
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setIsActionMenuOpen(false)}
+                  />
+                  <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-dark-850 rounded-2xl shadow-xl border border-slate-200 dark:border-dark-750 py-1.5 z-50 animate-scaleIn origin-top-right text-xs">
+                    <button
+                      onClick={() => {
+                        setIsActionMenuOpen(false);
+                        setIsQrModalOpen(true);
+                      }}
+                      className="w-full px-3.5 py-2.5 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-dark-800 flex items-center space-x-2.5 transition"
+                    >
+                      <QrCode className="w-4 h-4 text-brand-500 flex-shrink-0" />
+                      <span className="font-semibold">Бирка ТО и QR-книжка</span>
+                    </button>
+
+                    {isOwner && (
+                      <button
+                        onClick={() => {
+                          setIsActionMenuOpen(false);
+                          onOpenReminderModal();
+                        }}
+                        className="w-full px-3.5 py-2.5 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-dark-800 flex items-center space-x-2.5 transition"
+                      >
+                        <CalendarClock className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                        <span className="font-semibold">Добавить регламент ТО</span>
+                      </button>
+                    )}
+
+                    {isOwner && (
+                      <button
+                        onClick={() => {
+                          setIsActionMenuOpen(false);
+                          setIsStarLineModalOpen(true);
+                        }}
+                        className="w-full px-3.5 py-2.5 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-dark-800 flex items-center space-x-2.5 transition"
+                      >
+                        <Satellite className="w-4 h-4 text-sky-500 flex-shrink-0" />
+                        <span className="font-semibold">Настройки StarLine</span>
+                      </button>
+                    )}
+
+                    {isOwner && onEditVehicle && (
+                      <div className="border-t border-slate-100 dark:border-dark-750 my-1 pt-1">
+                        <button
+                          onClick={() => {
+                            setIsActionMenuOpen(false);
+                            onEditVehicle();
+                          }}
+                          className="w-full px-3.5 py-2.5 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-dark-800 flex items-center space-x-2.5 transition"
+                        >
+                          <Edit2 className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                          <span className="font-semibold">Редактировать автомобиль</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
