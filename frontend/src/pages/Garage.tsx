@@ -124,69 +124,46 @@ export const Garage: React.FC<GarageProps> = ({
           </button>
         </div>
       )}
-      {/* Top Banner Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-4">
-        <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 p-4 sm:p-5 rounded-2xl flex items-center justify-between shadow-sm">
-          <div>
-            <span className="text-[11px] sm:text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
-              Моих авто в гараже
-            </span>
-            <div className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white mt-0.5">
-              {myVehicles.length}
-              {visibleSharedVehicles.length > 0 && (
-                <span className="text-xs font-normal text-slate-400 ml-1.5">
-                  (+{visibleSharedVehicles.length} общих)
-                </span>
-              )}
-            </div>
+      {/* Slim Single-Row Stats Bar */}
+      <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-3 sm:px-5 sm:py-3.5 shadow-sm flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="flex items-center space-x-2">
+          <div className="w-7 h-7 rounded-lg bg-brand-500/10 text-brand-500 flex items-center justify-center font-bold">
+            <Car className="w-4 h-4" />
           </div>
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-brand-500 flex-shrink-0">
-            <Car className="w-5 h-5 sm:w-6 sm:h-6" />
+          <div>
+            <span className="text-slate-500 dark:text-slate-400 font-medium">Авто в гараже: </span>
+            <span className="font-bold text-slate-900 dark:text-white font-mono text-sm">{myVehicles.length}</span>
+            {visibleSharedVehicles.length > 0 && (
+              <span className="text-[11px] text-slate-400 ml-1">(+{visibleSharedVehicles.length} общих)</span>
+            )}
           </div>
         </div>
 
-        <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 p-4 sm:p-5 rounded-2xl flex items-center justify-between shadow-sm">
-          <div>
-            <span className="text-[11px] sm:text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
-              Напоминаний к ТО
-            </span>
-            <div className="flex items-center space-x-2 mt-0.5">
-              <span
-                className={`text-xl sm:text-2xl font-extrabold ${
-                  totalOverdueReminders > 0 ? 'text-rose-500' : 'text-emerald-500'
-                }`}
-              >
-                {totalOverdueReminders}
-              </span>
-              {totalOverdueReminders > 0 && (
-                <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 font-medium">
-                  Требует внимания
-                </span>
-              )}
-            </div>
+        <div className="h-4 w-px bg-slate-200 dark:border-dark-750 hidden sm:block" />
+
+        <div className="flex items-center space-x-2">
+          <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${totalOverdueReminders > 0 ? 'bg-rose-500/10 text-rose-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+            <CalendarClock className="w-4 h-4" />
           </div>
-          <div
-            className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
-              totalOverdueReminders > 0
-                ? 'bg-rose-500/10 border border-rose-500/20 text-rose-500'
-                : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-500'
-            }`}
-          >
-            <CalendarClock className="w-5 h-5 sm:w-6 sm:h-6" />
+          <div>
+            <span className="text-slate-500 dark:text-slate-400 font-medium">Регламент ТО: </span>
+            <span className={`font-bold font-mono text-sm ${totalOverdueReminders > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
+              {totalOverdueReminders > 0 ? `${totalOverdueReminders} требует внимания` : 'В норме'}
+            </span>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 p-4 sm:p-5 rounded-2xl flex items-center justify-between shadow-sm">
+        <div className="h-4 w-px bg-slate-200 dark:border-dark-750 hidden sm:block" />
+
+        <div className="flex items-center space-x-2">
+          <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center">
+            <TrendingUp className="w-4 h-4" />
+          </div>
           <div>
-            <span className="text-[11px] sm:text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
-              Всего расходов
-            </span>
-            <div className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white mt-0.5">
+            <span className="text-slate-500 dark:text-slate-400 font-medium">Всего расходов: </span>
+            <span className="font-bold text-slate-900 dark:text-white font-mono text-sm">
               {totalSpendMy.toLocaleString('ru-RU')} ₽
-            </div>
-          </div>
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 flex-shrink-0">
-            <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6" />
+            </span>
           </div>
         </div>
       </div>
@@ -344,22 +321,20 @@ export const Garage: React.FC<GarageProps> = ({
               return (
                 <div
                   key={v.id}
-                  className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 hover:border-slate-300 dark:hover:border-dark-700 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col group"
+                  onClick={() => onSelectVehicle(v)}
+                  className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 hover:border-brand-500/50 dark:hover:border-brand-500/50 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-200 flex flex-col cursor-pointer group"
                 >
                   {/* Vehicle Image */}
-                  <div
-                    onClick={() => onSelectVehicle(v)}
-                    className="h-40 sm:h-44 relative bg-slate-100 dark:bg-dark-800 overflow-hidden cursor-pointer group-hover:brightness-105 transition-all"
-                  >
+                  <div className="h-36 sm:h-40 relative bg-slate-100 dark:bg-dark-800 overflow-hidden">
                     {v.photo_url ? (
                       <img
                         src={v.photo_url}
                         alt={`${v.make} ${v.model}`}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 dark:bg-gradient-to-br dark:from-dark-800 dark:to-dark-900 text-slate-400 dark:text-slate-600">
-                        <Car className="w-14 h-14 stroke-[1.2]" />
+                        <Car className="w-12 h-12 stroke-[1.2]" />
                       </div>
                     )}
 
@@ -367,41 +342,19 @@ export const Garage: React.FC<GarageProps> = ({
                     {(v.overdue_reminders_count || 0) > 0 && (
                       <div className="absolute top-2.5 left-2.5 bg-rose-500/95 backdrop-blur-md text-white text-[10px] font-bold px-2 py-0.5 rounded-lg flex items-center space-x-1 shadow-lg shadow-rose-500/30">
                         <AlertTriangle className="w-3 h-3" />
-                        <span>{v.overdue_reminders_count} ТО скоро/просрочено</span>
+                        <span>{v.overdue_reminders_count} ТО скоро</span>
                       </div>
                     )}
 
-                    {/* Privacy / Ownership Badges */}
-                    <div className="absolute top-2.5 right-2.5 flex items-center space-x-1">
-                      {isOwner ? (
-                        v.is_public ? (
-                          <span className="bg-emerald-500/90 backdrop-blur-md text-white text-[10px] font-bold px-2 py-0.5 rounded-lg flex items-center space-x-1 shadow">
-                            <Globe className="w-3 h-3" />
-                            <span>Публичный</span>
-                          </span>
-                        ) : (
-                          <span className="bg-slate-800/80 backdrop-blur-md text-slate-200 text-[10px] font-bold px-2 py-0.5 rounded-lg flex items-center space-x-1 shadow">
-                            <Lock className="w-3 h-3" />
-                            <span>Личный</span>
-                          </span>
-                        )
-                      ) : (
-                        <span className="bg-blue-600/90 backdrop-blur-md text-white text-[10px] font-bold px-2 py-0.5 rounded-lg flex items-center space-x-1 shadow">
-                          <UserIcon className="w-3 h-3" />
-                          <span>{v.owner_name || 'Общий'}</span>
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Plate / Year Badges */}
-                    <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between">
+                    {/* License plate & Year overlay */}
+                    <div className="absolute bottom-2 left-2.5 right-2.5 flex items-center justify-between">
                       {v.license_plate && (
-                        <span className="bg-slate-900/85 dark:bg-dark-950/85 backdrop-blur-md border border-slate-700 text-white text-xs font-mono font-bold px-2 py-0.5 rounded-md shadow-md">
+                        <span className="bg-slate-900/85 dark:bg-dark-950/85 backdrop-blur-md border border-slate-700/80 text-amber-300 text-[11px] font-mono font-black px-2 py-0.5 rounded-md shadow">
                           {v.license_plate}
                         </span>
                       )}
                       {v.year && (
-                        <span className="bg-slate-900/85 dark:bg-dark-950/85 backdrop-blur-md border border-slate-700 text-slate-200 text-xs font-semibold px-2 py-0.5 rounded-md ml-auto">
+                        <span className="bg-slate-900/85 dark:bg-dark-950/85 backdrop-blur-md border border-slate-700/80 text-slate-200 text-xs font-semibold px-2 py-0.5 rounded-md ml-auto">
                           {v.year} г.
                         </span>
                       )}
@@ -409,24 +362,22 @@ export const Garage: React.FC<GarageProps> = ({
                   </div>
 
                   {/* Card Content */}
-                  <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-3 sm:space-y-4">
+                  <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-3">
                     <div>
                       <div className="flex items-start justify-between">
-                        <div
-                          onClick={() => onSelectVehicle(v)}
-                          className="cursor-pointer group-hover:text-brand-500 transition-colors min-w-0"
-                        >
-                          <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight truncate">
+                        <div className="min-w-0">
+                          <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight group-hover:text-brand-500 transition-colors truncate">
                             {v.name || `${v.make} ${v.model}`}
                           </h3>
                           {v.engine && (
-                            <p className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate">
+                            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate mt-0.5">
                               {v.engine}
                             </p>
                           )}
                         </div>
+
                         {isAuthenticated && isOwner && (
-                          <div className="flex items-center space-x-1 flex-shrink-0">
+                          <div className="flex items-center space-x-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                             <button
                               onClick={() => onEditVehicle(v)}
                               className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-dark-750 rounded-lg transition-colors"
@@ -436,11 +387,7 @@ export const Garage: React.FC<GarageProps> = ({
                             </button>
                             <button
                               onClick={() => {
-                                if (
-                                  confirm(
-                                    `Удалить ${v.make} ${v.model} и все связанные записи?`
-                                  )
-                                ) {
+                                if (confirm(`Удалить ${v.make} ${v.model} и все связанные записи?`)) {
                                   onDeleteVehicle(v.id);
                                 }
                               }}
@@ -451,15 +398,16 @@ export const Garage: React.FC<GarageProps> = ({
                             </button>
                           </div>
                         )}
+
                         {!isOwner && (
-                          <div className="flex items-center space-x-1.5 flex-shrink-0">
+                          <div className="flex items-center space-x-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                             <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                              Только чтение
+                              {v.owner_name || 'Только чтение'}
                             </span>
                             <button
                               onClick={() => handleHideSingleVehicle(v.id)}
                               className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-dark-750 rounded-lg transition-colors flex items-center"
-                              title="Не показывать этот автомобиль в моем гараже"
+                              title="Скрыть этот автомобиль"
                             >
                               <EyeOff className="w-3.5 h-3.5" />
                             </button>
@@ -467,47 +415,28 @@ export const Garage: React.FC<GarageProps> = ({
                         )}
                       </div>
 
-                      {/* Metrics Grid */}
-                      <div className="grid grid-cols-2 gap-2 mt-3 pt-2.5 border-t border-slate-100 dark:border-dark-750">
-                        <div className="bg-slate-50 dark:bg-dark-900/70 p-2 sm:p-2.5 rounded-xl border border-slate-200 dark:border-dark-750/70">
-                          <span className="text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400 block">
-                            Пробег
-                          </span>
-                          <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white font-mono block">
-                            {Math.round(v.current_odometer).toLocaleString('ru-RU')}{' '}
-                            <span className="text-[10px] text-slate-500 font-sans">
-                              {v.distance_unit}
-                            </span>
+                      {/* Clean Metric Row */}
+                      <div className="flex items-center justify-between pt-3 mt-3 border-t border-slate-100 dark:border-dark-750/80 text-xs">
+                        <div>
+                          <span className="text-[10px] text-slate-400 uppercase font-bold block">Пробег</span>
+                          <span className="font-mono font-bold text-slate-900 dark:text-white text-sm">
+                            {Math.round(v.current_odometer).toLocaleString('ru-RU')} {v.distance_unit || 'км'}
                           </span>
                           {v.current_engine_hours > 0 && (
-                            <span className="text-[11px] text-cyan-600 dark:text-cyan-400 font-mono">
+                            <span className="text-[11px] text-cyan-600 dark:text-cyan-400 font-mono block">
                               {Math.round(v.current_engine_hours)} м/ч
                             </span>
                           )}
                         </div>
 
-                        <div className="bg-slate-50 dark:bg-dark-900/70 p-2 sm:p-2.5 rounded-xl border border-slate-200 dark:border-dark-750/70">
-                          <span className="text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400 block">
-                            Затраты
-                          </span>
-                          <span className="text-xs sm:text-sm font-bold text-brand-600 dark:text-brand-400 font-mono">
-                            {Math.round(v.total_cost || 0).toLocaleString('ru-RU')}{' '}
-                            <span className="text-[10px] text-slate-500 font-sans">
-                              {v.currency}
-                            </span>
+                        <div className="text-right">
+                          <span className="text-[10px] text-slate-400 uppercase font-bold block">Расходы</span>
+                          <span className="font-mono font-bold text-brand-600 dark:text-brand-400 text-sm">
+                            {Math.round(v.total_cost || 0).toLocaleString('ru-RU')} {v.currency || '₽'}
                           </span>
                         </div>
                       </div>
                     </div>
-
-                    {/* Open Button */}
-                    <button
-                      onClick={() => onSelectVehicle(v)}
-                      className="w-full flex items-center justify-center space-x-1.5 bg-slate-100 dark:bg-dark-800 hover:bg-brand-500 text-slate-700 dark:text-slate-200 hover:text-white py-2 rounded-xl text-xs font-semibold transition-all duration-200 border border-slate-200 dark:border-dark-700 hover:border-brand-500 shadow-sm"
-                    >
-                      <span>{isOwner ? 'Открыть журнал и ТО' : 'Просмотр сервисной книжки'}</span>
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
                   </div>
                 </div>
               );
