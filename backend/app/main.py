@@ -21,12 +21,17 @@ from app.api import (
     backup,
     telematics,
 )
+from app.services.telematics_scheduler import start_telematics_background_worker
+import asyncio
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Initialize database tables on startup
     await init_db()
+    # Start background telematics auto-sync worker
+    scheduler_task = asyncio.create_task(start_telematics_background_worker())
     yield
+    scheduler_task.cancel()
 
 app = FastAPI(
     title=settings.PROJECT_NAME,

@@ -698,4 +698,16 @@ export const api = {
         method: 'DELETE',
       }
     ),
+
+  updateTelematicsSettings: (
+    vehicleId: number,
+    data: { auto_sync_interval_minutes: number; auto_sync?: boolean }
+  ) =>
+    request<{ status: string; message: string; starline_auto_sync_interval_minutes: number; telematics_auto_sync: boolean }>(
+      `${API_BASE}/telematics/${vehicleId}/settings`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }
+    ),
 };

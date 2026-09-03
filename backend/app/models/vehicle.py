@@ -51,6 +51,7 @@ class Vehicle(Base):
     starline_gps_type = Column(String(20), default="gps") # 'gps' или 'lbs' (сотовые вышки)
     starline_is_spoofed = Column(Boolean, default=False) # Обнаружена подмена/глушение GPS
     telematics_auto_sync = Column(Boolean, default=False)
+    starline_auto_sync_interval_minutes = Column(Integer, default=60, nullable=True) # Интервал автообновления в минутах (0 = отключено, 30, 60, 120, 240, 720, 1440)
     telematics_webhook_key = Column(String(100), nullable=True, unique=True, index=True)
     
     created_at = Column(DateTime, default=datetime.datetime.utcnow)

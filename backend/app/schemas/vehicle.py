@@ -43,6 +43,7 @@ class VehicleBase(BaseModel):
     starline_is_spoofed: Optional[bool] = False
     telematics_webhook_key: Optional[str] = None
     telematics_auto_sync: bool = False
+    starline_auto_sync_interval_minutes: Optional[int] = 60
 
 class VehicleCreate(VehicleBase):
     pass
@@ -68,6 +69,8 @@ class VehicleUpdate(BaseModel):
     currency: Optional[str] = None
     photo_url: Optional[str] = None
     notes: Optional[str] = None
+    starline_auto_sync_interval_minutes: Optional[int] = None
+    telematics_auto_sync: Optional[bool] = None
 
 class VehicleResponse(VehicleBase):
     id: int

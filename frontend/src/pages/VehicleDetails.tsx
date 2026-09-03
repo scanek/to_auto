@@ -631,11 +631,16 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                       <span>CAN/OBD</span>
                     </span>
                   </div>
-                  <div className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 flex items-center space-x-1.5 mt-0.5">
+                  <div className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 flex flex-wrap items-center gap-1 mt-0.5">
                     <span className="hidden sm:inline">Синхронизация:</span>
                     <strong className="text-slate-700 dark:text-slate-200">
                       {formatSyncTime(vehicle.starline_last_sync)}
                     </strong>
+                    {vehicle.starline_auto_sync_interval_minutes && vehicle.starline_auto_sync_interval_minutes > 0 ? (
+                      <span className="text-[10px] text-sky-600 dark:text-sky-400 font-medium">
+                        • авто {vehicle.starline_auto_sync_interval_minutes >= 60 ? `${vehicle.starline_auto_sync_interval_minutes / 60} ч.` : `${vehicle.starline_auto_sync_interval_minutes} мин.`}
+                      </span>
+                    ) : null}
                   </div>
                 </div>
               </div>

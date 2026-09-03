@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, Satellite, CheckCircle2, RefreshCw, Smartphone, ShieldCheck, BatteryCharging, Gauge, Flame, AlertCircle, Trash2, KeyRound } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Satellite, CheckCircle2, RefreshCw, Smartphone, ShieldCheck, BatteryCharging, Gauge, Flame, AlertCircle, Trash2, KeyRound, Clock } from 'lucide-react';
 import { Vehicle } from '../types';
 import { api } from '../services/api';
 
@@ -34,13 +34,25 @@ export const StarLineModal: React.FC<StarLineModalProps> = ({
 
   // Result state
   const [loading, setLoading] = useState(false);
+  const [isSavingInterval, setIsSavingInterval] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const [authData, setAuthData] = useState<{ user_id: string; token: string } | null>(null);
   const [devices, setDevices] = useState<any[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
-  const [autoSync, setAutoSync] = useState(true);
+  const [syncInterval, setSyncInterval] = useState<number>(() => {
+    if (vehicle.starline_auto_sync_interval_minutes !== undefined) {
+      return vehicle.starline_auto_sync_interval_minutes;
+    }
+    return vehicle.telematics_auto_sync ? 60 : 60;
+  });
+
+  useEffect(() => {
+    if (vehicle.starline_auto_sync_interval_minutes !== undefined) {
+      setSyncInterval(vehicle.starline_auto_sync_interval_minutes);
+    }
+  }, [vehicle]);
 
   if (!isOpen) return null;
 
@@ -110,8 +122,9 @@ export const StarLineModal: React.FC<StarLineModalProps> = ({
         user_id: authData.user_id,
         device_id: devId,
         device_alias: chosenDevice ? chosenDevice.alias : 'StarLine S96',
-        auto_sync: autoSync,
-      });
+        auto_sync: syncInterval > 0,
+        auto_sync_interval_minutes: syncInterval,
+      } as any);
 
       setSuccessMsg(res.message || 'Телематика StarLine успешно подключена!');
       setStep('connected');
@@ -120,6 +133,28 @@ export const StarLineModal: React.FC<StarLineModalProps> = ({
       setErrorMsg(err.message || 'Ошибка привязки устройства');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleUpdateInterval = async (minutes: number) => {
+    setSyncInterval(minutes);
+    setIsSavingInterval(true);
+    setErrorMsg(null);
+    try {
+      const res = await api.updateTelematicsSettings(vehicle.id, {
+        auto_sync_interval_minutes: minutes,
+        auto_sync: minutes > 0,
+      });
+      setSuccessMsg(res.message || 'Интервал автообновления сохранен');
+      onSuccess({
+        ...vehicle,
+        starline_auto_sync_interval_minutes: minutes,
+        telematics_auto_sync: minutes > 0,
+      });
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Ошибка сохранения интервала');
+    } finally {
+      setIsSavingInterval(false);
     }
   };
 
@@ -244,6 +279,43 @@ export const StarLineModal: React.FC<StarLineModalProps> = ({
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Auto-sync Interval Selector */}
+            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-dark-800 border border-slate-200 dark:border-dark-700 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Clock className="w-4 h-4 text-sky-500" />
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                    Автообновление данных:
+                  </span>
+                </div>
+                {isSavingInterval && (
+                  <span className="text-[10px] text-sky-500 animate-pulse font-bold">Сохранение...</span>
+                )}
+              </div>
+
+              <select
+                value={syncInterval}
+                disabled={isSavingInterval}
+                onChange={(e) => handleUpdateInterval(Number(e.target.value))}
+                className="w-full px-3 py-2 bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 focus:outline-none transition cursor-pointer"
+              >
+                <option value={0}>⛔ Отключено (только вручную)</option>
+                <option value={30}>⏱️ Каждые 30 минут</option>
+                <option value={60}>⏱️ Каждый 1 час (рекомендуется)</option>
+                <option value={120}>⏱️ Каждые 2 часа</option>
+                <option value={240}>⏱️ Каждые 4 часа</option>
+                <option value={360}>⏱️ Каждые 6 часов</option>
+                <option value={720}>⏱️ Каждые 12 часов</option>
+                <option value={1440}>⏱️ Раз в сутки (24 ч)</option>
+              </select>
+
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                {syncInterval > 0
+                  ? `💡 Сервер автоматически запрашивает свежий уровень топлива, пробег и заряд АКБ каждые ${syncInterval >= 60 ? `${syncInterval / 60} ч.` : `${syncInterval} мин.`}`
+                  : '💡 Фоновый опрос отключен. Данные будут обновляться только по кнопке «Синхронизировать».'}
+              </p>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-2">
@@ -441,17 +513,24 @@ export const StarLineModal: React.FC<StarLineModalProps> = ({
               ))}
             </div>
 
-            <div className="flex items-center space-x-2 pt-1">
-              <input
-                type="checkbox"
-                id="autoSyncCheck"
-                checked={autoSync}
-                onChange={(e) => setAutoSync(e.target.checked)}
-                className="w-4 h-4 rounded text-sky-500 focus:ring-sky-400"
-              />
-              <label htmlFor="autoSyncCheck" className="text-xs text-slate-700 dark:text-slate-300">
-                Автоматически обновлять пробег и моточасы
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-dark-800 border border-slate-200 dark:border-dark-750 space-y-1.5">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                Интервал автообновления данных:
               </label>
+              <select
+                value={syncInterval}
+                onChange={(e) => setSyncInterval(Number(e.target.value))}
+                className="w-full px-3 py-2 bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 focus:outline-none transition cursor-pointer"
+              >
+                <option value={0}>⛔ Отключено (только вручную)</option>
+                <option value={30}>⏱️ Каждые 30 минут</option>
+                <option value={60}>⏱️ Каждый 1 час (рекомендуется)</option>
+                <option value={120}>⏱️ Каждые 2 часа</option>
+                <option value={240}>⏱️ Каждые 4 часа</option>
+                <option value={360}>⏱️ Каждые 6 часов</option>
+                <option value={720}>⏱️ Каждые 12 часов</option>
+                <option value={1440}>⏱️ Раз в сутки (24 ч)</option>
+              </select>
             </div>
 
             <div className="flex gap-2">

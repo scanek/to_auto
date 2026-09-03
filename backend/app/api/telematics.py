@@ -32,6 +32,11 @@ class StarLineConnectRequest(BaseModel):
     device_id: str
     device_alias: Optional[str] = None
     auto_sync: bool = False
+    auto_sync_interval_minutes: Optional[int] = 60
+
+class StarLineSettingsUpdate(BaseModel):
+    auto_sync_interval_minutes: int  # 0 (disabled), 30, 60, 120, 240, 360, 720, 1440
+    auto_sync: Optional[bool] = None
 
 class WebhookTelemetryPayload(BaseModel):
     odometer: Optional[float] = None
@@ -118,6 +123,7 @@ async def connect_starline_device(
     vehicle.starline_device_alias = payload.device_alias or "StarLine S96"
     vehicle.starline_token = payload.token
     vehicle.telematics_auto_sync = payload.auto_sync
+    vehicle.starline_auto_sync_interval_minutes = payload.auto_sync_interval_minutes or 60
     if not vehicle.telematics_webhook_key:
         vehicle.telematics_webhook_key = secrets.token_urlsafe(24)
 
@@ -137,6 +143,34 @@ async def connect_starline_device(
             "status": "connected",
             "message": f"Устройство привязано, но первый опрос завершился с замечанием: {str(e)}",
         }
+
+@router.patch("/{vehicle_id}/settings")
+async def update_starline_settings(
+    vehicle_id: int,
+    payload: StarLineSettingsUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Updates the StarLine telematics auto-sync interval and toggle for a vehicle.
+    """
+    vehicle = await verify_vehicle_access(db, vehicle_id, current_user, require_owner=True)
+    
+    vehicle.starline_auto_sync_interval_minutes = payload.auto_sync_interval_minutes
+    if payload.auto_sync is not None:
+        vehicle.telematics_auto_sync = payload.auto_sync
+    else:
+        vehicle.telematics_auto_sync = (payload.auto_sync_interval_minutes > 0)
+        
+    await db.commit()
+    await db.refresh(vehicle)
+    
+    return {
+        "status": "ok",
+        "starline_auto_sync_interval_minutes": vehicle.starline_auto_sync_interval_minutes,
+        "telematics_auto_sync": vehicle.telematics_auto_sync,
+        "message": "Настройки автообновления StarLine сохранены",
+    }
 
 @router.post("/{vehicle_id}/sync")
 async def sync_vehicle_telematics(
