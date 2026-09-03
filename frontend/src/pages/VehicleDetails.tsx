@@ -50,6 +50,7 @@ import {
   Key,
   Folder,
   MoreHorizontal,
+  Settings,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -474,16 +475,16 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               <div className="text-xs text-slate-500 dark:text-slate-400 flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5 font-medium">
                 {vehicle.year && <span>{vehicle.year} г.</span>}
                 {vehicle.engine && <span>• {vehicle.engine}</span>}
-                {vehicle.purchase_date && (
-                  <span title={`Куплен: ${new Date(vehicle.purchase_date).toLocaleDateString('ru-RU')}${vehicle.starting_odometer ? ` (с пробегом ${vehicle.starting_odometer} ${vehicle.distance_unit || 'км'})` : ''}`}>
-                    • Владение с {new Date(vehicle.purchase_date).toLocaleDateString('ru-RU')}
+                {vehicle.vin && (
+                  <span className="font-mono text-slate-400 dark:text-slate-500" title={`VIN: ${vehicle.vin}`}>
+                    • VIN: {vehicle.vin}
                   </span>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Right: Primary Action Buttons (2 buttons + ••• Menu) */}
+          {/* Right: Primary Action Buttons (2 buttons + Options Button) */}
           <div className="flex items-center space-x-1.5 sm:space-x-2 flex-shrink-0">
             {isOwner && (
               <>
@@ -507,18 +508,20 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               </>
             )}
 
-            {/* Actions Dropdown Menu (•••) */}
+            {/* Options Dropdown Menu (⚙️ Опции) */}
             <div className="relative">
               <button
                 onClick={() => setIsActionMenuOpen(!isActionMenuOpen)}
-                className={`p-2 rounded-xl text-xs transition border shadow-sm ${
+                className={`px-2.5 py-2 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition border shadow-sm ${
                   isActionMenuOpen
-                    ? 'bg-brand-500 text-white border-brand-500 shadow-brand-500/20'
-                    : 'bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-dark-700'
+                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-slate-900 dark:border-white shadow-md'
+                    : 'bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-dark-700 active:scale-95'
                 }`}
-                title="Дополнительные инструменты"
+                title="Опции, бирка ТО и настройки"
+                aria-label="Опции автомобиля"
               >
-                <MoreHorizontal className="w-4 h-4" />
+                <Settings className={`w-4 h-4 flex-shrink-0 ${isActionMenuOpen ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Опции</span>
               </button>
 
               {isActionMenuOpen && (
