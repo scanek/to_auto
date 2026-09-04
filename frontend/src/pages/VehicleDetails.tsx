@@ -1852,7 +1852,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               </div>
             </div>
 
-            {/* TCO & Cost of Ownership Forecast */}
+            {/* TCO & Cost of Ownership Forecast - Dark Titanium Style */}
             {(() => {
               const startDate = vehicle.purchase_date || vehicle.created_at;
               const days = startDate
@@ -1863,49 +1863,69 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               const forecastYear = Math.round(costPerDay * 365);
 
               return (
-                <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-dark-850 text-white p-4 sm:p-5 rounded-3xl shadow-lg border border-slate-700/50 space-y-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-8 h-8 rounded-xl bg-brand-500/20 text-brand-400 flex items-center justify-center font-bold">
-                        💰
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-black tracking-tight text-white">
-                          TCO: Стоимость владения автомобилем
-                        </h4>
-                        <p className="text-[11px] text-slate-400">
-                          Учет всех расходов за {days} {days === 1 ? 'день' : days < 5 ? 'дня' : 'дней'} владения
-                        </p>
-                      </div>
-                    </div>
-                    <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30">
-                      Всего: {analytics.total_spend.toLocaleString('ru-RU')} {vehicle.currency || '₽'}
-                    </span>
-                  </div>
+                <div className="bg-slate-950 dark:bg-black text-white p-4 sm:p-5 rounded-3xl shadow-xl border border-slate-800 dark:border-dark-750 relative overflow-hidden">
+                  {/* Subtle ambient glow background */}
+                  <div className="absolute top-0 right-0 -mt-8 -mr-8 w-44 h-44 bg-brand-500/10 rounded-full blur-3xl pointer-events-none" />
+                  <div className="absolute bottom-0 left-0 -mb-8 -ml-8 w-44 h-44 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-                    <div className="bg-white/5 border border-white/10 p-3 rounded-2xl">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">В день</span>
-                      <div className="text-base sm:text-lg font-black text-brand-400 font-mono mt-0.5">
-                        ~{costPerDay.toLocaleString('ru-RU')} {vehicle.currency || '₽'}/день
+                  <div className="relative z-10 space-y-3.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2.5">
+                      <div className="flex items-center space-x-2.5">
+                        <div className="w-9 h-9 rounded-2xl bg-dark-800 border border-dark-700 text-brand-400 flex items-center justify-center font-bold text-base shadow-inner">
+                          💰
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-sm sm:text-base font-black tracking-tight text-white">
+                              TCO: Стоимость владения автомобилем
+                            </h4>
+                            <span className="text-[9px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded-md bg-brand-500/20 text-brand-400 border border-brand-500/30">
+                              Smart Forecast
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-400">
+                            Все расходы (топливо, ТО, ремонты, шины, документы) за {days} {days === 1 ? 'день' : days < 5 ? 'дня' : 'дней'}
+                          </p>
+                        </div>
                       </div>
-                      <span className="text-[10px] text-slate-400 block mt-0.5">Среднесуточный расход</span>
-                    </div>
-
-                    <div className="bg-white/5 border border-white/10 p-3 rounded-2xl">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">В месяц</span>
-                      <div className="text-base sm:text-lg font-black text-sky-400 font-mono mt-0.5">
-                        ~{costPerMonth.toLocaleString('ru-RU')} {vehicle.currency || '₽'}/мес
-                      </div>
-                      <span className="text-[10px] text-slate-400 block mt-0.5">При текущем темпе</span>
+                      <span className="text-xs font-mono font-extrabold px-3 py-1.5 rounded-xl bg-dark-800/90 text-emerald-400 border border-emerald-500/30 shadow-sm">
+                        Всего: {analytics.total_spend.toLocaleString('ru-RU')} {vehicle.currency || '₽'}
+                      </span>
                     </div>
 
-                    <div className="bg-white/5 border border-white/10 p-3 rounded-2xl">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Прогноз на 1 год</span>
-                      <div className="text-base sm:text-lg font-black text-emerald-400 font-mono mt-0.5">
-                        ~{forecastYear.toLocaleString('ru-RU')} {vehicle.currency || '₽'}/год
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-0.5">
+                      <div className="bg-dark-900/90 border border-dark-750/80 p-3.5 rounded-2xl space-y-1 hover:border-brand-500/40 transition shadow-sm">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] uppercase font-bold text-slate-400">В день</span>
+                          <span className="text-[10px] text-brand-400 font-mono font-bold">24 часа</span>
+                        </div>
+                        <div className="text-base sm:text-xl font-black text-white font-mono tracking-tight">
+                          ~{costPerDay.toLocaleString('ru-RU')} <span className="text-xs font-sans text-brand-400 font-bold">{vehicle.currency || '₽'}/день</span>
+                        </div>
+                        <span className="text-[10px] text-slate-400 block">Среднесуточный расход</span>
                       </div>
-                      <span className="text-[10px] text-slate-400 block mt-0.5">Ориентир на 12 месяцев</span>
+
+                      <div className="bg-dark-900/90 border border-dark-750/80 p-3.5 rounded-2xl space-y-1 hover:border-sky-500/40 transition shadow-sm">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] uppercase font-bold text-slate-400">В месяц</span>
+                          <span className="text-[10px] text-sky-400 font-mono font-bold">~30.5 дн.</span>
+                        </div>
+                        <div className="text-base sm:text-xl font-black text-white font-mono tracking-tight">
+                          ~{costPerMonth.toLocaleString('ru-RU')} <span className="text-xs font-sans text-sky-400 font-bold">{vehicle.currency || '₽'}/мес</span>
+                        </div>
+                        <span className="text-[10px] text-slate-400 block">При текущем темпе</span>
+                      </div>
+
+                      <div className="bg-dark-900/90 border border-dark-750/80 p-3.5 rounded-2xl space-y-1 hover:border-emerald-500/40 transition shadow-sm">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] uppercase font-bold text-slate-400">Прогноз на 1 год</span>
+                          <span className="text-[10px] text-emerald-400 font-mono font-bold">365 дн.</span>
+                        </div>
+                        <div className="text-base sm:text-xl font-black text-white font-mono tracking-tight">
+                          ~{forecastYear.toLocaleString('ru-RU')} <span className="text-xs font-sans text-emerald-400 font-bold">{vehicle.currency || '₽'}/год</span>
+                        </div>
+                        <span className="text-[10px] text-slate-400 block">Ориентир на 12 месяцев</span>
+                      </div>
                     </div>
                   </div>
                 </div>
