@@ -614,6 +614,7 @@ export function App() {
       <NotificationSettingsModal
         isOpen={isNotificationModalOpen}
         onClose={() => setIsNotificationModalOpen(false)}
+        currentUser={currentUser}
       />
 
       <InstallAppModal
@@ -706,7 +707,7 @@ export function App() {
           </div>
           <div className="flex items-center space-x-2 font-mono text-[11px]">
             <span className="px-2.5 py-1 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 font-bold border border-brand-500/25 shadow-sm">
-              Версия программы: v2.6.0
+              Версия программы: v2.8.2
             </span>
           </div>
         </div>

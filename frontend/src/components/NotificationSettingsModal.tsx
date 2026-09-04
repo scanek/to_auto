@@ -14,19 +14,26 @@ import {
   Satellite,
   BatteryCharging,
   Trash2,
+  KeyRound,
+  Eye,
+  EyeOff,
+  Bot,
+  RefreshCw,
 } from 'lucide-react';
 import { notificationService, NotificationSettings } from '../services/notificationService';
 import { api } from '../services/api';
-import { TelegramStatus } from '../types';
+import { TelegramStatus, TelegramBotConfig, User } from '../types';
 
 interface NotificationSettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  currentUser?: User | null;
 }
 
 export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps> = ({
   isOpen,
   onClose,
+  currentUser,
 }) => {
   const [settings, setSettings] = useState<NotificationSettings>(notificationService.getSettings());
   const [permission, setPermission] = useState<NotificationPermission>('default');
@@ -37,15 +44,76 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
   const [loadingTelegram, setLoadingTelegram] = useState(false);
   const [telegramTestResult, setTelegramTestResult] = useState<string | null>(null);
 
+  // Admin Bot Token Config State
+  const isAdmin = currentUser?.role === 'admin';
+  const [botConfig, setBotConfig] = useState<TelegramBotConfig | null>(null);
+  const [showBotConfigEditor, setShowBotConfigEditor] = useState(false);
+  const [botTokenInput, setBotTokenInput] = useState('');
+  const [showTokenText, setShowTokenText] = useState(false);
+  const [isSavingToken, setIsSavingToken] = useState(false);
+  const [tokenSaveMsg, setTokenSaveMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
   useEffect(() => {
     if (isOpen) {
       setSettings(notificationService.getSettings());
       setPermission(notificationService.getPermission());
       setTestResult(null);
       setTelegramTestResult(null);
+      setTokenSaveMsg(null);
       loadTelegramStatus();
+      if (isAdmin) {
+        loadBotConfig();
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, isAdmin]);
+
+  const loadBotConfig = async () => {
+    try {
+      const cfg = await api.getTelegramBotConfig();
+      setBotConfig(cfg);
+      if (cfg.bot_token) {
+        setBotTokenInput(cfg.bot_token);
+      }
+    } catch (e) {
+      console.error('Failed to load bot config', e);
+    }
+  };
+
+  const handleSaveBotToken = async () => {
+    if (!botTokenInput.trim()) {
+      setTokenSaveMsg({ text: 'Введите токен от @BotFather', type: 'error' });
+      return;
+    }
+    setIsSavingToken(true);
+    setTokenSaveMsg(null);
+    try {
+      const res = await api.updateTelegramBotConfig(botTokenInput.trim());
+      setTokenSaveMsg({ text: res.message, type: 'success' });
+      await loadBotConfig();
+      await loadTelegramStatus();
+    } catch (err: any) {
+      const errMsg = err?.response?.data?.detail || err?.message || 'Ошибка проверки токена бота';
+      setTokenSaveMsg({ text: errMsg, type: 'error' });
+    } finally {
+      setIsSavingToken(false);
+    }
+  };
+
+  const handleResetBotToken = async () => {
+    if (!window.confirm('Сбросить токен бота к значению по умолчанию?')) return;
+    setIsSavingToken(true);
+    setTokenSaveMsg(null);
+    try {
+      const res = await api.resetTelegramBotConfig();
+      setTokenSaveMsg({ text: res.message, type: 'success' });
+      await loadBotConfig();
+      await loadTelegramStatus();
+    } catch (err: any) {
+      setTokenSaveMsg({ text: 'Ошибка сброса настроек токена', type: 'error' });
+    } finally {
+      setIsSavingToken(false);
+    }
+  };
 
   const loadTelegramStatus = async () => {
     try {
@@ -260,6 +328,115 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
                     <span>Подключить Telegram-бота</span>
                     <ExternalLink className="w-3.5 h-3.5" />
                   </a>
+                )}
+              </div>
+            )}
+
+            {/* Admin Bot Token Configuration Accordion */}
+            {isAdmin && (
+              <div className="pt-2 border-t border-sky-500/20">
+                <button
+                  type="button"
+                  onClick={() => setShowBotConfigEditor(!showBotConfigEditor)}
+                  className="flex items-center justify-between w-full text-[11px] font-bold text-sky-700 dark:text-sky-300 hover:text-sky-900 dark:hover:text-white transition"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <KeyRound className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Сменить токен Telegram-бота (Admin)</span>
+                  </span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-500/15 border border-sky-500/30">
+                    {showBotConfigEditor ? '▲ Скрыть' : '▼ Изменить токен'}
+                  </span>
+                </button>
+
+                {showBotConfigEditor && (
+                  <div className="mt-2.5 p-3 rounded-xl bg-white dark:bg-dark-900 border border-sky-500/30 space-y-2.5 animate-fade-in">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="font-semibold text-slate-700 dark:text-slate-300">
+                        Статус подключения:
+                      </span>
+                      {botConfig?.is_active ? (
+                        <span className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/25">
+                          🟢 @{botConfig.bot_username} ({botConfig.bot_name || 'Активен'})
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold text-rose-500 bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/25">
+                          🔴 Не активен / Ошибка
+                        </span>
+                      )}
+                    </div>
+
+                    {botConfig?.status_detail && (
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                        {botConfig.status_detail}
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        API Token бота (от @BotFather):
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showTokenText ? 'text' : 'password'}
+                          value={botTokenInput}
+                          onChange={(e) => setBotTokenInput(e.target.value)}
+                          placeholder="8868283738:AAG3Dh994OcZ1SxHjRuWeko..."
+                          className="w-full text-xs font-mono px-3 py-1.5 pr-8 rounded-lg border border-slate-300 dark:border-dark-700 bg-slate-50 dark:bg-dark-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-sky-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowTokenText(!showTokenText)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                        >
+                          {showTokenText ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-1">
+                      <button
+                        type="button"
+                        disabled={isSavingToken}
+                        onClick={handleSaveBotToken}
+                        className="flex-1 bg-sky-500 hover:bg-sky-600 active:scale-95 disabled:opacity-50 text-white font-bold py-1.5 px-3 rounded-lg text-xs transition flex items-center justify-center gap-1.5 shadow-sm"
+                      >
+                        {isSavingToken ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+                        <span>Сохранить и применить</span>
+                      </button>
+
+                      {botConfig?.is_custom_token && (
+                        <button
+                          type="button"
+                          disabled={isSavingToken}
+                          onClick={handleResetBotToken}
+                          className="bg-slate-200 hover:bg-slate-300 dark:bg-dark-750 dark:hover:bg-dark-700 text-slate-700 dark:text-slate-300 font-bold py-1.5 px-2.5 rounded-lg text-xs transition"
+                          title="Сбросить к значению из .env / дефолтному"
+                        >
+                          Сбросить
+                        </button>
+                      )}
+                    </div>
+
+                    {tokenSaveMsg && (
+                      <div
+                        className={`text-[10px] p-2 rounded-lg font-medium ${
+                          tokenSaveMsg.type === 'success'
+                            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25'
+                            : 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/25'
+                        }`}
+                      >
+                        {tokenSaveMsg.text}
+                      </div>
+                    )}
+
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400 space-y-1 bg-slate-50 dark:bg-dark-800/80 p-2 rounded-lg border border-slate-200/60 dark:border-dark-700/60">
+                      <div className="font-semibold text-slate-700 dark:text-slate-300">💡 Как создать или сменить бота:</div>
+                      <div>1. Напишите <a href="https://t.me/BotFather" target="_blank" rel="noreferrer" className="text-sky-500 underline font-bold">@BotFather</a> в Telegram команду <code>/newbot</code>.</div>
+                      <div>2. Вставьте скопированный HTTP API токен в поле выше и нажмите «Сохранить».</div>
+                      <div>3. Бот мгновенно переключится и будет отправлять уведомления и команды.</div>
+                    </div>
+                  </div>
                 )}
               </div>
             )}

@@ -772,4 +772,21 @@ export const api = {
         telegram_notify_documents: data.notify_documents,
       }),
     }),
+
+  getTelegramBotConfig: () =>
+    request<import('../types').TelegramBotConfig>(`${API_BASE}/telegram/bot-config`),
+
+  updateTelegramBotConfig: (bot_token: string) =>
+    request<{ message: string; bot_username: string; bot_name?: string; is_active: boolean }>(
+      `${API_BASE}/telegram/bot-config`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({ bot_token }),
+      }
+    ),
+
+  resetTelegramBotConfig: () =>
+    request<{ message: string; bot_username: string }>(`${API_BASE}/telegram/bot-config`, {
+      method: 'DELETE',
+    }),
 };

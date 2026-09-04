@@ -16,6 +16,7 @@ from app.models.reminder import MaintenancePlan
 from app.models.service import ServiceRecord, RecordType
 from app.models.fuel import FuelLog
 from app.models.document import DocumentNote
+from app.models.setting import Setting
 from app.services.reminder_service import compute_reminder_status, sync_reminder_baselines
 from app.services.starline_service import StarLineService
 
@@ -30,6 +31,81 @@ MAIN_KEYBOARD = {
 }
 
 class TelegramService:
+    _cached_bot_token: Optional[str] = None
+    _cached_bot_username: Optional[str] = None
+
+    @classmethod
+    async def get_bot_token(cls, session=None) -> Optional[str]:
+        if cls._cached_bot_token:
+            return cls._cached_bot_token
+        try:
+            if session:
+                res = await session.execute(select(Setting).where(Setting.key == "telegram_bot_token"))
+                setting = res.scalar_one_or_none()
+                if setting and setting.value and setting.value.strip():
+                    cls._cached_bot_token = setting.value.strip()
+                    return cls._cached_bot_token
+            else:
+                async with AsyncSessionLocal() as s:
+                    res = await s.execute(select(Setting).where(Setting.key == "telegram_bot_token"))
+                    setting = res.scalar_one_or_none()
+                    if setting and setting.value and setting.value.strip():
+                        cls._cached_bot_token = setting.value.strip()
+                        return cls._cached_bot_token
+        except Exception:
+            pass
+
+        return settings.TELEGRAM_BOT_TOKEN
+
+    @classmethod
+    async def get_bot_username(cls, session=None) -> str:
+        if cls._cached_bot_username:
+            return cls._cached_bot_username
+        try:
+            if session:
+                res = await session.execute(select(Setting).where(Setting.key == "telegram_bot_username"))
+                setting = res.scalar_one_or_none()
+                if setting and setting.value and setting.value.strip():
+                    cls._cached_bot_username = setting.value.strip()
+                    return cls._cached_bot_username
+            else:
+                async with AsyncSessionLocal() as s:
+                    res = await s.execute(select(Setting).where(Setting.key == "telegram_bot_username"))
+                    setting = res.scalar_one_or_none()
+                    if setting and setting.value and setting.value.strip():
+                        cls._cached_bot_username = setting.value.strip()
+                        return cls._cached_bot_username
+        except Exception:
+            pass
+
+        return settings.TELEGRAM_BOT_USERNAME or "to_scanek_bot"
+
+    @classmethod
+    def set_cached_bot_credentials(cls, token: Optional[str], username: Optional[str]):
+        cls._cached_bot_token = token.strip() if token else None
+        cls._cached_bot_username = username.strip() if username else None
+
+    @staticmethod
+    async def verify_bot_token(token: str) -> dict:
+        """Validates token with Telegram API getMe."""
+        if not token or not token.strip():
+            return {"valid": False, "error": "Токен не может быть пустым"}
+        url = f"https://api.telegram.org/bot{token.strip()}/getMe"
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                res = await client.get(url)
+                if res.status_code == 200:
+                    data = res.json()
+                    if data.get("ok"):
+                        return {"valid": True, "bot": data.get("result", {})}
+                    return {"valid": False, "error": data.get("description", "Неизвестная ошибка Telegram")}
+                elif res.status_code == 401:
+                    return {"valid": False, "error": "Неверный токен (401 Unauthorized). Проверьте токен от @BotFather"}
+                else:
+                    return {"valid": False, "error": f"Ошибка HTTP {res.status_code}: {res.text}"}
+        except Exception as e:
+            return {"valid": False, "error": f"Сетевая ошибка при проверке токена: {e}"}
+
     @staticmethod
     async def send_message(
         chat_id: str,
@@ -38,10 +114,11 @@ class TelegramService:
         disable_preview: bool = True
     ) -> Optional[dict]:
         """Sends an HTML formatted message to a Telegram chat."""
-        if not settings.TELEGRAM_BOT_TOKEN or not chat_id:
+        token = await TelegramService.get_bot_token()
+        if not token or not chat_id:
             return None
 
-        url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/sendMessage"
+        url = f"https://api.telegram.org/bot{token}/sendMessage"
         payload = {
             "chat_id": chat_id,
             "text": text,
@@ -72,10 +149,11 @@ class TelegramService:
         disable_preview: bool = True
     ) -> bool:
         """Edits an existing Telegram message."""
-        if not settings.TELEGRAM_BOT_TOKEN or not chat_id or not message_id:
+        token = await TelegramService.get_bot_token()
+        if not token or not chat_id or not message_id:
             return False
 
-        url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/editMessageText"
+        url = f"https://api.telegram.org/bot{token}/editMessageText"
         payload = {
             "chat_id": chat_id,
             "message_id": message_id,
@@ -101,10 +179,11 @@ class TelegramService:
         show_alert: bool = False
     ) -> bool:
         """Answers a Telegram inline callback query to dismiss loading state."""
-        if not settings.TELEGRAM_BOT_TOKEN or not callback_query_id:
+        token = await TelegramService.get_bot_token()
+        if not token or not callback_query_id:
             return False
 
-        url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/answerCallbackQuery"
+        url = f"https://api.telegram.org/bot{token}/answerCallbackQuery"
         payload = {
             "callback_query_id": callback_query_id,
             "show_alert": show_alert,
@@ -128,10 +207,11 @@ class TelegramService:
         reply_markup: Optional[dict] = None
     ) -> bool:
         """Sends a native Telegram map location pin."""
-        if not settings.TELEGRAM_BOT_TOKEN or not chat_id:
+        token = await TelegramService.get_bot_token()
+        if not token or not chat_id:
             return False
 
-        url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/sendLocation"
+        url = f"https://api.telegram.org/bot{token}/sendLocation"
         payload = {
             "chat_id": chat_id,
             "latitude": latitude,
@@ -154,7 +234,7 @@ class TelegramService:
         token = uuid.uuid4().hex[:16]
         user.telegram_auth_token = token
         await session.commit()
-        bot_username = settings.TELEGRAM_BOT_USERNAME or "to_scanek_bot"
+        bot_username = await TelegramService.get_bot_username(session)
         return f"https://t.me/{bot_username}?start=bind_{token}"
 
     @staticmethod
@@ -1059,16 +1139,24 @@ class TelegramService:
 
 async def start_telegram_bot_worker():
     """Background polling worker for incoming Telegram updates."""
-    if not settings.TELEGRAM_BOT_TOKEN:
-        log.info("[Telegram Bot] Token is not set. Telegram bot worker will not start.")
-        return
-
-    log.info(f"[Telegram Bot] Starting background polling worker for @{settings.TELEGRAM_BOT_USERNAME}...")
+    log.info("[Telegram Bot] Background polling worker initialized.")
     offset = 0
-    url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/getUpdates"
+    active_token = None
 
     while True:
         try:
+            token = await TelegramService.get_bot_token()
+            if not token:
+                await asyncio.sleep(5)
+                continue
+
+            if token != active_token:
+                active_token = token
+                offset = 0
+                username = await TelegramService.get_bot_username()
+                log.info(f"[Telegram Bot] Starting/Updating polling worker for @{username}...")
+
+            url = f"https://api.telegram.org/bot{active_token}/getUpdates"
             async with httpx.AsyncClient(timeout=35.0) as client:
                 res = await client.get(url, params={"offset": offset, "timeout": 25})
                 if res.status_code == 200:
@@ -1079,6 +1167,9 @@ async def start_telegram_bot_worker():
                             asyncio.create_task(TelegramService.process_update(update))
                 elif res.status_code == 409:
                     log.warning("[Telegram Bot] Conflict: another instance is polling. Waiting 10s...")
+                    await asyncio.sleep(10)
+                elif res.status_code == 401:
+                    log.warning("[Telegram Bot] Active token is unauthorized. Waiting 10s...")
                     await asyncio.sleep(10)
                 else:
                     await asyncio.sleep(5)
@@ -1092,7 +1183,8 @@ async def start_telegram_bot_worker():
 
 async def check_and_send_scheduled_telegram_notifications():
     """Periodic background check for maintenance reminders, document expirations, and low battery alerts."""
-    if not settings.TELEGRAM_BOT_TOKEN:
+    token = await TelegramService.get_bot_token()
+    if not token:
         return
 
     async with AsyncSessionLocal() as session:

@@ -284,3 +284,12 @@ export interface TelegramStatus {
   notify_battery: boolean;
   notify_documents: boolean;
 }
+
+export interface TelegramBotConfig {
+  bot_token: string | null;
+  bot_username: string;
+  bot_name: string | null;
+  is_custom_token: boolean;
+  is_active: boolean;
+  status_detail?: string | null;
+}
