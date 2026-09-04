@@ -63,6 +63,8 @@ class MaintenancePlanResponse(MaintenancePlanBase):
     remaining_hours: Optional[float] = None
     remaining_days: Optional[int] = None
     status: str = "ok" # "ok", "due_soon", "overdue"
+    is_overdue: bool = False
+    is_due_soon: bool = False
     progress_percentage: float = 0.0
 
     model_config = ConfigDict(from_attributes=True)

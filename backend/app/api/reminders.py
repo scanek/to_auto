@@ -34,7 +34,8 @@ async def get_reminders(
         resp = MaintenancePlanResponse.model_validate(p)
         computed = compute_reminder_status(p, vehicle)
         for k, v in computed.items():
-            setattr(resp, k, v)
+            if hasattr(resp, k):
+                setattr(resp, k, v)
         responses.append(resp)
 
     # Sort by urgency: overdue first, then due_soon, then ok
@@ -60,7 +61,8 @@ async def create_reminder(
     resp = MaintenancePlanResponse.model_validate(plan)
     computed = compute_reminder_status(plan, vehicle)
     for k, v in computed.items():
-        setattr(resp, k, v)
+        if hasattr(resp, k):
+            setattr(resp, k, v)
     return resp
 
 @router.put("/{plan_id}", response_model=MaintenancePlanResponse)
@@ -87,7 +89,8 @@ async def update_reminder(
     resp = MaintenancePlanResponse.model_validate(plan)
     computed = compute_reminder_status(plan, vehicle)
     for k, v in computed.items():
-        setattr(resp, k, v)
+        if hasattr(resp, k):
+            setattr(resp, k, v)
     return resp
 
 @router.post("/{plan_id}/mark-done", response_model=MaintenancePlanResponse)
@@ -124,7 +127,8 @@ async def mark_reminder_done(
     resp = MaintenancePlanResponse.model_validate(plan)
     computed = compute_reminder_status(plan, vehicle)
     for k, v in computed.items():
-        setattr(resp, k, v)
+        if hasattr(resp, k):
+            setattr(resp, k, v)
     return resp
 
 @router.delete("/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -270,7 +274,8 @@ async def apply_default_reminders_pack(
         resp = MaintenancePlanResponse.model_validate(p)
         computed = compute_reminder_status(p, vehicle)
         for k, v in computed.items():
-            setattr(resp, k, v)
+            if hasattr(resp, k):
+                setattr(resp, k, v)
         responses.append(resp)
 
     priority = {"overdue": 0, "due_soon": 1, "ok": 2}

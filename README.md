@@ -4,7 +4,7 @@
 
 Автор и разработчик: **Александр Щеголев** ([@scanek](https://github.com/scanek))  
 Официальный репозиторий: **[https://github.com/scanek/to_auto](https://github.com/scanek/to_auto)**  
-Текущая версия: **v2.8.0 (Interactive Telegram Bot Assistant, Instant Maintenance Push Alerts & TCO Engine)**
+Текущая версия: **v2.8.1 (Interactive Telegram Bot Assistant, Instant Maintenance Push Alerts & TCO Engine)**
 
 ---
 
