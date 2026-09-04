@@ -71,6 +71,9 @@ async def start_telematics_background_worker():
     while True:
         try:
             await check_and_sync_all_vehicles()
+            # Also check telegram proactive notifications (battery, low fuel, urgent TO)
+            from app.services.telegram_service import check_and_send_scheduled_telegram_notifications
+            await check_and_send_scheduled_telegram_notifications()
         except asyncio.CancelledError:
             log.info("[Telematics Scheduler] Worker shutting down...")
             break
@@ -82,3 +85,4 @@ async def start_telematics_background_worker():
         except asyncio.CancelledError:
             log.info("[Telematics Scheduler] Worker sleep cancelled, shutting down...")
             break
+
