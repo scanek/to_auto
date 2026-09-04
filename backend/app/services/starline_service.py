@@ -653,6 +653,12 @@ class StarLineService:
         await db.commit()
         await db.refresh(vehicle)
 
+        try:
+            from app.services.telegram_service import TelegramService
+            await TelegramService.check_and_notify_vehicle_reminders(db, vehicle)
+        except Exception:
+            pass
+
         summary = ", ".join(updated_fields) if updated_fields else "Телеметрия обновлена"
 
         return {

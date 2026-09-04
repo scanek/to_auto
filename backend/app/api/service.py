@@ -10,6 +10,7 @@ from app.models.service import ServiceRecord, ServiceItem, RecordType
 from app.models.reminder import MaintenancePlan
 from app.schemas.service import ServiceRecordCreate, ServiceRecordUpdate, ServiceRecordResponse
 from app.core.security import get_current_user, get_optional_current_user
+from app.services.reminder_service import compute_reminder_status, sync_reminder_baselines
 from app.services.auth_helper import verify_vehicle_access
 
 router = APIRouter(prefix="/service-records", tags=["Service Records"])
@@ -89,17 +90,8 @@ async def create_service_record(
     if record.odometer > (vehicle.current_odometer or 0.0):
         vehicle.current_odometer = record.odometer
 
-    # If this is a regular service, check if we should update matching maintenance plans
-    if record.record_type == RecordType.SERVICE.value:
-        plans_res = await db.execute(select(MaintenancePlan).where(MaintenancePlan.vehicle_id == vehicle_id))
-        plans = plans_res.scalars().all()
-        for p in plans:
-            if p.title.lower() in record.title.lower() or (record.description and p.title.lower() in record.description.lower()):
-                if record.odometer >= p.last_service_odometer:
-                    p.last_service_odometer = record.odometer
-                    p.last_service_date = record.date
-
     await db.commit()
+    await sync_reminder_baselines(db, vehicle_id)
     
     # Reload with relations
     res = await db.execute(
@@ -192,6 +184,7 @@ async def update_service_record(
             record.total_cost = calc_total
 
     await db.commit()
+    await sync_reminder_baselines(db, record.vehicle_id)
     
     res = await db.execute(
         select(ServiceRecord)
@@ -214,7 +207,9 @@ async def delete_service_record(
     if not record:
         raise HTTPException(status_code=404, detail="Запись не найдена")
     
-    await verify_vehicle_access(db, record.vehicle_id, current_user, require_owner=True)
+    vehicle_id = record.vehicle_id
+    await verify_vehicle_access(db, vehicle_id, current_user, require_owner=True)
     await db.delete(record)
     await db.commit()
+    await sync_reminder_baselines(db, vehicle_id)
     return None

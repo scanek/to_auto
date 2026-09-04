@@ -167,6 +167,85 @@ class TelegramService:
         return True
 
     @staticmethod
+    async def check_and_notify_vehicle_reminders(
+        session,
+        vehicle: Vehicle,
+        user: Optional[User] = None,
+        force: bool = False
+    ) -> bool:
+        """
+        Evaluates active maintenance reminders for a vehicle and sends an instant Telegram
+        notification if any maintenance item is overdue or due soon.
+        """
+        if not user:
+            user_res = await session.execute(select(User).where(User.id == vehicle.user_id))
+            user = user_res.scalar_one_or_none()
+
+        if not user or not user.telegram_chat_id or not user.telegram_notifications_enabled or not user.telegram_notify_reminders:
+            return False
+
+        await sync_reminder_baselines(session, vehicle.id)
+        rem_res = await session.execute(
+            select(MaintenancePlan).where(MaintenancePlan.vehicle_id == vehicle.id, MaintenancePlan.is_active == True)
+        )
+        reminders = rem_res.scalars().all()
+        if not reminders:
+            return False
+
+        urgent_reminders = []
+        for r in reminders:
+            st = compute_reminder_status(r, vehicle)
+            if st.get("is_overdue") or st.get("is_due_soon"):
+                urgent_reminders.append((r, st))
+
+        if not urgent_reminders:
+            return False
+
+        has_overdue = any(st.get("is_overdue") for _, st in urgent_reminders)
+        icon = "🚨" if has_overdue else "⚠️"
+        title_status = "СРОЧНОЕ ОБСЛУЖИВАНИЕ (ТО)" if has_overdue else "ПРИБЛИЖАЕТСЯ СРОК ТО"
+        odo_formatted = f"{int(vehicle.current_odometer or 0):,}".replace(",", " ")
+
+        lines = [
+            f"{icon} <b>Внимание! {title_status}!</b>\n",
+            f"🚘 Автомобиль: <b>{vehicle.make} {vehicle.model}</b>",
+            f"🛣️ Текущий пробег: <b>{odo_formatted} км</b>\n",
+            "<b>Необходимые работы:</b>",
+        ]
+
+        inline_btns = []
+        for r, st in urgent_reminders:
+            r_icon = "🔴" if st.get("is_overdue") else "🟡"
+            r_lbl = "ПРОСРОЧЕНО!" if st.get("is_overdue") else "СКОРО!"
+            line = f"{r_icon} <b>{r.title}</b> — {r_lbl}"
+            if st.get("remaining_distance") is not None:
+                rem_km = int(st["remaining_distance"])
+                if rem_km < 0:
+                    rem_km_fmt = f"{abs(rem_km):,}".replace(",", " ")
+                    line += f"\n   • Просрочено на: <b>{rem_km_fmt} км</b>"
+                else:
+                    rem_km_fmt = f"{rem_km:,}".replace(",", " ")
+                    line += f"\n   • Осталось: <b>{rem_km_fmt} км</b>"
+            if st.get("remaining_days") is not None:
+                rem_d = st["remaining_days"]
+                if rem_d < 0:
+                    line += f"\n   • Просрочено на: <b>{abs(rem_d)} дн.</b>"
+                else:
+                    line += f"\n   • Срок: <b>{rem_d} дн.</b>"
+            lines.append(line)
+
+            short_t = (r.title[:20] + "..") if len(r.title) > 22 else r.title
+            inline_btns.append([{"text": f"✅ Выполнено: {short_t}", "callback_data": f"done_to:{r.id}"}])
+
+        inline_btns.append([{"text": "🔧 Все регламенты", "callback_data": f"to:{vehicle.id}"}])
+
+        kb = {"inline_keyboard": inline_btns}
+        await TelegramService.send_message(user.telegram_chat_id, "\n".join(lines), kb)
+        user.telegram_last_reminder_alert = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+        await session.commit()
+        return True
+
+    @staticmethod
     def build_vehicle_card_text(v: Vehicle) -> str:
         """Formats full telematics and status details for a vehicle."""
         tank_cap = v.fuel_tank_capacity or 55.0
@@ -361,7 +440,7 @@ class TelegramService:
                     if rem_dist is not None:
                         target_formatted = f"{int(due_dist):,}".replace(",", " ") if due_dist else "—"
                         rem_dist_formatted = f"{int(rem_dist):,}".replace(",", " ")
-                        line += f"\n   • Осталось: <b>{rem_dist_formatted} км</b> (на {target_formatted} км)"
+                        line += f"\n   • До ТО: <b>{rem_dist_formatted} км</b> (на {target_formatted} км)"
                     if rem_days is not None:
                         line += f"\n   • Срок: <b>{rem_days} дн.</b>"
                     msg_lines.append(line)
@@ -814,6 +893,12 @@ class TelegramService:
 
         await TelegramService.send_message(chat_id, receipt, MAIN_KEYBOARD)
 
+        # Check if new odometer triggered maintenance reminder
+        try:
+            await TelegramService.check_and_notify_vehicle_reminders(session, v, user, force=True)
+        except Exception as e:
+            log.warning(f"[TelegramService] Reminder notification error after fuel: {e}")
+
     @staticmethod
     async def handle_odometer_command(chat_id: str, cmd_text: str, user: User, session):
         """Processes quick odometer update."""
@@ -838,31 +923,22 @@ class TelegramService:
         v.current_odometer = new_odo
         await session.commit()
 
-        await sync_reminder_baselines(session, v.id)
-        rem_res = await session.execute(select(MaintenancePlan).where(MaintenancePlan.vehicle_id == v.id, MaintenancePlan.is_active == True))
-        reminders = rem_res.scalars().all()
-
-        urgent_count = 0
-        for r in reminders:
-            st = compute_reminder_status(r, v)
-            if st.get("is_overdue") or st.get("is_due_soon"):
-                urgent_count += 1
-
         old_formatted = f"{int(old_odo):,}".replace(",", " ")
         new_formatted = f"{int(new_odo):,}".replace(",", " ")
         msg = (
             f"🛣️ <b>Пробег успешно обновлен!</b>\n\n"
             f"🚘 Автомобиль: <b>{v.make} {v.model}</b>\n"
             f"• Предыдущий: {old_formatted} км\n"
-            f"• Актуальный: <b>{new_formatted} км</b>\n"
+            f"• Актуальный: <b>{new_formatted} км</b>"
         )
-        if urgent_count > 0:
-            msg += f"\n⚠️ <b>Внимание:</b> {urgent_count} регламентов ТО требуют внимания! Отправьте /to для просмотра."
-        else:
-            msg += "\n✅ Все регламенты ТО в норме."
-
         kb = {"inline_keyboard": [[{"text": "🔧 Проверить ТО", "callback_data": f"to:{v.id}"}]]}
         await TelegramService.send_message(chat_id, msg, kb)
+
+        # Trigger immediate reminder check
+        try:
+            await TelegramService.check_and_notify_vehicle_reminders(session, v, user, force=True)
+        except Exception as e:
+            log.warning(f"[TelegramService] Reminder notification error after odometer: {e}")
 
     @staticmethod
     async def handle_engine_hours_command(chat_id: str, cmd_text: str, user: User, session):
@@ -889,6 +965,11 @@ class TelegramService:
             f"• Актуальные моточасы: <b>{new_hours} м/ч</b>"
         )
         await TelegramService.send_message(chat_id, msg, MAIN_KEYBOARD)
+
+        try:
+            await TelegramService.check_and_notify_vehicle_reminders(session, v, user, force=True)
+        except Exception as e:
+            log.warning(f"[TelegramService] Reminder notification error after hours: {e}")
 
     @staticmethod
     async def send_tco_report(chat_id: str, user: User, session, specific_vid: Optional[int] = None):
@@ -1054,61 +1135,14 @@ async def check_and_send_scheduled_telegram_notifications():
                             await session.commit()
 
                     # 2. Maintenance Reminders Alert (Overdue or Due Soon)
-                    if user.telegram_notify_reminders:
+                    if user.telegram_notify_reminders and v.reminders:
                         last_rem_alert = user.telegram_last_reminder_alert
                         should_check_rem = False
                         if not last_rem_alert or (now - last_rem_alert).total_seconds() > 24 * 3600:
                             should_check_rem = True
 
-                        if should_check_rem and v.reminders:
-                            urgent_reminders = []
-                            for r in v.reminders:
-                                if not r.is_active:
-                                    continue
-                                st = compute_reminder_status(r, v)
-                                if st.get("is_overdue") or st.get("is_due_soon"):
-                                    urgent_reminders.append((r, st))
-
-                            if urgent_reminders:
-                                has_overdue = any(st.get("is_overdue") for _, st in urgent_reminders)
-                                icon = "🚨" if has_overdue else "⚠️"
-                                title_status = "СРОЧНОЕ ОБСЛУЖИВАНИЕ (ТО)" if has_overdue else "ПРИБЛИЖАЕТСЯ СРОК ТО"
-
-                                lines = [
-                                    f"{icon} <b>Внимание! {title_status}!</b>\n",
-                                    f"🚘 Автомобиль: <b>{v.make} {v.model}</b>",
-                                    f"🛣️ Текущий пробег: <b>{int(v.current_odometer or 0):,} км</b>\n",
-                                    "<b>Необходимые работы:</b>",
-                                ]
-
-                                inline_btns = []
-                                for r, st in urgent_reminders:
-                                    r_icon = "🔴" if st.get("is_overdue") else "🟡"
-                                    r_lbl = "ПРОСРОЧЕНО!" if st.get("is_overdue") else "СКОРО!"
-                                    line = f"{r_icon} <b>{r.title}</b> — {r_lbl}"
-                                    if st.get("remaining_distance") is not None:
-                                        rem_km = int(st["remaining_distance"])
-                                        if rem_km < 0:
-                                            line += f"\n   • Просрочено на: <b>{abs(rem_km):,} км</b>"
-                                        else:
-                                            line += f"\n   • Осталось: <b>{rem_km:,} км</b>"
-                                    if st.get("remaining_days") is not None:
-                                        rem_d = st["remaining_days"]
-                                        if rem_d < 0:
-                                            line += f"\n   • Просрочено на: <b>{abs(rem_d)} дн.</b>"
-                                        else:
-                                            line += f"\n   • Срок: <b>{rem_d} дн.</b>"
-                                    lines.append(line)
-
-                                    short_t = (r.title[:20] + "..") if len(r.title) > 22 else r.title
-                                    inline_btns.append([{"text": f"✅ Выполнено: {short_t}", "callback_data": f"done_to:{r.id}"}])
-
-                                inline_btns.append([{"text": "🔧 Все регламенты", "callback_data": f"to:{v.id}"}])
-
-                                kb = {"inline_keyboard": inline_btns}
-                                await TelegramService.send_message(chat_id, "\n".join(lines), kb)
-                                user.telegram_last_reminder_alert = now
-                                await session.commit()
+                        if should_check_rem:
+                            await TelegramService.check_and_notify_vehicle_reminders(session, v, user)
 
                     # 3. Documents / Insurance Expiration (<= 14 days)
                     if user.telegram_notify_documents and v.documents:
@@ -1143,4 +1177,3 @@ async def check_and_send_scheduled_telegram_notifications():
 
         except Exception as e:
             log.error(f"[Telegram Notifications] Error: {e}")
-

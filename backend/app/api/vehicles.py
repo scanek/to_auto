@@ -252,6 +252,15 @@ async def update_vehicle(
         setattr(vehicle, field, value)
     await db.commit()
     await db.refresh(vehicle)
+
+    # If mileage or engine hours were updated, instantly check and notify via Telegram if maintenance is due
+    if "current_odometer" in update_data or "current_engine_hours" in update_data:
+        try:
+            from app.services.telegram_service import TelegramService
+            await TelegramService.check_and_notify_vehicle_reminders(db, vehicle, current_user, force=True)
+        except Exception as e:
+            pass
+
     resp = VehicleResponse.model_validate(vehicle)
     resp.is_owner = True
     resp.owner_name = current_user.full_name or current_user.username

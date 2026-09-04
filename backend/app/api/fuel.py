@@ -54,6 +54,12 @@ async def create_fuel_log(
     await recalculate_fuel_logs(db, vehicle_id)
     await db.refresh(log)
 
+    try:
+        from app.services.telegram_service import TelegramService
+        await TelegramService.check_and_notify_vehicle_reminders(db, vehicle, current_user, force=True)
+    except Exception:
+        pass
+
     return FuelLogResponse.model_validate(log)
 
 @router.put("/{log_id}", response_model=FuelLogResponse)
