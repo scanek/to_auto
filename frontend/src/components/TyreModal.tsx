@@ -370,6 +370,39 @@ export const TyreModal: React.FC<TyreModalProps> = ({
                 }
                 className="w-full bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-emerald-600 dark:text-emerald-400 focus:outline-none focus:border-emerald-500 font-mono font-bold"
               />
+              <div className="mt-1 flex items-center gap-1.5">
+                <div className="flex-1 bg-slate-200 dark:bg-dark-750 h-1.5 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full transition-all ${
+                      formData.tread_depth_mm >= 7
+                        ? 'bg-emerald-500'
+                        : formData.tread_depth_mm >= 4
+                        ? 'bg-amber-500'
+                        : formData.tread_depth_mm >= 2
+                        ? 'bg-orange-500'
+                        : 'bg-rose-500'
+                    }`}
+                    style={{ width: `${Math.min(100, (formData.tread_depth_mm / 10) * 100)}%` }}
+                  />
+                </div>
+                <span className={`text-[10px] font-bold ${
+                  formData.tread_depth_mm >= 7
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : formData.tread_depth_mm >= 4
+                    ? 'text-amber-600 dark:text-amber-400'
+                    : formData.tread_depth_mm >= 2
+                    ? 'text-orange-600 dark:text-orange-400'
+                    : 'text-rose-600 dark:text-rose-400'
+                }`}>
+                  {formData.tread_depth_mm >= 7
+                    ? 'Новые'
+                    : formData.tread_depth_mm >= 4
+                    ? 'Норма'
+                    : formData.tread_depth_mm >= 2
+                    ? 'Износ'
+                    : 'Замена!'}
+                </span>
+              </div>
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">

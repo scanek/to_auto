@@ -44,6 +44,8 @@ class VehicleBase(BaseModel):
     telematics_webhook_key: Optional[str] = None
     telematics_auto_sync: bool = False
     starline_auto_sync_interval_minutes: Optional[int] = 60
+    starline_last_error: Optional[str] = None
+    starline_consecutive_errors: int = 0
 
 class VehicleCreate(VehicleBase):
     pass

@@ -212,6 +212,22 @@ export const FuelModal: React.FC<FuelModalProps> = ({
                 onChange={(e) => setFormData({ ...formData, fuel_grade: e.target.value })}
                 className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-medium"
               />
+              <div className="flex flex-wrap gap-1 mt-1.5">
+                {['АИ-95', 'АИ-95+', 'АИ-92', 'АИ-98', 'АИ-100', 'ДТ'].map((g) => (
+                  <button
+                    key={g}
+                    type="button"
+                    onClick={() => setFormData((prev) => ({ ...prev, fuel_grade: g }))}
+                    className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border transition ${
+                      formData.fuel_grade === g
+                        ? 'bg-brand-500 text-white border-brand-500'
+                        : 'bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-dark-750 hover:bg-slate-200 dark:hover:bg-dark-700'
+                    }`}
+                  >
+                    {g}
+                  </button>
+                ))}
+              </div>
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -224,6 +240,22 @@ export const FuelModal: React.FC<FuelModalProps> = ({
                 onChange={(e) => setFormData({ ...formData, gas_station: e.target.value })}
                 className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
               />
+              <div className="flex flex-wrap gap-1 mt-1.5">
+                {['Лукойл', 'Газпромнефть', 'Роснефть', 'Татнефть', 'Teboil', 'Башнефть'].map((st) => (
+                  <button
+                    key={st}
+                    type="button"
+                    onClick={() => setFormData((prev) => ({ ...prev, gas_station: st }))}
+                    className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border transition ${
+                      formData.gas_station === st
+                        ? 'bg-brand-500 text-white border-brand-500'
+                        : 'bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-dark-750 hover:bg-slate-200 dark:hover:bg-dark-700'
+                    }`}
+                  >
+                    {st}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 

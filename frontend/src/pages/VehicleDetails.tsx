@@ -556,6 +556,28 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                       </button>
                     )}
 
+                    <button
+                      onClick={() => {
+                        setIsActionMenuOpen(false);
+                        api.downloadServiceBooklet(vehicle.id);
+                      }}
+                      className="w-full px-3.5 py-2.5 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-dark-800 flex items-center space-x-2.5 transition"
+                    >
+                      <FileText className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                      <span className="font-semibold">Сервисная книжка (PDF)</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setIsActionMenuOpen(false);
+                        api.downloadExcelFile(vehicle.id);
+                      }}
+                      className="w-full px-3.5 py-2.5 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-dark-800 flex items-center space-x-2.5 transition"
+                    >
+                      <FileSpreadsheet className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                      <span className="font-semibold">Экспорт в Excel (.xlsx)</span>
+                    </button>
+
                     {isOwner && (
                       <button
                         onClick={() => {
@@ -1829,6 +1851,66 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 </div>
               </div>
             </div>
+
+            {/* TCO & Cost of Ownership Forecast */}
+            {(() => {
+              const startDate = vehicle.purchase_date || vehicle.created_at;
+              const days = startDate
+                ? Math.max(1, Math.round((new Date().getTime() - new Date(startDate).getTime()) / (1000 * 3600 * 24)))
+                : 30;
+              const costPerDay = Math.round(analytics.total_spend / days);
+              const costPerMonth = Math.round(costPerDay * 30.5);
+              const forecastYear = Math.round(costPerDay * 365);
+
+              return (
+                <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-dark-850 text-white p-4 sm:p-5 rounded-3xl shadow-lg border border-slate-700/50 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-8 h-8 rounded-xl bg-brand-500/20 text-brand-400 flex items-center justify-center font-bold">
+                        💰
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-black tracking-tight text-white">
+                          TCO: Стоимость владения автомобилем
+                        </h4>
+                        <p className="text-[11px] text-slate-400">
+                          Учет всех расходов за {days} {days === 1 ? 'день' : days < 5 ? 'дня' : 'дней'} владения
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30">
+                      Всего: {analytics.total_spend.toLocaleString('ru-RU')} {vehicle.currency || '₽'}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                    <div className="bg-white/5 border border-white/10 p-3 rounded-2xl">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block">В день</span>
+                      <div className="text-base sm:text-lg font-black text-brand-400 font-mono mt-0.5">
+                        ~{costPerDay.toLocaleString('ru-RU')} {vehicle.currency || '₽'}/день
+                      </div>
+                      <span className="text-[10px] text-slate-400 block mt-0.5">Среднесуточный расход</span>
+                    </div>
+
+                    <div className="bg-white/5 border border-white/10 p-3 rounded-2xl">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block">В месяц</span>
+                      <div className="text-base sm:text-lg font-black text-sky-400 font-mono mt-0.5">
+                        ~{costPerMonth.toLocaleString('ru-RU')} {vehicle.currency || '₽'}/мес
+                      </div>
+                      <span className="text-[10px] text-slate-400 block mt-0.5">При текущем темпе</span>
+                    </div>
+
+                    <div className="bg-white/5 border border-white/10 p-3 rounded-2xl">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Прогноз на 1 год</span>
+                      <div className="text-base sm:text-lg font-black text-emerald-400 font-mono mt-0.5">
+                        ~{forecastYear.toLocaleString('ru-RU')} {vehicle.currency || '₽'}/год
+                      </div>
+                      <span className="text-[10px] text-slate-400 block mt-0.5">Ориентир на 12 месяцев</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Charts Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">

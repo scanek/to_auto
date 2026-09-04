@@ -2,6 +2,7 @@ import datetime
 from sqlalchemy import Column, Integer, String, Float, DateTime, Text, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from app.db.session import Base
+from app.core.datetime_utils import utc_now_naive
 
 class Vehicle(Base):
     __tablename__ = "vehicles"
@@ -52,10 +53,12 @@ class Vehicle(Base):
     starline_is_spoofed = Column(Boolean, default=False) # Обнаружена подмена/глушение GPS
     telematics_auto_sync = Column(Boolean, default=False)
     starline_auto_sync_interval_minutes = Column(Integer, default=60, nullable=True) # Интервал автообновления в минутах (0 = отключено, 30, 60, 120, 240, 720, 1440)
+    starline_last_error = Column(String(500), nullable=True) # Последняя ошибка авторизации/синхронизации
+    starline_consecutive_errors = Column(Integer, default=0, nullable=False) # Количество последовательных ошибок
     telematics_webhook_key = Column(String(100), nullable=True, unique=True, index=True)
     
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now_naive)
+    updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
 
     # Relationships
     user = relationship("User", back_populates="vehicles")

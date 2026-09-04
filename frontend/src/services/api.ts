@@ -622,6 +622,24 @@ export const api = {
     const token = getAuthToken();
     return `${API_BASE}/export/excel/${vehicleId}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
   },
+  downloadServiceBooklet: async (vehicleId: number) => {
+    try {
+      const ticketRes = await request<{ ticket: string }>(`${API_BASE}/export/ticket/${vehicleId}`, { method: 'POST' });
+      window.open(`${API_BASE}/export/service-booklet/${vehicleId}?ticket=${encodeURIComponent(ticketRes.ticket)}`, '_blank');
+    } catch {
+      const token = getAuthToken();
+      window.open(`${API_BASE}/export/service-booklet/${vehicleId}${token ? `?token=${encodeURIComponent(token)}` : ''}`, '_blank');
+    }
+  },
+  downloadExcelFile: async (vehicleId: number) => {
+    try {
+      const ticketRes = await request<{ ticket: string }>(`${API_BASE}/export/ticket/${vehicleId}`, { method: 'POST' });
+      window.location.href = `${API_BASE}/export/excel/${vehicleId}?ticket=${encodeURIComponent(ticketRes.ticket)}`;
+    } catch {
+      const token = getAuthToken();
+      window.location.href = `${API_BASE}/export/excel/${vehicleId}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+    }
+  },
 
   // -------------------------------------------------------------
   // Synchronize Offline Queue
