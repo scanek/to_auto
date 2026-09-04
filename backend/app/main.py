@@ -20,18 +20,22 @@ from app.api import (
     tyres,
     backup,
     telematics,
+    telegram,
 )
 from app.services.telematics_scheduler import start_telematics_background_worker
+from app.services.telegram_service import start_telegram_bot_worker
 import asyncio
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Initialize database tables on startup
     await init_db()
-    # Start background telematics auto-sync worker
+    # Start background workers
     scheduler_task = asyncio.create_task(start_telematics_background_worker())
+    telegram_task = asyncio.create_task(start_telegram_bot_worker())
     yield
     scheduler_task.cancel()
+    telegram_task.cancel()
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -68,6 +72,7 @@ app.include_router(uploads.router, prefix=api_v1_prefix)
 app.include_router(tyres.router, prefix=api_v1_prefix)
 app.include_router(backup.router, prefix=api_v1_prefix)
 app.include_router(telematics.router, prefix=api_v1_prefix)
+app.include_router(telegram.router, prefix=api_v1_prefix)
 
 @app.get("/health", tags=["Health"])
 async def health_check():

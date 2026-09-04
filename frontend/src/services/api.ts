@@ -745,4 +745,31 @@ export const api = {
         body: JSON.stringify(data),
       }
     ),
+
+  // -------------------------------------------------------------
+  // Telegram Bot Integration
+  // -------------------------------------------------------------
+  getTelegramStatus: () =>
+    request<import('../types').TelegramStatus>(`${API_BASE}/telegram/status`),
+
+  unlinkTelegram: () =>
+    request<{ message: string }>(`${API_BASE}/telegram/unlink`, {
+      method: 'POST',
+    }),
+
+  sendTelegramTestMessage: () =>
+    request<{ message: string }>(`${API_BASE}/telegram/test-message`, {
+      method: 'POST',
+    }),
+
+  updateTelegramSettings: (data: Partial<import('../types').TelegramStatus>) =>
+    request<{ message: string }>(`${API_BASE}/telegram/settings`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        telegram_notifications_enabled: data.notifications_enabled,
+        telegram_notify_reminders: data.notify_reminders,
+        telegram_notify_battery: data.notify_battery,
+        telegram_notify_documents: data.notify_documents,
+      }),
+    }),
 };

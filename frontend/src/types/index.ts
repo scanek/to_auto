@@ -272,3 +272,15 @@ export interface SystemAnnouncement {
   updated_at?: string;
   updated_by?: string;
 }
+
+export interface TelegramStatus {
+  is_connected: boolean;
+  telegram_username?: string | null;
+  telegram_chat_id?: string | null;
+  bot_username: string;
+  link_url: string;
+  notifications_enabled: boolean;
+  notify_reminders: boolean;
+  notify_battery: boolean;
+  notify_documents: boolean;
+}

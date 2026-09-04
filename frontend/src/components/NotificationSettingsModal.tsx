@@ -10,8 +10,14 @@ import {
   Clock,
   ShieldCheck,
   Send,
+  ExternalLink,
+  Satellite,
+  BatteryCharging,
+  Trash2,
 } from 'lucide-react';
 import { notificationService, NotificationSettings } from '../services/notificationService';
+import { api } from '../services/api';
+import { TelegramStatus } from '../types';
 
 interface NotificationSettingsModalProps {
   isOpen: boolean;
@@ -26,13 +32,63 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
   const [permission, setPermission] = useState<NotificationPermission>('default');
   const [testResult, setTestResult] = useState<string | null>(null);
 
+  // Telegram Integration State
+  const [telegramStatus, setTelegramStatus] = useState<TelegramStatus | null>(null);
+  const [loadingTelegram, setLoadingTelegram] = useState(false);
+  const [telegramTestResult, setTelegramTestResult] = useState<string | null>(null);
+
   useEffect(() => {
     if (isOpen) {
       setSettings(notificationService.getSettings());
       setPermission(notificationService.getPermission());
       setTestResult(null);
+      setTelegramTestResult(null);
+      loadTelegramStatus();
     }
   }, [isOpen]);
+
+  const loadTelegramStatus = async () => {
+    try {
+      setLoadingTelegram(true);
+      const res = await api.getTelegramStatus();
+      setTelegramStatus(res);
+    } catch (e) {
+      console.error('Failed to load Telegram status', e);
+    } finally {
+      setLoadingTelegram(false);
+    }
+  };
+
+  const handleUnlinkTelegram = async () => {
+    if (!window.confirm('Отвязать Telegram-бота от аккаунта?')) return;
+    try {
+      await api.unlinkTelegram();
+      await loadTelegramStatus();
+    } catch (e) {
+      alert('Ошибка при отвязке Telegram');
+    }
+  };
+
+  const handleSendTelegramTest = async () => {
+    setTelegramTestResult('Отправка в Telegram...');
+    try {
+      await api.sendTelegramTestMessage();
+      setTelegramTestResult('✅ Сообщение отправлено в Telegram!');
+    } catch (e) {
+      setTelegramTestResult('⚠️ Ошибка отправки. Убедитесь, что бот запущен.');
+    }
+  };
+
+  const handleToggleTelegramOption = async (field: keyof TelegramStatus, val: boolean) => {
+    if (!telegramStatus) return;
+    const updated = { ...telegramStatus, [field]: val };
+    setTelegramStatus(updated);
+    try {
+      await api.updateTelegramSettings(updated);
+    } catch (e) {
+      console.error('Failed to update telegram settings', e);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -100,6 +156,122 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
 
         {/* Content */}
         <div className="p-5 space-y-4 overflow-y-auto flex-1 text-xs">
+          {/* Telegram Bot Integration Card */}
+          <div className="bg-gradient-to-br from-sky-500/10 via-brand-500/10 to-transparent border border-sky-500/25 p-4 rounded-2xl space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-8 h-8 rounded-xl bg-sky-500 text-white flex items-center justify-center font-bold text-base shadow-md shadow-sky-500/20">
+                  ✈️
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <h4 className="font-bold text-slate-900 dark:text-white text-xs">
+                      Telegram-бот (@{telegramStatus?.bot_username || 'to_scanek_bot'})
+                    </h4>
+                    {telegramStatus?.is_connected ? (
+                      <span className="text-[9px] uppercase font-extrabold px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                        Подключен
+                      </span>
+                    ) : (
+                      <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded-md bg-slate-200 dark:bg-dark-700 text-slate-600 dark:text-slate-400">
+                        Не привязан
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Мгновенные оповещения в личные сообщения Telegram
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {telegramStatus?.is_connected ? (
+              <div className="space-y-2.5 pt-1">
+                <div className="flex items-center justify-between text-[11px] p-2 rounded-xl bg-white/60 dark:bg-dark-900/60 border border-slate-200 dark:border-dark-700">
+                  <span className="text-slate-600 dark:text-slate-400">
+                    Привязанный аккаунт: <b className="text-slate-900 dark:text-white">{telegramStatus.telegram_username ? `@${telegramStatus.telegram_username}` : `ID: ${telegramStatus.telegram_chat_id}`}</b>
+                  </span>
+                  <button
+                    onClick={handleUnlinkTelegram}
+                    className="text-rose-500 hover:text-rose-600 font-bold text-[10px] hover:underline"
+                  >
+                    Отвязать
+                  </button>
+                </div>
+
+                {/* Sub-toggles for Telegram */}
+                <div className="space-y-1.5 pt-1">
+                  <label className="flex items-center justify-between text-[11px] text-slate-700 dark:text-slate-300 cursor-pointer">
+                    <span>🔧 Напоминания о регламентах ТО</span>
+                    <input
+                      type="checkbox"
+                      checked={telegramStatus.notify_reminders}
+                      onChange={(e) => handleToggleTelegramOption('notify_reminders', e.target.checked)}
+                      className="rounded text-brand-500"
+                    />
+                  </label>
+                  <label className="flex items-center justify-between text-[11px] text-slate-700 dark:text-slate-300 cursor-pointer">
+                    <span>🪫 Предупреждать о разряде АКБ (&lt; 11.8 В)</span>
+                    <input
+                      type="checkbox"
+                      checked={telegramStatus.notify_battery}
+                      onChange={(e) => handleToggleTelegramOption('notify_battery', e.target.checked)}
+                      className="rounded text-brand-500"
+                    />
+                  </label>
+                </div>
+
+                <div className="pt-1 flex gap-2">
+                  <button
+                    onClick={handleSendTelegramTest}
+                    className="flex-1 bg-white dark:bg-dark-800 hover:bg-slate-100 dark:hover:bg-dark-750 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-dark-700 font-bold py-1.5 px-3 rounded-xl transition text-[11px] flex items-center justify-center gap-1.5"
+                  >
+                    <Send className="w-3.5 h-3.5 text-sky-500" />
+                    <span>Отправить тест</span>
+                  </button>
+                  <a
+                    href={`https://t.me/${telegramStatus.bot_username || 'to_scanek_bot'}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="bg-sky-500 hover:bg-sky-600 text-white font-bold py-1.5 px-3 rounded-xl transition text-[11px] flex items-center justify-center gap-1 shadow-sm"
+                  >
+                    <span>Открыть чат</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+                {telegramTestResult && (
+                  <div className="text-center text-[10px] font-semibold text-slate-600 dark:text-slate-300">
+                    {telegramTestResult}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="pt-1 space-y-2">
+                <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                  Подключите бота в 1 клик, чтобы получать уведомления о приближающемся ТО и критическом разряде аккумулятора.
+                </p>
+                {telegramStatus?.link_url && (
+                  <a
+                    href={telegramStatus.link_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="w-full inline-flex items-center justify-center space-x-2 bg-sky-500 hover:bg-sky-600 active:scale-95 text-white font-bold py-2 px-4 rounded-xl transition shadow-md shadow-sky-500/20 text-xs"
+                  >
+                    <span>Подключить Telegram-бота</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Browser Web Push Heading */}
+          <div className="pt-2">
+            <h4 className="text-[11px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider">
+              Браузерные Web Push-уведомления
+            </h4>
+          </div>
+
           {/* Permission Status Banner */}
           <div
             className={`p-3 rounded-xl border flex items-start space-x-2.5 ${

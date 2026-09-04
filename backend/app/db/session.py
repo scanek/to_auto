@@ -32,6 +32,16 @@ async def auto_migrate_sqlite(conn):
     """
     # Columns to check and add
     column_migrations = {
+        "users": [
+            ("telegram_chat_id", "VARCHAR(100)"),
+            ("telegram_username", "VARCHAR(100)"),
+            ("telegram_auth_token", "VARCHAR(100)"),
+            ("telegram_notifications_enabled", "BOOLEAN DEFAULT 1"),
+            ("telegram_notify_reminders", "BOOLEAN DEFAULT 1"),
+            ("telegram_notify_battery", "BOOLEAN DEFAULT 1"),
+            ("telegram_notify_documents", "BOOLEAN DEFAULT 1"),
+            ("telegram_last_battery_alert", "DATETIME"),
+        ],
         "vehicles": [
             ("user_id", "INTEGER REFERENCES users(id)"),
             ("is_public", "BOOLEAN DEFAULT 0"),
