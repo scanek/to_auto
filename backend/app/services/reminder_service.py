@@ -185,5 +185,7 @@ def compute_reminder_status(plan: MaintenancePlan, vehicle: Vehicle) -> Dict[str
         "remaining_hours": remaining_hours,
         "remaining_days": remaining_days,
         "status": status,
+        "is_overdue": is_overdue,
+        "is_due_soon": is_due_soon,
         "progress_percentage": round(progress, 1),
     }

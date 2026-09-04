@@ -41,6 +41,8 @@ async def auto_migrate_sqlite(conn):
             ("telegram_notify_battery", "BOOLEAN DEFAULT 1"),
             ("telegram_notify_documents", "BOOLEAN DEFAULT 1"),
             ("telegram_last_battery_alert", "DATETIME"),
+            ("telegram_last_reminder_alert", "DATETIME"),
+            ("telegram_last_document_alert", "DATETIME"),
         ],
         "vehicles": [
             ("user_id", "INTEGER REFERENCES users(id)"),

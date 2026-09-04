@@ -29,6 +29,8 @@ class User(Base):
     telegram_notify_battery = Column(Boolean, default=True, nullable=False)
     telegram_notify_documents = Column(Boolean, default=True, nullable=False)
     telegram_last_battery_alert = Column(DateTime, nullable=True)
+    telegram_last_reminder_alert = Column(DateTime, nullable=True)
+    telegram_last_document_alert = Column(DateTime, nullable=True)
 
     created_at = Column(DateTime, default=utc_now_naive, nullable=False)
     updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive, nullable=False)

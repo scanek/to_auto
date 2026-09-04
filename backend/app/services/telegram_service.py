@@ -1010,7 +1010,7 @@ async def start_telegram_bot_worker():
 
 
 async def check_and_send_scheduled_telegram_notifications():
-    """Periodic background check for maintenance reminders and low battery alerts."""
+    """Periodic background check for maintenance reminders, document expirations, and low battery alerts."""
     if not settings.TELEGRAM_BOT_TOKEN:
         return
 
@@ -1020,7 +1020,10 @@ async def check_and_send_scheduled_telegram_notifications():
                 select(User).where(
                     User.telegram_chat_id.isnot(None),
                     User.telegram_notifications_enabled == True,
-                ).options(selectinload(User.vehicles).selectinload(Vehicle.reminders))
+                ).options(
+                    selectinload(User.vehicles).selectinload(Vehicle.reminders),
+                    selectinload(User.vehicles).selectinload(Vehicle.documents),
+                )
             )
             users = users_res.scalars().all()
             now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
@@ -1031,6 +1034,7 @@ async def check_and_send_scheduled_telegram_notifications():
                     continue
 
                 for v in (user.vehicles or []):
+                    # 1. Low Battery Alert (< 11.8 V)
                     if user.telegram_notify_battery and v.starline_battery and v.starline_battery < 11.8:
                         last_alert = user.telegram_last_battery_alert
                         should_alert = False
@@ -1048,5 +1052,95 @@ async def check_and_send_scheduled_telegram_notifications():
                             await TelegramService.send_message(chat_id, alert_msg, kb)
                             user.telegram_last_battery_alert = now
                             await session.commit()
+
+                    # 2. Maintenance Reminders Alert (Overdue or Due Soon)
+                    if user.telegram_notify_reminders:
+                        last_rem_alert = user.telegram_last_reminder_alert
+                        should_check_rem = False
+                        if not last_rem_alert or (now - last_rem_alert).total_seconds() > 24 * 3600:
+                            should_check_rem = True
+
+                        if should_check_rem and v.reminders:
+                            urgent_reminders = []
+                            for r in v.reminders:
+                                if not r.is_active:
+                                    continue
+                                st = compute_reminder_status(r, v)
+                                if st.get("is_overdue") or st.get("is_due_soon"):
+                                    urgent_reminders.append((r, st))
+
+                            if urgent_reminders:
+                                has_overdue = any(st.get("is_overdue") for _, st in urgent_reminders)
+                                icon = "🚨" if has_overdue else "⚠️"
+                                title_status = "СРОЧНОЕ ОБСЛУЖИВАНИЕ (ТО)" if has_overdue else "ПРИБЛИЖАЕТСЯ СРОК ТО"
+
+                                lines = [
+                                    f"{icon} <b>Внимание! {title_status}!</b>\n",
+                                    f"🚘 Автомобиль: <b>{v.make} {v.model}</b>",
+                                    f"🛣️ Текущий пробег: <b>{int(v.current_odometer or 0):,} км</b>\n",
+                                    "<b>Необходимые работы:</b>",
+                                ]
+
+                                inline_btns = []
+                                for r, st in urgent_reminders:
+                                    r_icon = "🔴" if st.get("is_overdue") else "🟡"
+                                    r_lbl = "ПРОСРОЧЕНО!" if st.get("is_overdue") else "СКОРО!"
+                                    line = f"{r_icon} <b>{r.title}</b> — {r_lbl}"
+                                    if st.get("remaining_distance") is not None:
+                                        rem_km = int(st["remaining_distance"])
+                                        if rem_km < 0:
+                                            line += f"\n   • Просрочено на: <b>{abs(rem_km):,} км</b>"
+                                        else:
+                                            line += f"\n   • Осталось: <b>{rem_km:,} км</b>"
+                                    if st.get("remaining_days") is not None:
+                                        rem_d = st["remaining_days"]
+                                        if rem_d < 0:
+                                            line += f"\n   • Просрочено на: <b>{abs(rem_d)} дн.</b>"
+                                        else:
+                                            line += f"\n   • Срок: <b>{rem_d} дн.</b>"
+                                    lines.append(line)
+
+                                    short_t = (r.title[:20] + "..") if len(r.title) > 22 else r.title
+                                    inline_btns.append([{"text": f"✅ Выполнено: {short_t}", "callback_data": f"done_to:{r.id}"}])
+
+                                inline_btns.append([{"text": "🔧 Все регламенты", "callback_data": f"to:{v.id}"}])
+
+                                kb = {"inline_keyboard": inline_btns}
+                                await TelegramService.send_message(chat_id, "\n".join(lines), kb)
+                                user.telegram_last_reminder_alert = now
+                                await session.commit()
+
+                    # 3. Documents / Insurance Expiration (<= 14 days)
+                    if user.telegram_notify_documents and v.documents:
+                        last_doc_alert = user.telegram_last_document_alert
+                        should_check_doc = False
+                        if not last_doc_alert or (now - last_doc_alert).total_seconds() > 24 * 3600:
+                            should_check_doc = True
+
+                        if should_check_doc:
+                            expiring_docs = []
+                            for doc in v.documents:
+                                if not doc.is_active or not doc.expiration_date:
+                                    continue
+                                days_left = (doc.expiration_date - now).days
+                                if days_left <= 14:
+                                    expiring_docs.append((doc, days_left))
+
+                            if expiring_docs:
+                                doc_lines = [
+                                    f"📄 <b>Внимание! Истекает срок действия документов!</b>\n",
+                                    f"🚘 Автомобиль: <b>{v.make} {v.model}</b>\n",
+                                ]
+                                for doc, days_left in expiring_docs:
+                                    d_icon = "🔴" if days_left <= 0 else "🟡"
+                                    status_str = f"ИСТЕК ({abs(days_left)} дн. назад)" if days_left <= 0 else f"осталось {days_left} дн."
+                                    doc_lines.append(f"{d_icon} <b>{doc.title}</b> ({doc.company or 'Полис'}) — <b>{status_str}</b>")
+
+                                kb = {"inline_keyboard": [[{"text": "📊 Статус авто", "callback_data": f"sync:{v.id}"}]]}
+                                await TelegramService.send_message(chat_id, "\n".join(doc_lines), kb)
+                                user.telegram_last_document_alert = now
+                                await session.commit()
+
         except Exception as e:
             log.error(f"[Telegram Notifications] Error: {e}")
+
