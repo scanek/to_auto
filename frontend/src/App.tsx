@@ -18,6 +18,8 @@ import { InstallAppModal } from './components/InstallAppModal';
 import { AuthModal } from './components/AuthModal';
 import { NotificationSettingsModal } from './components/NotificationSettingsModal';
 import { SettingsModal } from './components/SettingsModal';
+import { QuickActionFab } from './components/QuickActionFab';
+import { QuickOdometerModal } from './components/QuickOdometerModal';
 import { PublicServiceBooklet } from './pages/PublicServiceBooklet';
 import { Github, ZapOff, RefreshCw, CheckCircle2, AlertTriangle, ShieldAlert, Info, X } from 'lucide-react';
 
@@ -239,8 +241,31 @@ export function App() {
   const [editingTyre, setEditingTyre] = useState<TyreSet | null>(null);
 
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isOdometerModalOpen, setIsOdometerModalOpen] = useState(false);
 
-  // Manual & Automatic Sync Handler
+  // PWA Shortcut Actions Listener (/?action=fuel, /?action=odometer, /?action=service)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const action = params.get('action');
+    if (!action) return;
+
+    if (!loading && vehicles.length > 0) {
+      if (action === 'fuel') {
+        handleOpenFuelModal();
+      } else if (action === 'odometer') {
+        handleOpenOdometerModal();
+      } else if (action === 'service') {
+        handleOpenServiceModal('service');
+      }
+
+      // Clear query params without page reload
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+    }
+  }, [loading, vehicles]);
+
+    // Manual & Automatic Sync Handler
   const handleSyncOfflineQueue = useCallback(async () => {
     if (!navigator.onLine) {
       setSyncToast({
@@ -358,6 +383,9 @@ export function App() {
       setIsAuthModalOpen(true);
       return;
     }
+    if (!selectedVehicle && vehicles.length > 0) {
+      setSelectedVehicle(vehicles[0]);
+    }
     setServiceModalType(type);
     setEditingServiceRecord(record || null);
     setIsServiceModalOpen(true);
@@ -378,6 +406,9 @@ export function App() {
     if (!currentUser && !localDB.isStandalone()) {
       setIsAuthModalOpen(true);
       return;
+    }
+    if (!selectedVehicle && vehicles.length > 0) {
+      setSelectedVehicle(vehicles[0]);
     }
     setEditingFuelLog(log || null);
     setIsFuelModalOpen(true);
@@ -413,7 +444,18 @@ export function App() {
     await loadVehicles();
   };
 
-  // Handlers for Tyre Modal
+  const handleOpenOdometerModal = () => {
+    if (!currentUser && !localDB.isStandalone()) {
+      setIsAuthModalOpen(true);
+      return;
+    }
+    if (!selectedVehicle && vehicles.length > 0) {
+      setSelectedVehicle(vehicles[0]);
+    }
+    setIsOdometerModalOpen(true);
+  };
+
+    // Handlers for Tyre Modal
   const handleOpenTyreModal = (tyre?: TyreSet) => {
     if (!currentUser && !localDB.isStandalone()) {
       setIsAuthModalOpen(true);
@@ -718,7 +760,28 @@ export function App() {
         </>
       )}
 
-      {/* Single Unified Footer */}
+      {/* Floating Action Button for 1-tap quick actions */}
+      {vehicles.length > 0 && (
+        <QuickActionFab
+          vehicle={selectedVehicle || vehicles[0]}
+          onAddFuel={() => handleOpenFuelModal()}
+          onUpdateOdometer={handleOpenOdometerModal}
+          onAddService={() => handleOpenServiceModal('service')}
+          onAddExpense={() => handleOpenServiceModal('repair')}
+        />
+      )}
+
+      {/* Quick Odometer Update Dialog */}
+      <QuickOdometerModal
+        isOpen={isOdometerModalOpen}
+        onClose={() => setIsOdometerModalOpen(false)}
+        vehicle={selectedVehicle || (vehicles.length > 0 ? vehicles[0] : null)}
+        onSuccess={async (newOdometer) => {
+          await loadVehicles();
+        }}
+      />
+
+            {/* Single Unified Footer */}
       <footer className="w-full border-t border-slate-200 dark:border-dark-800 bg-white/60 dark:bg-dark-900/60 backdrop-blur-sm py-3.5 px-3 sm:px-6 mt-auto text-center transition-colors">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400 font-medium">
           <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
@@ -740,7 +803,7 @@ export function App() {
           </div>
           <div className="flex items-center space-x-2 font-mono text-[11px]">
             <span className="px-2.5 py-1 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 font-bold border border-brand-500/25 shadow-sm">
-              Версия программы: v2.8.2
+              Версия программы: v2.8.3
             </span>
           </div>
         </div>

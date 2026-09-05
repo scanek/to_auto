@@ -891,6 +891,11 @@ export const api = {
     const token = getAuthToken();
     return `${API_BASE}/backup/database${token ? `?token=${encodeURIComponent(token)}` : ''}`;
   },
+  sendBackupToTelegram: (scope?: string) =>
+    request<{ status: string; message: string }>(
+      `${API_BASE}/backup/send-telegram${scope ? `?scope=${encodeURIComponent(scope)}` : ''}`,
+      { method: 'POST' }
+    ),
   exportServiceBookletUrl: (vehicleId: number) => {
     const token = getAuthToken();
     return `${API_BASE}/export/service-booklet/${vehicleId}${token ? `?token=${encodeURIComponent(token)}` : ''}`;

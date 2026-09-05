@@ -266,28 +266,19 @@ async def export_vehicle_backup(
         },
     )
 
-@router.get("/export-all")
-async def export_all_backup(
-    token: Optional[str] = Query(None),
-    authorization: Optional[str] = Header(None),
-    scope: Optional[str] = Query(None),
-    db: AsyncSession = Depends(get_db),
-):
+async def generate_backup_json_bytes(
+    db: AsyncSession,
+    user: User,
+    scope: Optional[str] = None,
+) -> tuple[bytes, str]:
     """
-    Exports a complete JSON backup.
-    Admin (default): exports ALL users, settings, and vehicles across the entire database.
-    Admin (scope='mine' or 'garage'): exports ONLY vehicles owned by this admin.
-    Regular user: exports ONLY vehicles owned by this user.
+    Generates a complete JSON backup and filename for a user or full system.
     """
-    user = await resolve_user_from_header_or_query(authorization, token, db)
-    if not user:
-        raise HTTPException(status_code=401, detail="Требуется авторизация")
-
     date_str = datetime.datetime.utcnow().strftime("%Y-%m-%d")
-
     all_users = []
     all_settings = []
-    is_full_admin_backup = bool(user.role == UserRole.ADMIN and scope not in ("mine", "garage"))
+    is_admin = (hasattr(user.role, "value") and user.role.value == "admin") or str(user.role) == "admin" or user.role == UserRole.ADMIN
+    is_full_admin_backup = bool(is_admin and scope not in ("mine", "garage"))
 
     if is_full_admin_backup:
         query = select(Vehicle).order_by(Vehicle.id.asc())
@@ -384,15 +375,81 @@ async def export_all_backup(
         payload["settings"] = all_settings
 
     json_str = json.dumps(payload, ensure_ascii=False, indent=2)
+    return json_str.encode("utf-8"), filename
+
+
+@router.get("/export-all")
+async def export_all_backup(
+    token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
+    scope: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Exports a complete JSON backup.
+    Admin (default): exports ALL users, settings, and vehicles across the entire database.
+    Admin (scope='mine' or 'garage'): exports ONLY vehicles owned by this admin.
+    Regular user: exports ONLY vehicles owned by this user.
+    """
+    user = await resolve_user_from_header_or_query(authorization, token, db)
+    if not user:
+        raise HTTPException(status_code=401, detail="Требуется авторизация")
+
+    json_bytes, filename = await generate_backup_json_bytes(db, user, scope)
     encoded_filename = urllib.parse.quote(filename)
 
     return Response(
-        content=json_str.encode("utf-8"),
+        content=json_bytes,
         media_type="application/json; charset=utf-8",
         headers={
             "Content-Disposition": f'attachment; filename="{encoded_filename}"; filename*=UTF-8\'\'{encoded_filename}'
         },
     )
+
+
+@router.post("/send-telegram")
+async def send_backup_to_telegram(
+    scope: Optional[str] = Query(None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Sends the user's or full system backup JSON file directly to their linked Telegram chat.
+    """
+    if not current_user.telegram_chat_id:
+        raise HTTPException(
+            status_code=400,
+            detail="У вас не привязан Telegram аккаунт. Привяжите Telegram в настройках профиля.",
+        )
+
+    from app.services.telegram_service import TelegramService
+
+    json_bytes, filename = await generate_backup_json_bytes(db, current_user, scope)
+    is_admin = (hasattr(current_user.role, "value") and current_user.role.value == "admin") or str(current_user.role) == "admin"
+    backup_type_name = "Полный бэкап системы" if (is_admin and scope not in ("mine", "garage")) else "Резервная копия гаража"
+    caption = (
+        f"💾 <b>{backup_type_name}</b>\n"
+        f"👤 Пользователь: <b>{current_user.username}</b>\n"
+        f"📅 Создан: <b>{datetime.datetime.utcnow().strftime('%d.%m.%Y %H:%M UTC')}</b>\n"
+        f"📦 Размер: <b>{len(json_bytes) / 1024:.1f} КБ</b>\n\n"
+        f"Файл готов для восстановления через панель «Настройки» ➡️ «Резервное копирование»."
+    )
+
+    result = await TelegramService.send_document(
+        chat_id=current_user.telegram_chat_id,
+        file_bytes=json_bytes,
+        filename=filename,
+        caption=caption,
+    )
+
+    if not result:
+        raise HTTPException(
+            status_code=500,
+            detail="Не удалось отправить файл через Telegram бота. Проверьте настройки бота или попробуйте позже.",
+        )
+
+    return {"status": "ok", "message": "Резервная копия успешно отправлена в ваш Telegram!"}
+
 
 @router.get("/database")
 async def download_database_backup(

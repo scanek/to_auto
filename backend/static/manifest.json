@@ -45,5 +45,28 @@
     "utilities",
     "productivity",
     "auto"
+  ],
+  "shortcuts": [
+    {
+      "name": "Заправить авто",
+      "short_name": "Заправка",
+      "description": "Быстро записать заправку топлива",
+      "url": "/?action=fuel",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Обновить пробег",
+      "short_name": "Пробег",
+      "description": "Быстро изменить текущий одометр",
+      "url": "/?action=odometer",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Записать ТО",
+      "short_name": "Запись ТО",
+      "description": "Добавить запись обслуживания или ремонта",
+      "url": "/?action=service",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
   ]
 }

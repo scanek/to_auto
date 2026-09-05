@@ -143,6 +143,43 @@ class TelegramService:
             return None
 
     @staticmethod
+    async def send_document(
+        chat_id: str,
+        file_bytes: bytes,
+        filename: str,
+        caption: Optional[str] = None,
+        content_type: str = "application/json"
+    ) -> Optional[dict]:
+        """Sends a document/file to a Telegram chat."""
+        token = await TelegramService.get_bot_token()
+        if not token or not chat_id:
+            return None
+
+        url = f"https://api.telegram.org/bot{token}/sendDocument"
+        data = {
+            "chat_id": chat_id,
+            "parse_mode": "HTML",
+        }
+        if caption:
+            data["caption"] = caption
+
+        files = {
+            "document": (filename, file_bytes, content_type)
+        }
+
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                res = await client.post(url, data=data, files=files)
+                if res.status_code == 200:
+                    return res.json().get("result")
+                else:
+                    log.warning(f"[TelegramService] sendDocument returned {res.status_code}: {res.text}")
+                    return None
+        except Exception as e:
+            log.warning(f"[TelegramService] Failed to send document to {chat_id}: {e}")
+            return None
+
+    @staticmethod
     async def edit_message_text(
         chat_id: str,
         message_id: int,
@@ -697,6 +734,7 @@ class TelegramService:
                     f"• <b>💰 Расходы и TCO</b> (<code>/tco</code>) — полная стоимость владения и статистика\n"
                     f"• <b>📍 Где авто?</b> (<code>/map</code>) — GPS-точка + ссылки на Яндекс Карты и 2ГИС\n"
                     f"• <b>🔄 Обновить StarLine</b> (<code>/sync</code>) — принудительный опрос телематики\n"
+                    f"• <b>💾 Резервная копия</b> (<code>/backup</code>) — мгновенный файл бэкапа в чат\n"
                     f"• <b>❌ /unlink</b> — отвязать Telegram"
                 )
                 await TelegramService.send_message(chat_id, help_msg, MAIN_KEYBOARD)
@@ -857,6 +895,31 @@ class TelegramService:
 
             elif cmd_lower.startswith("/hours") or cmd_lower.startswith("/моточасы"):
                 await TelegramService.handle_engine_hours_command(chat_id, cmd_raw, user, session)
+
+            elif cmd_lower in ("/backup", "бэкап", "/бэкап", "резервная копия"):
+                from app.api.backup import generate_backup_json_bytes
+                await TelegramService.send_message(chat_id, "⏳ Формирую резервную копию базы данных, подождите...")
+                try:
+                    json_bytes, filename = await generate_backup_json_bytes(session, user)
+                    backup_type_name = "Полный бэкап системы" if (hasattr(user.role, "value") and user.role.value == "admin" or str(user.role) == "admin") else "Резервная копия гаража"
+                    caption = (
+                        f"💾 <b>{backup_type_name}</b>\n"
+                        f"👤 Пользователь: <b>{user.username}</b>\n"
+                        f"📅 Дата: <b>{datetime.datetime.utcnow().strftime('%d.%m.%Y %H:%M UTC')}</b>\n"
+                        f"📦 Размер: <b>{len(json_bytes) / 1024:.1f} КБ</b>\n\n"
+                        f"Файл готов для восстановления в веб-панели (Настройки ➡️ Резервное копирование)."
+                    )
+                    sent = await TelegramService.send_document(
+                        chat_id=chat_id,
+                        file_bytes=json_bytes,
+                        filename=filename,
+                        caption=caption,
+                    )
+                    if not sent:
+                        await TelegramService.send_message(chat_id, "❌ Не удалось отправить файл бэкапа. Попробуйте через веб-интерфейс.")
+                except Exception as e:
+                    log.exception("Error generating backup in Telegram bot")
+                    await TelegramService.send_message(chat_id, f"❌ Ошибка при создании бэкапа: {e}")
 
             elif cmd_lower in ("/unlink", "❌ отвязать"):
                 await TelegramService.unlink_user(user, session)

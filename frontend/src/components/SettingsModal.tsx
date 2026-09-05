@@ -30,6 +30,7 @@ import {
   EyeOff,
   Bot,
   Send,
+  Loader2,
   ExternalLink,
   Database,
 } from 'lucide-react';
@@ -198,6 +199,30 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const handleExportFullServerJson = async () => {
     window.location.href = api.exportAllBackupUrl();
+  };
+
+  const [isSendingTgBackup, setIsSendingTgBackup] = useState(false);
+  const [tgBackupMsg, setTgBackupMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  const handleSendBackupToTelegram = async () => {
+    if (!currentUser?.telegram_chat_id) {
+      setTgBackupMsg({
+        text: 'Сначала привяжите Telegram в разделе «Профиль» или «Уведомления», чтобы бот знал, куда отправить файл.',
+        type: 'error',
+      });
+      return;
+    }
+    setIsSendingTgBackup(true);
+    setTgBackupMsg(null);
+    try {
+      const res = await api.sendBackupToTelegram(currentUser.role === 'admin' ? undefined : 'mine');
+      setTgBackupMsg({ text: res.message || 'Резервная копия успешно отправлена в ваш Telegram!', type: 'success' });
+    } catch (err: any) {
+      const errMsg = err?.response?.data?.detail || err?.message || 'Не удалось отправить бэкап в Telegram';
+      setTgBackupMsg({ text: errMsg, type: 'error' });
+    } finally {
+      setIsSendingTgBackup(false);
+    }
   };
 
   const handleExportJson = handleExportMyGarageJson;
@@ -568,7 +593,51 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </div>
                     </div>
                   </button>
+
+                  {/* Option 5: Send Backup to Telegram */}
+                  {!localDB.isStandalone() && (
+                    <button
+                      onClick={handleSendBackupToTelegram}
+                      disabled={isSendingTgBackup}
+                      className="p-3.5 rounded-2xl border border-slate-200 dark:border-dark-750 bg-slate-50/60 dark:bg-dark-800/60 hover:border-sky-500/40 hover:bg-sky-500/5 transition flex items-center space-x-3 group text-left disabled:opacity-60"
+                      title="Отправить актуальный файл бэкапа прямо в Telegram бот"
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-sky-500/10 text-sky-500 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                        {isSendingTgBackup ? (
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                        ) : (
+                          <Send className="w-5 h-5" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center space-x-1.5">
+                          <span>Бэкап в Telegram</span>
+                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-sky-500/10 text-sky-600 dark:text-sky-400">1-клик</span>
+                        </div>
+                        <div className="text-[11px] text-slate-500">
+                          Прислать файл базы в чат с ботом
+                        </div>
+                      </div>
+                    </button>
+                  )}
                 </div>
+
+                {tgBackupMsg && (
+                  <div
+                    className={`p-3 rounded-xl text-xs flex items-center space-x-2 transition-all ${
+                      tgBackupMsg.type === 'success'
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                        : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
+                    }`}
+                  >
+                    {tgBackupMsg.type === 'success' ? (
+                      <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                    ) : (
+                      <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                    )}
+                    <span>{tgBackupMsg.text}</span>
+                  </div>
+                )}
               </div>
 
               {/* Standalone / Server Sync Mode */}
