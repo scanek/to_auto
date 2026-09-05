@@ -46,6 +46,9 @@ export const Garage: React.FC<GarageProps> = ({
   onEditVehicle,
   onDeleteVehicle,
   onOpenImportModal,
+  onOpenServiceModal,
+  onOpenFuelModal,
+  onOpenReminderModal,
 }) => {
   const [filterTab, setFilterTab] = useState<'all' | 'my' | 'shared'>('all');
 
