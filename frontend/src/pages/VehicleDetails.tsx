@@ -125,6 +125,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   const isOwner = isAuthenticated && vehicle.is_owner !== false;
 
   const [serviceRecords, setServiceRecords] = useState<ServiceRecord[]>([]);
+  const [expandedRecords, setExpandedRecords] = useState<Record<number, boolean>>({});
   const [fuelLogs, setFuelLogs] = useState<FuelLog[]>([]);
   const [reminders, setReminders] = useState<MaintenancePlan[]>([]);
   const [documents, setDocuments] = useState<DocumentNote[]>([]);
@@ -1085,7 +1086,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
         </div>
       </div>
 
-      {/* Modern 7-Column Segmented Tab Bar (All tabs on 1 line without scroll) */}
+      {/* Modern 7-Column Segmented Tab Bar (Clean & Minimal without counter bubbles) */}
       <div className="grid grid-cols-7 gap-1 p-1 bg-slate-200/70 dark:bg-dark-800 border border-slate-200 dark:border-dark-750 rounded-2xl">
         {navTabs.map((tab) => {
           const Icon = tab.icon;
@@ -1094,34 +1095,16 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`relative flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 py-1.5 sm:py-2 px-0.5 sm:px-1 rounded-xl font-bold transition-all ${
+              className={`flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 py-1.5 sm:py-2.5 px-0.5 sm:px-1 rounded-xl font-bold transition-all ${
                 isActive
                   ? 'bg-brand-500 text-white shadow-md shadow-brand-500/25 scale-[1.02]'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-dark-750/50'
               }`}
               title={tab.label}
             >
-              <div className="relative flex items-center justify-center">
-                <Icon className="w-4 h-4 sm:w-4 sm:h-4 flex-shrink-0" />
-                {tab.count !== undefined && tab.count > 0 && (
-                  <span className="sm:hidden absolute -top-1 -right-2 text-[8px] min-w-[12px] h-[12px] px-0.5 rounded-full font-mono font-extrabold flex items-center justify-center bg-brand-600 text-white border border-white dark:border-dark-800">
-                    {tab.count > 99 ? '99+' : tab.count}
-                  </span>
-                )}
-              </div>
+              <Icon className="w-4 h-4 sm:w-4 sm:h-4 flex-shrink-0" />
               <span className="hidden sm:inline text-xs truncate">{tab.label}</span>
               <span className="sm:hidden text-[9px] leading-tight truncate max-w-full text-center mt-0.5">{tab.shortLabel}</span>
-              {tab.count !== undefined && tab.count > 0 && (
-                <span
-                  className={`hidden sm:inline-block text-[9px] px-1 py-0.2 rounded-full font-mono font-extrabold ${
-                    isActive
-                      ? 'bg-white/25 text-white'
-                      : 'bg-slate-300 dark:bg-dark-700 text-slate-700 dark:text-slate-300'
-                  }`}
-                >
-                  {tab.count}
-                </span>
-              )}
             </button>
           );
         })}
@@ -1178,7 +1161,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 </button>
               </div>
 
-              {/* Search & Add Record */}
+              {/* Search & Add Record & Expand All */}
               <div className="flex items-center space-x-2">
                 <div className="relative flex-1 md:w-60">
                   <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
@@ -1198,6 +1181,29 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                     </button>
                   )}
                 </div>
+                {displayedServiceRecords.some(r => r.description || r.notes || (Array.isArray(r.items) && r.items.length > 0)) && (
+                  <button
+                    onClick={() => {
+                      const recordsWithDetails = displayedServiceRecords.filter(r => r.description || r.notes || (Array.isArray(r.items) && r.items.length > 0));
+                      const allOpen = recordsWithDetails.length > 0 && recordsWithDetails.every(r => expandedRecords[r.id]);
+                      if (allOpen) {
+                        setExpandedRecords({});
+                      } else {
+                        const next: Record<number, boolean> = {};
+                        recordsWithDetails.forEach(r => { next[r.id] = true; });
+                        setExpandedRecords(next);
+                      }
+                    }}
+                    className="p-1.5 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white bg-white dark:bg-dark-850 hover:bg-slate-100 dark:hover:bg-dark-750 border border-slate-200 dark:border-dark-750 rounded-lg text-xs font-semibold shadow-sm transition flex-shrink-0"
+                    title={displayedServiceRecords.some(r => expandedRecords[r.id]) ? 'Свернуть подробности всех записей' : 'Развернуть подробности всех записей'}
+                  >
+                    {displayedServiceRecords.length > 0 && displayedServiceRecords.filter(r => r.description || r.notes || (Array.isArray(r.items) && r.items.length > 0)).every(r => expandedRecords[r.id]) ? (
+                      <ChevronUp className="w-3.5 h-3.5" />
+                    ) : (
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                )}
                 {isOwner && (
                   <button
                     onClick={() => onOpenServiceModal(serviceFilter === 'all' ? 'service' : serviceFilter as any)}
@@ -1229,164 +1235,209 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 )}
               </div>
             ) : (
-              <div className="space-y-3">
-                {displayedServiceRecords.map((rec) => (
-                  <div
-                    key={rec.id}
-                    className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 hover:border-slate-300 dark:hover:border-dark-700 rounded-2xl p-4 sm:p-5 shadow-sm transition-all space-y-3"
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div className="flex items-center space-x-3 min-w-0">
-                        {/* Thematic Icon Box */}
-                        {rec.record_type === 'upgrade' ? (
-                          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-500/15 to-purple-500/15 border border-amber-500/25 flex items-center justify-center text-amber-600 dark:text-amber-400 flex-shrink-0 shadow-sm">
-                            <Sparkles className="w-5 h-5" />
-                          </div>
-                        ) : rec.record_type === 'repair' ? (
-                          <div className="w-10 h-10 rounded-2xl bg-rose-500/10 dark:bg-rose-500/15 border border-rose-500/25 flex items-center justify-center text-rose-600 dark:text-rose-400 flex-shrink-0 shadow-sm">
-                            <Wrench className="w-5 h-5" />
-                          </div>
-                        ) : (rec.to_tag && /^ТО-\d+$/i.test(String(rec.to_tag).trim())) ? (
-                          <div className="w-10 h-10 rounded-2xl bg-brand-500/10 dark:bg-brand-500/20 border border-brand-500/30 flex items-center justify-center text-brand-600 dark:text-brand-400 flex-shrink-0 shadow-sm">
-                            <span className="font-mono text-xs font-black tracking-tight">{String(rec.to_tag).trim()}</span>
-                          </div>
-                        ) : (
-                          <div className="w-10 h-10 rounded-2xl bg-brand-500/10 dark:bg-brand-500/20 border border-brand-500/30 flex items-center justify-center text-brand-600 dark:text-brand-400 flex-shrink-0 shadow-sm">
-                            <Wrench className="w-5 h-5" />
-                          </div>
-                        )}
+              <div className="space-y-2.5">
+                {displayedServiceRecords.map((rec) => {
+                  const hasDetails = Boolean(rec.description || rec.notes || (Array.isArray(rec.items) && rec.items.length > 0));
+                  const isExpanded = Boolean(expandedRecords[rec.id]);
 
-                        {/* Title & Tags */}
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            {rec.to_tag ? (
-                              String(rec.to_tag).trim().toLowerCase() === 'вне то' ? (
-                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-dark-750 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-dark-700">
-                                  Вне ТО
+                  return (
+                    <div
+                      key={rec.id}
+                      className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 hover:border-slate-300 dark:hover:border-dark-700 rounded-2xl p-3.5 sm:p-4 shadow-sm transition-all space-y-2.5"
+                    >
+                      {/* Compact Header: Date, Mileage, Title, Tags, Price, Actions */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="flex items-center space-x-2.5 sm:space-x-3 min-w-0 flex-1">
+                          {/* Thematic Icon Box */}
+                          {rec.record_type === 'upgrade' ? (
+                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-br from-amber-500/15 to-purple-500/15 border border-amber-500/25 flex items-center justify-center text-amber-600 dark:text-amber-400 flex-shrink-0 shadow-sm">
+                              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
+                            </div>
+                          ) : rec.record_type === 'repair' ? (
+                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-rose-500/10 dark:bg-rose-500/15 border border-rose-500/25 flex items-center justify-center text-rose-600 dark:text-rose-400 flex-shrink-0 shadow-sm">
+                              <Wrench className="w-4 h-4 sm:w-5 sm:h-5" />
+                            </div>
+                          ) : (rec.to_tag && /^ТО-\d+$/i.test(String(rec.to_tag).trim())) ? (
+                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-brand-500/10 dark:bg-brand-500/20 border border-brand-500/30 flex items-center justify-center text-brand-600 dark:text-brand-400 flex-shrink-0 shadow-sm">
+                              <span className="font-mono text-xs font-black tracking-tight">{String(rec.to_tag).trim()}</span>
+                            </div>
+                          ) : (
+                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-brand-500/10 dark:bg-brand-500/20 border border-brand-500/30 flex items-center justify-center text-brand-600 dark:text-brand-400 flex-shrink-0 shadow-sm">
+                              <Wrench className="w-4 h-4 sm:w-5 sm:h-5" />
+                            </div>
+                          )}
+
+                          {/* Title & Tags */}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              {rec.to_tag ? (
+                                String(rec.to_tag).trim().toLowerCase() === 'вне то' ? (
+                                  <span className="inline-flex items-center gap-1 text-[9.5px] sm:text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-dark-750 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-dark-700">
+                                    Вне ТО
+                                  </span>
+                                ) : rec.record_type === 'upgrade' ? (
+                                  <span className="inline-flex items-center gap-1 text-[9.5px] sm:text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/25">
+                                    <Sparkles className="w-2.5 h-2.5" />
+                                    <span>{String(rec.to_tag)}</span>
+                                  </span>
+                                ) : rec.record_type === 'repair' ? (
+                                  <span className="inline-flex items-center gap-1 text-[9.5px] sm:text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/25">
+                                    <span>{String(rec.to_tag)}</span>
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 text-[9.5px] sm:text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-md bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/25">
+                                    <span>{String(rec.to_tag)}</span>
+                                  </span>
+                                )
+                              ) : null}
+                              <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">{rec.title}</h4>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-mono">
+                              <span>📅 {new Date(rec.date).toLocaleDateString('ru-RU')}</span>
+                              <span>• 🛣️ {Math.round(rec.odometer).toLocaleString('ru-RU')} {vehicle.distance_unit || 'км'}</span>
+                              {rec.engine_hours ? (
+                                <span>• ⏱️ {rec.engine_hours} м/ч</span>
+                              ) : null}
+                              {rec.store ? (
+                                <span className="font-sans font-medium text-slate-600 dark:text-slate-400 truncate max-w-[140px] sm:max-w-none">
+                                  • 🏢 {rec.store}
                                 </span>
-                              ) : rec.record_type === 'upgrade' ? (
-                                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/25">
-                                  <Sparkles className="w-2.5 h-2.5" />
-                                  <span>{String(rec.to_tag)}</span>
-                                </span>
-                              ) : rec.record_type === 'repair' ? (
-                                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/25">
-                                  <span>{String(rec.to_tag)}</span>
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-md bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/25">
-                                  <span>{String(rec.to_tag)}</span>
-                                </span>
-                              )
-                            ) : null}
-                            <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">{rec.title}</h4>
-                          </div>
-                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400 mt-1 font-mono">
-                            <span>📅 {new Date(rec.date).toLocaleDateString('ru-RU')}</span>
-                            <span>🛣️ {Math.round(rec.odometer).toLocaleString('ru-RU')} {vehicle.distance_unit || 'км'}</span>
-                            {rec.engine_hours && (
-                              <span>⏱️ {rec.engine_hours} м/ч</span>
-                            )}
-                            {rec.store && (
-                              <span className="font-sans font-medium text-slate-600 dark:text-slate-400">🏢 {rec.store}</span>
-                            )}
+                              ) : null}
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      <div className="flex items-center justify-between sm:justify-end space-x-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-dark-750">
-                        <div className="text-left sm:text-right">
-                          <div className="text-base font-extrabold text-brand-600 dark:text-brand-400 font-mono">
-                            {rec.total_cost.toLocaleString('ru-RU')} {vehicle.currency || '₽'}
+                        {/* Price & Action Buttons */}
+                        <div className="flex items-center justify-between sm:justify-end space-x-2.5 pt-1.5 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-dark-750 flex-shrink-0">
+                          <div className="text-left sm:text-right">
+                            <div className="text-sm sm:text-base font-extrabold text-brand-600 dark:text-brand-400 font-mono">
+                              {rec.total_cost.toLocaleString('ru-RU')} {vehicle.currency || '₽'}
+                            </div>
+                            {(rec.cost_parts > 0 || rec.cost_labor > 0) && (
+                              <div className="text-[9.5px] sm:text-[10px] text-slate-400">
+                                {rec.cost_parts > 0 && `Детали: ${rec.cost_parts} `}
+                                {rec.cost_labor > 0 && `Работа: ${rec.cost_labor}`}
+                              </div>
+                            )}
                           </div>
-                          {(rec.cost_parts > 0 || rec.cost_labor > 0) && (
-                            <div className="text-[10px] text-slate-400">
-                              {rec.cost_parts > 0 && `Детали: ${rec.cost_parts} `}
-                              {rec.cost_labor > 0 && `Работа: ${rec.cost_labor}`}
+
+                          {isOwner && (
+                            <div className="flex items-center space-x-1 pl-2 border-l border-slate-200 dark:border-dark-750">
+                              <button
+                                onClick={() => onOpenServiceModal(rec.record_type, rec)}
+                                className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-dark-750 rounded-lg transition"
+                                title="Редактировать запись"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteService(rec.id)}
+                                className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition"
+                                title="Удалить запись"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
                             </div>
                           )}
                         </div>
-
-                        {isOwner && (
-                          <div className="flex items-center space-x-1 pl-2 border-l border-slate-200 dark:border-dark-750">
-                            <button
-                              onClick={() => onOpenServiceModal(rec.record_type, rec)}
-                              className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-dark-750 rounded-lg"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteService(rec.id)}
-                              className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        )}
                       </div>
-                    </div>
 
-                    {(rec.description || rec.notes) && (
-                      <div className="text-xs text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-dark-900/60 p-2.5 rounded-lg border border-slate-200 dark:border-dark-750/60 space-y-1">
-                        {rec.description && <p>{rec.description}</p>}
-                        {rec.notes && <p className="text-[11px] text-slate-500 dark:text-slate-400 italic">📝 {rec.notes}</p>}
-                      </div>
-                    )}
-
-                    {Array.isArray(rec.items) && rec.items.length > 0 && (
-                      <div className="space-y-1.5 pt-2 border-t border-slate-200 dark:border-dark-750/70">
-                        <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
-                          Позиции и артикулы ({rec.items.length}):
-                        </span>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          {rec.items.map((it, idx) => (
-                            <div
-                              key={idx}
-                              className="flex items-center justify-between text-xs bg-slate-50 dark:bg-dark-900 p-2 rounded-lg border border-slate-200 dark:border-dark-750 text-slate-700 dark:text-slate-300"
-                            >
-                              <div className="truncate mr-2">
-                                <div className="flex items-center space-x-1.5">
-                                  <span className="font-medium text-slate-900 dark:text-white">{it.name}</span>
-                                  {it.brand && (
-                                    <span className="text-[10px] text-brand-500 font-semibold">
-                                      ({it.brand})
-                                    </span>
-                                  )}
-                                  {it.url && (
-                                    <a
-                                      href={it.url}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className="text-slate-400 hover:text-brand-500"
-                                    >
-                                      <ExternalLink className="w-3 h-3 inline" />
-                                    </a>
-                                  )}
-                                </div>
-                                {it.part_number && (
-                                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono block">
-                                    Арт: <strong>{it.part_number}</strong>
-                                    {it.store && ` • ${it.store}`}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex flex-col items-end flex-shrink-0 font-mono text-right pl-2">
-                                <span className="text-slate-900 dark:text-slate-200 whitespace-nowrap text-[11px] font-bold">
-                                  {Math.round(it.total_price || 0).toLocaleString('ru-RU')} {vehicle.currency || '₽'}
+                      {/* Collapsible Spoiler Trigger */}
+                      {hasDetails && (
+                        <div className="pt-1.5 border-t border-slate-100 dark:border-dark-750">
+                          <button
+                            onClick={() => setExpandedRecords(prev => ({ ...prev, [rec.id]: !prev[rec.id] }))}
+                            className="w-full flex items-center justify-between text-left text-slate-500 dark:text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors py-0.5 group"
+                          >
+                            <div className="flex items-center space-x-1.5 text-[11px] font-medium truncate">
+                              {Array.isArray(rec.items) && rec.items.length > 0 ? (
+                                <span className="font-semibold text-slate-700 dark:text-slate-300">
+                                  Запчасти и материалы ({rec.items.length})
                                 </span>
-                                {it.quantity > 1 && it.unit_price > 0 && (
-                                  <span className="text-[9px] text-slate-400 dark:text-slate-500 whitespace-nowrap">
-                                    {it.quantity} {it.unit || 'шт'} × {Math.round(it.unit_price).toLocaleString('ru-RU')}
-                                  </span>
-                                )}
+                              ) : (
+                                <span>Подробности и примечания</span>
+                              )}
+                              {(rec.description || rec.notes) && (
+                                <span className="text-[10px] text-slate-400 hidden sm:inline">
+                                  {rec.description ? '• описание' : ''} {rec.notes ? '• заметки' : ''}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center space-x-1 text-[11px] font-bold text-brand-500 dark:text-brand-400 group-hover:underline flex-shrink-0 ml-2">
+                              <span>{isExpanded ? 'Скрыть' : 'Детали'}</span>
+                              {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                            </div>
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Collapsible Content */}
+                      {hasDetails && isExpanded && (
+                        <div className="space-y-2.5 pt-1 animate-fadeIn">
+                          {(rec.description || rec.notes) && (
+                            <div className="text-xs text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-dark-900/60 p-2.5 rounded-xl border border-slate-200 dark:border-dark-750/60 space-y-1">
+                              {rec.description && <p>{rec.description}</p>}
+                              {rec.notes && <p className="text-[11px] text-slate-500 dark:text-slate-400 italic">📝 {rec.notes}</p>}
+                            </div>
+                          )}
+
+                          {Array.isArray(rec.items) && rec.items.length > 0 && (
+                            <div className="space-y-1.5">
+                              <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider">
+                                Позиции и артикулы ({rec.items.length}):
+                              </span>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {rec.items.map((it, idx) => (
+                                  <div
+                                    key={idx}
+                                    className="flex items-center justify-between text-xs bg-slate-50 dark:bg-dark-900 p-2 sm:p-2.5 rounded-xl border border-slate-200 dark:border-dark-750 text-slate-700 dark:text-slate-300"
+                                  >
+                                    <div className="truncate mr-2">
+                                      <div className="flex items-center space-x-1.5">
+                                        <span className="font-medium text-slate-900 dark:text-white truncate">{it.name}</span>
+                                        {it.brand && (
+                                          <span className="text-[10px] text-brand-500 font-semibold flex-shrink-0">
+                                            ({it.brand})
+                                          </span>
+                                        )}
+                                        {it.url && (
+                                          <a
+                                            href={it.url}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="text-slate-400 hover:text-brand-500 flex-shrink-0"
+                                          >
+                                            <ExternalLink className="w-3 h-3 inline" />
+                                          </a>
+                                        )}
+                                      </div>
+                                      {it.part_number && (
+                                        <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono block truncate">
+                                          Арт: <strong>{it.part_number}</strong>
+                                          {it.store && ` • ${it.store}`}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex flex-col items-end flex-shrink-0 font-mono text-right pl-2">
+                                      <span className="text-slate-900 dark:text-slate-200 whitespace-nowrap text-[11px] font-bold">
+                                        {Math.round(it.total_price || 0).toLocaleString('ru-RU')} {vehicle.currency || '₽'}
+                                      </span>
+                                      {it.quantity > 1 && it.unit_price > 0 && (
+                                        <span className="text-[9px] text-slate-400 dark:text-slate-500 whitespace-nowrap">
+                                          {it.quantity} {it.unit || 'шт'} × {Math.round(it.unit_price).toLocaleString('ru-RU')}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
                               </div>
                             </div>
-                          ))}
+                          )}
                         </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
