@@ -614,6 +614,10 @@ export const api = {
     const token = getAuthToken();
     return `${API_BASE}/backup/export-all${token ? `?token=${encodeURIComponent(token)}` : ''}`;
   },
+  exportDatabaseUrl: () => {
+    const token = getAuthToken();
+    return `${API_BASE}/backup/database${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+  },
   exportServiceBookletUrl: (vehicleId: number) => {
     const token = getAuthToken();
     return `${API_BASE}/export/service-booklet/${vehicleId}${token ? `?token=${encodeURIComponent(token)}` : ''}`;

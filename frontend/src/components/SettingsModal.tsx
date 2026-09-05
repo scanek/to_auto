@@ -31,6 +31,7 @@ import {
   Bot,
   Send,
   ExternalLink,
+  Database,
 } from 'lucide-react';
 import { User, AdminUser, Vehicle, TelegramBotConfig } from '../types';
 import { api, removeAuthToken } from '../services/api';
@@ -82,7 +83,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [adminVehicles, setAdminVehicles] = useState<Vehicle[]>([]);
   const [loadingAdminData, setLoadingAdminData] = useState(false);
-  const [adminSubTab, setAdminSubTab] = useState<'users' | 'vehicles' | 'announcement' | 'telegram'>('users');
+  const [adminSubTab, setAdminSubTab] = useState<'users' | 'vehicles' | 'announcement' | 'telegram' | 'backup'>('users');
   const [adminMsg, setAdminMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   // Admin announcement state
@@ -398,12 +399,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               {/* Backup & System Data */}
               <div className="space-y-2.5">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  Резервное копирование (JSON)
+                  {currentUser?.role === 'admin' ? 'Резервное копирование' : 'Резервная копия гаража'}
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <a
                     href={api.exportAllBackupUrl()}
-                    download="autotracker_full_backup.json"
+                    download={currentUser?.role === 'admin' ? "autotracker_full_backup.json" : "my_garage_backup.json"}
                     className="p-3.5 rounded-2xl border border-slate-200 dark:border-dark-750 bg-slate-50/60 dark:bg-dark-800/60 hover:border-brand-500/40 hover:bg-brand-500/5 transition flex items-center space-x-3 group"
                   >
                     <div className="w-10 h-10 rounded-xl bg-brand-500/10 text-brand-500 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
@@ -411,10 +412,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </div>
                     <div className="min-w-0">
                       <div className="text-xs font-bold text-slate-900 dark:text-white">
-                        Экспорт всей базы (JSON)
+                        {currentUser?.role === 'admin' ? 'Экспорт всей базы (JSON)' : 'Экспорт моего гаража (JSON)'}
                       </div>
                       <div className="text-[11px] text-slate-500">
-                        Сохранить бэкап на устройство
+                        {currentUser?.role === 'admin' ? 'Все пользователи и авто' : 'Сохранить мои авто и историю ТО'}
                       </div>
                     </div>
                   </a>
@@ -736,6 +737,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   >
                     <Bot className="w-3.5 h-3.5 inline mr-1 text-sky-500" />
                     Telegram-бот
+                  </button>
+                  <button
+                    onClick={() => setAdminSubTab('backup')}
+                    className={`px-3 py-1.5 rounded-lg transition ${
+                      adminSubTab === 'backup'
+                        ? 'bg-white dark:bg-dark-750 text-slate-900 dark:text-white shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                    }`}
+                  >
+                    <Database className="w-3.5 h-3.5 inline mr-1 text-emerald-500" />
+                    Бэкапы
                   </button>
                 </div>
 
@@ -1149,6 +1161,104 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         <li>Нажмите кнопку <b>«Сохранить и применить токен»</b>.</li>
                         <li>Сервер мгновенно проверит токен, определит юзернейм нового бота и без перезагрузки переключит отправку и прием команд на вашего нового бота!</li>
                       </ol>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Subtab: Admin Database Backups */}
+              {adminSubTab === 'backup' && (
+                <div className="space-y-4">
+                  <div className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-2xl p-5 space-y-4 shadow-sm">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-dark-750">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-500 text-white flex items-center justify-center font-bold text-lg shadow-md shadow-emerald-500/20">
+                          <Database className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-slate-900 dark:text-white text-sm">
+                            Резервное копирование всей базы данных
+                          </h4>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            Полное сохранение всех пользователей, системных настроек, автомобилей и записей ТО
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/25">
+                        Только для Администратора
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Card 1: SQLite .db file */}
+                      <div className="border border-slate-200 dark:border-dark-700 bg-slate-50 dark:bg-dark-800/80 rounded-xl p-4 flex flex-col justify-between space-y-3">
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                              <Database className="w-4 h-4 text-emerald-500" />
+                              База данных SQLite (.db)
+                            </span>
+                            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                              ACID Snapshot
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                            Горячий бинарный снимок файла <code className="font-mono text-emerald-600 dark:text-emerald-400">autotracker.db</code> без блокировок. Содержит 100% данных системы: пользователей, хэши паролей, автомобили, сервисные записи, заправки, шины, страховки и системные настройки.
+                          </p>
+                        </div>
+
+                        <a
+                          href={api.exportDatabaseUrl()}
+                          className="w-full flex items-center justify-center space-x-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition shadow-md shadow-emerald-600/20"
+                        >
+                          <Download className="w-4 h-4" />
+                          <span>Скачать файл autotracker.db</span>
+                        </a>
+                      </div>
+
+                      {/* Card 2: JSON Dump */}
+                      <div className="border border-slate-200 dark:border-dark-700 bg-slate-50 dark:bg-dark-800/80 rounded-xl p-4 flex flex-col justify-between space-y-3">
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                              <UploadCloud className="w-4 h-4 text-brand-500" />
+                              Полный JSON-дамп базы
+                            </span>
+                            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-brand-500/20 text-brand-600 dark:text-brand-400">
+                              JSON Backup
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                            Структурированный текстовый архив всех пользователей, настроек и гаражей всех пользователей со всеми записями. Удобен для выборочного восстановления и переноса данных через веб-интерфейс.
+                          </p>
+                        </div>
+
+                        <a
+                          href={api.exportAllBackupUrl()}
+                          className="w-full flex items-center justify-center space-x-2 bg-brand-600 hover:bg-brand-700 active:scale-95 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition shadow-md shadow-brand-600/20"
+                        >
+                          <Download className="w-4 h-4" />
+                          <span>Скачать полный JSON архив</span>
+                        </a>
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-50 dark:bg-dark-800/60 p-3.5 rounded-xl border border-slate-200/60 dark:border-dark-700/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+                      <div className="text-slate-600 dark:text-slate-400">
+                        <span className="font-bold text-slate-800 dark:text-slate-200 block sm:inline mr-1">
+                          Нужно восстановить данные?
+                        </span>
+                        Используйте мастер импорта бэкапа для восстановления автомобилей или всей базы из сохраненного JSON-файла.
+                      </div>
+                      <button
+                        onClick={() => {
+                          onClose();
+                          onOpenImportModal();
+                        }}
+                        className="px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-dark-700 dark:hover:bg-dark-600 text-slate-800 dark:text-slate-100 font-bold rounded-xl text-xs transition whitespace-nowrap active:scale-95"
+                      >
+                        Открыть мастер импорта
+                      </button>
                     </div>
                   </div>
                 </div>

@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     VERSION: str = "2.8.2"
     API_V1_STR: str = "/api/v1"
     
+    # Paths
+    DATA_DIR: Path = DATA_DIR
+    UPLOAD_DIR: Path = UPLOAD_DIR
+    
     # Database
     DATABASE_URL: str = os.getenv(
         "DATABASE_URL", f"sqlite+aiosqlite:///{DATA_DIR / 'autotracker.db'}"

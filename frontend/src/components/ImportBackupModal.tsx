@@ -9,8 +9,9 @@ import {
   Car,
   Database,
   Download,
+  ShieldCheck,
 } from 'lucide-react';
-import { Vehicle } from '../types';
+import { Vehicle, User } from '../types';
 import { api } from '../services/api';
 
 interface ImportBackupModalProps {
@@ -20,6 +21,7 @@ interface ImportBackupModalProps {
   vehicles?: Vehicle[];
   selectedVehicle?: Vehicle | null;
   initialTab?: 'import' | 'export';
+  currentUser?: User | null;
 }
 
 export const ImportBackupModal: React.FC<ImportBackupModalProps> = ({
@@ -29,12 +31,16 @@ export const ImportBackupModal: React.FC<ImportBackupModalProps> = ({
   vehicles = [],
   selectedVehicle,
   initialTab = 'import',
+  currentUser,
 }) => {
   const [activeTab, setActiveTab] = useState<'import' | 'export'>(initialTab);
   const [jsonText, setJsonText] = useState('');
   const [parsedData, setParsedData] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const isAdmin = currentUser?.role === 'admin';
+  const exportableVehicles = isAdmin ? vehicles : vehicles.filter((v) => v.is_owner !== false);
 
   if (!isOpen) return null;
 
@@ -265,26 +271,58 @@ export const ImportBackupModal: React.FC<ImportBackupModalProps> = ({
             /* EXPORT TAB */
             <div className="space-y-4">
               <div className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                Выгрузите полную резервную копию всех ваших данных в формате <strong>JSON</strong> для надежного хранения на компьютере, телефоне или переноса на другой сервер.
+                {isAdmin
+                  ? 'Выгрузка резервных копий данных системы. Вы можете скачать полный JSON-дамп со всеми пользователями и автомобилями или бинарный файл базы данных SQLite (.db).'
+                  : 'Выгрузите резервную копию вашего гаража в формате JSON для надежного сохранения или переноса данных.'}
               </div>
 
-              {/* Export Full Database Button */}
-              <div className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-500/10 space-y-2.5">
-                <div className="flex items-center space-x-2 text-emerald-700 dark:text-emerald-300 font-bold text-xs">
-                  <Database className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                  <span>Полный бэкап всей базы данных</span>
+              {/* Full Admin Backup vs User Garage Backup */}
+              {isAdmin ? (
+                <div className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-500/10 space-y-3">
+                  <div className="flex items-center space-x-2 text-emerald-700 dark:text-emerald-300 font-bold text-xs">
+                    <ShieldCheck className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                    <span>Полный бэкап всей базы данных (Администратор)</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Содержит всех пользователей, системные настройки, все автомобили, полную историю ТО, заправок, регламентов, шин и страховок.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                    <button
+                      onClick={() => downloadJson(api.exportAllBackupUrl())}
+                      className="flex items-center justify-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-3 rounded-xl text-xs transition-all shadow-md shadow-emerald-500/20 active:scale-95"
+                      title="Выгрузить всех пользователей и автомобили в JSON"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span>Полный JSON базы</span>
+                    </button>
+                    <button
+                      onClick={() => downloadJson(api.exportDatabaseUrl())}
+                      className="flex items-center justify-center space-x-2 bg-slate-800 hover:bg-slate-900 dark:bg-dark-700 dark:hover:bg-dark-600 text-white font-bold py-2.5 px-3 rounded-xl text-xs transition-all shadow-md active:scale-95 border border-slate-700"
+                      title="Скачать горячий ACID-снимок файла autotracker.db"
+                    >
+                      <Database className="w-4 h-4 text-emerald-400" />
+                      <span>Файл SQLite (.db)</span>
+                    </button>
+                  </div>
                 </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  Включает все автомобили в гараже, полную историю ТО, все заправки, регламенты, комплекты шин и полисы страхования.
-                </p>
-                <button
-                  onClick={() => downloadJson(api.exportAllBackupUrl())}
-                  className="w-full flex items-center justify-center space-x-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-all shadow-md shadow-emerald-500/20 active:scale-95"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Скачать полный архив базы данных (.json)</span>
-                </button>
-              </div>
+              ) : (
+                <div className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-500/10 space-y-2.5">
+                  <div className="flex items-center space-x-2 text-emerald-700 dark:text-emerald-300 font-bold text-xs">
+                    <Database className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                    <span>Резервная копия моего гаража</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Включает все ваши автомобили, полную историю ТО, все заправки, регламенты, комплекты шин и документы.
+                  </p>
+                  <button
+                    onClick={() => downloadJson(api.exportAllBackupUrl())}
+                    className="w-full flex items-center justify-center space-x-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-all shadow-md shadow-emerald-500/20 active:scale-95"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Скачать архив моего гаража (.json)</span>
+                  </button>
+                </div>
+              )}
 
               {/* Export Individual Vehicle */}
               <div className="space-y-2 pt-2">
@@ -292,13 +330,13 @@ export const ImportBackupModal: React.FC<ImportBackupModalProps> = ({
                   Или скачать бэкап конкретного автомобиля:
                 </label>
 
-                {vehicles.length === 0 ? (
+                {exportableVehicles.length === 0 ? (
                   <div className="text-xs text-slate-400 p-3 bg-slate-50 dark:bg-dark-800 rounded-xl text-center">
-                    В гараже пока нет автомобилей
+                    В гараже пока нет доступных автомобилей
                   </div>
                 ) : (
                   <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                    {vehicles.map((v) => (
+                    {exportableVehicles.map((v) => (
                       <div
                         key={v.id}
                         className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-dark-800 border border-slate-200 dark:border-dark-700 hover:border-brand-500/40 transition-colors"
