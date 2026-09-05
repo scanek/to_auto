@@ -81,21 +81,67 @@ export const ImportBackupModal: React.FC<ImportBackupModalProps> = ({
     }
   };
 
-  const downloadJson = (url: string) => {
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = '';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleExportFull = async () => {
+    try {
+      const blob = await api.exportFullServerBackup();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `bortovoi_full_backup_${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      setError(err?.message || 'Ошибка экспорта бэкапа');
+    }
   };
 
-  const veh = parsedData?.vehicle || parsedData?.vehicles?.[0];
-  const recordsCount = parsedData?.service_records?.length || parsedData?.maintenance_records?.length || 0;
-  const trackersCount = parsedData?.trackers?.length || veh?.trackers?.length || 0;
-  const tyresCount = parsedData?.tyre_sets?.length || 0;
-  const insCount = parsedData?.documents?.length || parsedData?.insurances?.length || 0;
-  const fuelCount = parsedData?.fuel_logs?.length || 0;
+  const handleExportVehicle = async (v: Vehicle) => {
+    try {
+      const blob = await api.exportBackup(v.id);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const cleanCar = `${v.make}_${v.model}`.replace(/\s+/g, '_');
+      link.download = `backup_${cleanCar}_${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      setError(err?.message || 'Ошибка экспорта бэкапа');
+    }
+  };
+
+  const veh = parsedData?.vehicle || parsedData?.vehicles?.[0] || parsedData?.data?.[0]?.vehicle;
+  const recordsCount =
+    parsedData?.service_records?.length ||
+    parsedData?.maintenance_records?.length ||
+    parsedData?.services?.length ||
+    parsedData?.data?.[0]?.service_records?.length ||
+    0;
+  const trackersCount =
+    parsedData?.trackers?.length ||
+    parsedData?.reminders?.length ||
+    veh?.trackers?.length ||
+    parsedData?.data?.[0]?.trackers?.length ||
+    0;
+  const tyresCount =
+    parsedData?.tyre_sets?.length ||
+    parsedData?.tyres?.length ||
+    parsedData?.data?.[0]?.tyre_sets?.length ||
+    0;
+  const insCount =
+    parsedData?.documents?.length ||
+    parsedData?.insurances?.length ||
+    parsedData?.data?.[0]?.documents?.length ||
+    0;
+  const fuelCount =
+    parsedData?.fuel_logs?.length ||
+    parsedData?.fuel?.length ||
+    parsedData?.data?.[0]?.fuel_logs?.length ||
+    0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm animate-fade-in">
@@ -278,7 +324,7 @@ export const ImportBackupModal: React.FC<ImportBackupModalProps> = ({
                   Включает все автомобили в гараже, полную историю ТО, все заправки, регламенты, комплекты шин и полисы страхования.
                 </p>
                 <button
-                  onClick={() => downloadJson(api.exportAllBackupUrl())}
+                  onClick={handleExportFull}
                   className="w-full flex items-center justify-center space-x-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-all shadow-md shadow-emerald-500/20 active:scale-95"
                 >
                   <Download className="w-4 h-4" />
@@ -318,7 +364,7 @@ export const ImportBackupModal: React.FC<ImportBackupModalProps> = ({
                         </div>
 
                         <button
-                          onClick={() => downloadJson(api.exportVehicleBackupUrl(v.id))}
+                          onClick={() => handleExportVehicle(v)}
                           className="flex items-center space-x-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-dark-700 dark:hover:bg-dark-600 text-slate-800 dark:text-slate-100 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95 flex-shrink-0"
                           title={`Скачать бэкап ${v.make} ${v.model}`}
                         >

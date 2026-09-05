@@ -95,91 +95,8 @@ export class LocalDatabaseEngine {
   // Initialization & Seeding
   // ----------------------------------------------------------------
   private ensureInitialized() {
-    const vehicles = this.load<Vehicle[]>(STORAGE_KEYS.VEHICLES, []);
-    if (vehicles.length === 0) {
-      const defaultVehicle: Vehicle = {
-        id: 1,
-        make: 'Мой Автомобиль',
-        model: 'Седан / Кроссовер',
-        year: new Date().getFullYear(),
-        starting_odometer: 0,
-        current_odometer: 15000,
-        current_engine_hours: 350,
-        distance_unit: 'km',
-        fuel_unit: 'L',
-        fuel_tank_capacity: 55,
-        currency: '₽',
-        created_at: this.nowIso(),
-        updated_at: this.nowIso(),
-        notes: 'Локальный автомобиль в автономном приложении',
-        is_owner: true,
-      };
-
-      this.save(STORAGE_KEYS.VEHICLES, [defaultVehicle]);
-
-      // Seed standard maintenance plan
-      const defaultReminders: MaintenancePlan[] = [
-        {
-          id: 1,
-          vehicle_id: 1,
-          title: 'Моторное масло и фильтр',
-          category: 'Двигатель',
-          interval_distance: 7500,
-          interval_months: 12,
-          interval_hours: 250,
-          last_service_odometer: 10000,
-          last_service_hours: 230,
-          last_service_date: new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString(),
-          is_active: true,
-          notify_before_distance: 500,
-          notify_before_days: 14,
-          notify_before_hours: 20,
-          created_at: this.nowIso(),
-          status: 'ok',
-          progress_percentage: 66,
-        },
-        {
-          id: 2,
-          vehicle_id: 1,
-          title: 'Воздушный фильтр двигателя',
-          category: 'Фильтры',
-          interval_distance: 15000,
-          interval_months: 12,
-          interval_hours: null,
-          last_service_odometer: 0,
-          last_service_hours: 0,
-          last_service_date: new Date(Date.now() - 180 * 24 * 3600 * 1000).toISOString(),
-          is_active: true,
-          notify_before_distance: 1000,
-          notify_before_days: 30,
-          notify_before_hours: 0,
-          created_at: this.nowIso(),
-          status: 'due_soon',
-          progress_percentage: 95,
-        },
-        {
-          id: 3,
-          vehicle_id: 1,
-          title: 'Салонный фильтр (Кондиционер)',
-          category: 'Фильтры',
-          interval_distance: 10000,
-          interval_months: 12,
-          interval_hours: null,
-          last_service_odometer: 0,
-          last_service_hours: 0,
-          last_service_date: new Date(Date.now() - 180 * 24 * 3600 * 1000).toISOString(),
-          is_active: true,
-          notify_before_distance: 500,
-          notify_before_days: 14,
-          notify_before_hours: 0,
-          created_at: this.nowIso(),
-          status: 'overdue',
-          progress_percentage: 100,
-        },
-      ];
-
-      this.save(STORAGE_KEYS.REMINDERS, defaultReminders);
-    }
+    // Clean initial state: no dummy vehicles or sample records are seeded by default.
+    // The user starts with an empty garage and can create a car or restore from backup.
   }
 
   // ----------------------------------------------------------------
@@ -979,39 +896,503 @@ export class LocalDatabaseEngine {
   }
 
   // ----------------------------------------------------------------
-  // Full Backup Export / Import
+  // Full Backup Export / Import (Universal Web & Standalone Compatibility)
   // ----------------------------------------------------------------
-  public exportFullBackup(): string {
-    const backup = {
-      version: '2.8.2-standalone',
+  public exportVehicleBackup(vehicleId: number): string {
+    const vehicle = this.load<Vehicle[]>(STORAGE_KEYS.VEHICLES, []).find((v) => v.id === vehicleId);
+    if (!vehicle) return '{}';
+    const services = this.load<ServiceRecord[]>(STORAGE_KEYS.SERVICES, []).filter((s) => s.vehicle_id === vehicleId);
+    const fuel_logs = this.load<FuelLog[]>(STORAGE_KEYS.FUEL, []).filter((f) => f.vehicle_id === vehicleId);
+    const reminders = this.load<MaintenancePlan[]>(STORAGE_KEYS.REMINDERS, []).filter((r) => r.vehicle_id === vehicleId);
+    const tyre_sets = this.load<TyreSet[]>(STORAGE_KEYS.TYRES, []).filter((t) => t.vehicle_id === vehicleId);
+    const documents = this.load<DocumentNote[]>(STORAGE_KEYS.DOCUMENTS, []).filter((d) => d.vehicle_id === vehicleId);
+
+    const payload = {
+      version: '1.0',
       exported_at: this.nowIso(),
-      vehicles: this.load(STORAGE_KEYS.VEHICLES, []),
-      services: this.load(STORAGE_KEYS.SERVICES, []),
-      fuel: this.load(STORAGE_KEYS.FUEL, []),
-      reminders: this.load(STORAGE_KEYS.REMINDERS, []),
-      tyres: this.load(STORAGE_KEYS.TYRES, []),
-      documents: this.load(STORAGE_KEYS.DOCUMENTS, []),
+      app: 'Бортовой Журнал',
+      vehicle: {
+        id: vehicle.id,
+        make: vehicle.make,
+        model: vehicle.model,
+        year: vehicle.year,
+        engine: vehicle.engine,
+        license_plate: vehicle.license_plate,
+        vin: vehicle.vin,
+        starting_odometer: vehicle.starting_odometer,
+        current_odometer: vehicle.current_odometer,
+        current_engine_hours: vehicle.current_engine_hours,
+        oil_spec: vehicle.oil_spec,
+        notes: vehicle.notes,
+        photo_url: vehicle.photo_url,
+        distance_unit: vehicle.distance_unit,
+        fuel_unit: vehicle.fuel_unit,
+        currency: vehicle.currency,
+        fuel_tank_capacity: vehicle.fuel_tank_capacity,
+      },
+      trackers: reminders.map((p) => ({
+        id: String(p.id),
+        name: p.title,
+        category: p.category,
+        brand: p.brand,
+        spec: p.spec,
+        article: p.article,
+        icon: p.icon,
+        interval_km: p.interval_distance,
+        interval_hours: p.interval_hours,
+        interval_months: p.interval_months,
+        last_service_odometer: p.last_service_odometer,
+        last_service_hours: p.last_service_hours,
+        last_service_date: p.last_service_date,
+        enabled: p.is_active,
+        warn_km: p.notify_before_distance,
+        warn_hours: p.notify_before_hours,
+        warn_days: p.notify_before_days,
+        notes: p.notes,
+      })),
+      service_records: services,
+      fuel_logs: fuel_logs,
+      tyre_sets: tyre_sets,
+      documents: documents,
+    };
+
+    return JSON.stringify(payload, null, 2);
+  }
+
+  public exportFullBackup(): string {
+    const vehicles = this.load<Vehicle[]>(STORAGE_KEYS.VEHICLES, []);
+    const services = this.load<ServiceRecord[]>(STORAGE_KEYS.SERVICES, []);
+    const fuel = this.load<FuelLog[]>(STORAGE_KEYS.FUEL, []);
+    const reminders = this.load<MaintenancePlan[]>(STORAGE_KEYS.REMINDERS, []);
+    const tyres = this.load<TyreSet[]>(STORAGE_KEYS.TYRES, []);
+    const documents = this.load<DocumentNote[]>(STORAGE_KEYS.DOCUMENTS, []);
+
+    const allData = vehicles.map((v) => {
+      const vServices = services.filter((s) => s.vehicle_id === v.id);
+      const vFuel = fuel.filter((f) => f.vehicle_id === v.id);
+      const vReminders = reminders.filter((r) => r.vehicle_id === v.id);
+      const vTyres = tyres.filter((t) => t.vehicle_id === v.id);
+      const vDocs = documents.filter((d) => d.vehicle_id === v.id);
+
+      return {
+        vehicle: {
+          id: v.id,
+          make: v.make,
+          model: v.model,
+          year: v.year,
+          engine: v.engine,
+          license_plate: v.license_plate,
+          vin: v.vin,
+          starting_odometer: v.starting_odometer,
+          current_odometer: v.current_odometer,
+          current_engine_hours: v.current_engine_hours,
+          oil_spec: v.oil_spec,
+          notes: v.notes,
+          photo_url: v.photo_url,
+          distance_unit: v.distance_unit,
+          fuel_unit: v.fuel_unit,
+          currency: v.currency,
+          fuel_tank_capacity: v.fuel_tank_capacity,
+        },
+        trackers: vReminders.map((p) => ({
+          id: String(p.id),
+          name: p.title,
+          category: p.category,
+          brand: p.brand,
+          spec: p.spec,
+          article: p.article,
+          icon: p.icon,
+          interval_km: p.interval_distance,
+          interval_hours: p.interval_hours,
+          interval_months: p.interval_months,
+          last_service_odometer: p.last_service_odometer,
+          last_service_hours: p.last_service_hours,
+          last_service_date: p.last_service_date,
+          enabled: p.is_active,
+          warn_km: p.notify_before_distance,
+          warn_hours: p.notify_before_hours,
+          warn_days: p.notify_before_days,
+          notes: p.notes,
+        })),
+        service_records: vServices,
+        fuel_logs: vFuel,
+        tyre_sets: vTyres,
+        documents: vDocs,
+      };
+    });
+
+    const backup = {
+      version: '1.0',
+      exported_at: this.nowIso(),
+      app: 'Бортовой Журнал',
+      vehicles_count: allData.length,
+      data: allData,
+      vehicles,
+      services,
+      fuel,
+      reminders,
+      tyres,
+      documents,
     };
 
     return JSON.stringify(backup, null, 2);
   }
 
-  public importFullBackup(jsonContent: string): boolean {
+  public importFullBackup(dataOrString: any): { success: boolean; vehicle_id?: number; error?: string } {
     try {
-      const data = JSON.parse(jsonContent);
-      if (Array.isArray(data.vehicles)) {
-        this.save(STORAGE_KEYS.VEHICLES, data.vehicles);
-        if (Array.isArray(data.services)) this.save(STORAGE_KEYS.SERVICES, data.services);
-        if (Array.isArray(data.fuel)) this.save(STORAGE_KEYS.FUEL, data.fuel);
-        if (Array.isArray(data.reminders)) this.save(STORAGE_KEYS.REMINDERS, data.reminders);
-        if (Array.isArray(data.tyres)) this.save(STORAGE_KEYS.TYRES, data.tyres);
-        if (Array.isArray(data.documents)) this.save(STORAGE_KEYS.DOCUMENTS, data.documents);
-        return true;
+      let payload = dataOrString;
+      if (typeof dataOrString === 'string') {
+        payload = JSON.parse(dataOrString);
       }
-      return false;
-    } catch (e) {
+      if (!payload || typeof payload !== 'object') {
+        return { success: false, error: 'Некорректный формат JSON' };
+      }
+
+      const existingVehicles = this.load<Vehicle[]>(STORAGE_KEYS.VEHICLES, []);
+      const existingServices = this.load<ServiceRecord[]>(STORAGE_KEYS.SERVICES, []);
+      const existingFuel = this.load<FuelLog[]>(STORAGE_KEYS.FUEL, []);
+      const existingReminders = this.load<MaintenancePlan[]>(STORAGE_KEYS.REMINDERS, []);
+      const existingTyres = this.load<TyreSet[]>(STORAGE_KEYS.TYRES, []);
+      const existingDocs = this.load<DocumentNote[]>(STORAGE_KEYS.DOCUMENTS, []);
+
+      let importedVehicleId: number | undefined;
+
+      // Case A: Standalone flat format
+      if (Array.isArray(payload.vehicles) && !payload.vehicle && !payload.data) {
+        if (payload.vehicles.length === 0) {
+          return { success: false, error: 'В файле резервной копии не найдены автомобили' };
+        }
+
+        const idMap = new Map<number, number>();
+
+        for (const v of payload.vehicles) {
+          const newId = this.nextId(existingVehicles);
+          idMap.set(v.id, newId);
+          const curKm = Number(v.current_odometer ?? v.current_km ?? 0);
+          const newV: Vehicle = {
+            ...v,
+            id: newId,
+            make: v.make || v.brand || 'Марка',
+            model: v.model || 'Модель',
+            year: Number(v.year || new Date().getFullYear()),
+            current_odometer: curKm,
+            starting_odometer: Number(v.starting_odometer ?? curKm),
+            current_engine_hours: Number(v.current_engine_hours || 0),
+            is_owner: true,
+          };
+          existingVehicles.push(newV);
+          if (!importedVehicleId) importedVehicleId = newId;
+        }
+
+        if (Array.isArray(payload.services)) {
+          for (const s of payload.services) {
+            const targetVehicleId = idMap.get(s.vehicle_id) || importedVehicleId || 1;
+            existingServices.push({
+              ...s,
+              id: this.nextId(existingServices),
+              vehicle_id: targetVehicleId,
+              odometer: Number(s.odometer ?? s.mileage ?? 0),
+              engine_hours: s.engine_hours ? Number(s.engine_hours) : null,
+              cost_labor: Number(s.cost_labor || 0),
+              cost_parts: Number(s.cost_parts || 0),
+              total_cost: Number(s.total_cost ?? (Number(s.cost_labor || 0) + Number(s.cost_parts || 0))),
+            });
+          }
+        }
+
+        if (Array.isArray(payload.fuel)) {
+          for (const f of payload.fuel) {
+            const targetVehicleId = idMap.get(f.vehicle_id) || importedVehicleId || 1;
+            existingFuel.push({
+              ...f,
+              id: this.nextId(existingFuel),
+              vehicle_id: targetVehicleId,
+              odometer: Number(f.odometer ?? f.mileage ?? 0),
+              fuel_amount: Number(f.fuel_amount || 0),
+              unit_price: Number(f.unit_price || 0),
+              total_cost: Number(f.total_cost || 0),
+            });
+          }
+        }
+
+        if (Array.isArray(payload.reminders)) {
+          for (const r of payload.reminders) {
+            const targetVehicleId = idMap.get(r.vehicle_id) || importedVehicleId || 1;
+            existingReminders.push({
+              ...r,
+              id: this.nextId(existingReminders),
+              vehicle_id: targetVehicleId,
+              title: r.title || r.name || 'Регламент',
+              category: r.category || 'Обслуживание',
+              interval_distance: r.interval_distance !== undefined ? r.interval_distance : (r.interval_km !== undefined ? r.interval_km : null),
+              last_service_odometer: Number(r.last_service_odometer || 0),
+            });
+          }
+        }
+
+        if (Array.isArray(payload.tyres)) {
+          for (const t of payload.tyres) {
+            const targetVehicleId = idMap.get(t.vehicle_id) || importedVehicleId || 1;
+            existingTyres.push({
+              ...t,
+              id: this.nextId(existingTyres),
+              vehicle_id: targetVehicleId,
+            });
+          }
+        }
+
+        if (Array.isArray(payload.documents)) {
+          for (const d of payload.documents) {
+            const targetVehicleId = idMap.get(d.vehicle_id) || importedVehicleId || 1;
+            existingDocs.push({
+              ...d,
+              id: this.nextId(existingDocs),
+              vehicle_id: targetVehicleId,
+            });
+          }
+        }
+
+        this.save(STORAGE_KEYS.VEHICLES, existingVehicles);
+        this.save(STORAGE_KEYS.SERVICES, existingServices);
+        this.save(STORAGE_KEYS.FUEL, existingFuel);
+        this.save(STORAGE_KEYS.REMINDERS, existingReminders);
+        this.save(STORAGE_KEYS.TYRES, existingTyres);
+        this.save(STORAGE_KEYS.DOCUMENTS, existingDocs);
+
+        return { success: true, vehicle_id: importedVehicleId };
+      }
+
+      // Case B & C: Web Backup Structure (Single Vehicle or Multi-Vehicle package)
+      const vehiclePackages: any[] = [];
+      if (Array.isArray(payload.data) && payload.data.length > 0) {
+        vehiclePackages.push(...payload.data);
+      } else if (payload.vehicle || (Array.isArray(payload.vehicles) && payload.vehicles.length > 0)) {
+        vehiclePackages.push(payload);
+      } else {
+        return { success: false, error: 'В файле не обнаружены данные автомобиля' };
+      }
+
+      for (const pkg of vehiclePackages) {
+        const vRaw = pkg.vehicle || (Array.isArray(pkg.vehicles) ? pkg.vehicles[0] : pkg);
+        if (!vRaw) continue;
+
+        const newId = this.nextId(existingVehicles);
+        if (!importedVehicleId) importedVehicleId = newId;
+
+        const make = String(vRaw.brand || vRaw.make || 'Марка');
+        const model = String(vRaw.model || 'Модель');
+        const curKm = Number(vRaw.current_km ?? vRaw.current_odometer ?? 0);
+        const curHours = Number(vRaw.current_engine_hours || 0);
+
+        const newVehicle: Vehicle = {
+          id: newId,
+          make,
+          model,
+          year: Number(vRaw.year || new Date().getFullYear()),
+          engine: String(vRaw.engine || ''),
+          license_plate: String(vRaw.plate || vRaw.license_plate || ''),
+          vin: String(vRaw.vin || ''),
+          starting_odometer: Number(vRaw.starting_odometer ?? curKm),
+          current_odometer: curKm,
+          current_engine_hours: curHours,
+          oil_spec: String(vRaw.oil_spec || ''),
+          notes: String(vRaw.notes || ''),
+          photo_url: String(vRaw.photo_url || ''),
+          distance_unit: String(vRaw.distance_unit || 'km'),
+          fuel_unit: String(vRaw.fuel_unit || 'L'),
+          currency: String(vRaw.currency || '₽'),
+          fuel_tank_capacity: Number(vRaw.fuel_tank_capacity || 55),
+          created_at: vRaw.created_at || this.nowIso(),
+          updated_at: vRaw.updated_at || this.nowIso(),
+          is_owner: true,
+        };
+        existingVehicles.push(newVehicle);
+
+        // Reminders / Trackers
+        const trackersRaw = pkg.trackers || pkg.reminders || vRaw.trackers || [];
+        for (const t of trackersRaw) {
+          const plan: MaintenancePlan = {
+            id: this.nextId(existingReminders),
+            vehicle_id: newId,
+            title: String(t.name || t.title || 'Регламент ТО'),
+            category: String(t.category || 'Обслуживание'),
+            brand: String(t.brand || ''),
+            spec: String(t.spec || ''),
+            article: String(t.article || ''),
+            icon: String(t.icon || 'wrench'),
+            interval_distance: t.interval_distance !== undefined ? t.interval_distance : (t.interval_km !== undefined ? t.interval_km : null),
+            interval_hours: t.interval_hours !== undefined ? t.interval_hours : null,
+            interval_months: t.interval_months !== undefined ? t.interval_months : 12,
+            last_service_odometer: Number(t.last_service_odometer || 0),
+            last_service_hours: Number(t.last_service_hours || 0),
+            last_service_date: t.last_service_date || null,
+            is_active: t.is_active !== undefined ? Boolean(t.is_active) : (t.enabled !== undefined ? Boolean(t.enabled) : true),
+            notify_before_distance: Number(t.notify_before_distance ?? t.warn_km ?? 500),
+            notify_before_days: Number(t.notify_before_days ?? t.warn_days ?? 14),
+            notify_before_hours: Number(t.notify_before_hours ?? t.warn_hours ?? 20),
+            notes: String(t.notes || ''),
+            created_at: t.created_at || this.nowIso(),
+          };
+          existingReminders.push(plan);
+        }
+
+        // Service Records
+        const sRecords = pkg.service_records || pkg.services || [];
+        if (sRecords.length > 0) {
+          for (const s of sRecords) {
+            const sRec: ServiceRecord = {
+              id: this.nextId(existingServices),
+              vehicle_id: newId,
+              record_type: String(s.record_type || 'service') as any,
+              to_tag: s.to_tag || null,
+              date: s.date ? new Date(s.date).toISOString() : this.nowIso(),
+              odometer: Number(s.odometer ?? s.mileage ?? 0),
+              engine_hours: s.engine_hours ? Number(s.engine_hours) : null,
+              title: String(s.title || 'Обслуживание'),
+              description: String(s.description || ''),
+              cost_labor: Number(s.cost_labor || 0),
+              cost_parts: Number(s.cost_parts || 0),
+              total_cost: Number(s.total_cost ?? (Number(s.cost_labor || 0) + Number(s.cost_parts || 0))),
+              store: String(s.store || ''),
+              url: String(s.url || ''),
+              notes: String(s.notes || ''),
+              items: (s.items || []).map((it: any, idx: number) => ({
+                id: it.id || idx + 1,
+                name: String(it.name || it.item_name || 'Деталь'),
+                brand: String(it.brand || ''),
+                part_number: String(it.part_number || it.article || ''),
+                category: String(it.category || 'part') as any,
+                unit: String(it.unit || 'шт'),
+                quantity: Number(it.quantity || 1),
+                unit_price: Number(it.unit_price || it.price_per_unit || 0),
+                total_price: Number(it.total_price || 0),
+                store: String(it.store || ''),
+                url: String(it.url || ''),
+              })),
+              created_at: s.created_at || this.nowIso(),
+            };
+            existingServices.push(sRec);
+          }
+        } else if (Array.isArray(pkg.maintenance_records)) {
+          for (const m of pkg.maintenance_records) {
+            const sRec: ServiceRecord = {
+              id: this.nextId(existingServices),
+              vehicle_id: newId,
+              record_type: (m.to_tag && m.to_tag.startsWith('ТО')) ? 'service' : 'upgrade',
+              to_tag: m.to_tag || null,
+              date: m.date ? new Date(m.date).toISOString() : this.nowIso(),
+              odometer: Number(m.mileage ?? m.odometer ?? 0),
+              engine_hours: m.engine_hours ? Number(m.engine_hours) : null,
+              title: String(m.item_name || m.to_tag || 'Обслуживание'),
+              description: String(m.note || ''),
+              cost_labor: 0,
+              cost_parts: Number(m.total_price || 0),
+              total_cost: Number(m.total_price || 0),
+              store: String(m.store || ''),
+              url: String(m.url || ''),
+              notes: '',
+              items: [
+                {
+                  id: 1,
+                  name: String(m.item_name || 'Деталь'),
+                  brand: String(m.brand || ''),
+                  part_number: String(m.article || ''),
+                  category: 'part',
+                  unit: String(m.unit || 'шт'),
+                  quantity: Number(m.quantity || 1),
+                  unit_price: Number(m.price_per_unit || 0),
+                  total_price: Number(m.total_price || 0),
+                  store: String(m.store || ''),
+                  url: String(m.url || ''),
+                },
+              ],
+              created_at: this.nowIso(),
+            };
+            existingServices.push(sRec);
+          }
+        }
+
+        // Fuel Logs
+        const fLogs = pkg.fuel_logs || pkg.fuel || [];
+        for (const f of fLogs) {
+          const fLog: FuelLog = {
+            id: this.nextId(existingFuel),
+            vehicle_id: newId,
+            date: f.date ? new Date(f.date).toISOString() : this.nowIso(),
+            odometer: Number(f.odometer ?? f.mileage ?? 0),
+            fuel_amount: Number(f.fuel_amount || 0),
+            unit_price: Number(f.unit_price || 0),
+            total_cost: Number(f.total_cost || 0),
+            is_full_tank: f.is_full_tank !== undefined ? Boolean(f.is_full_tank) : true,
+            is_missed: Boolean(f.is_missed),
+            gas_station: String(f.gas_station || ''),
+            fuel_grade: String(f.fuel_grade || ''),
+            notes: String(f.notes || ''),
+            created_at: f.created_at || this.nowIso(),
+          };
+          existingFuel.push(fLog);
+        }
+
+        // Tyre Sets
+        const tSets = pkg.tyre_sets || pkg.tyres || [];
+        for (const ty of tSets) {
+          const tyreItem: TyreSet = {
+            id: this.nextId(existingTyres),
+            vehicle_id: newId,
+            name: String(ty.name || 'Комплект шин'),
+            season: String(ty.season || 'summer') as any,
+            size: String(ty.size || ''),
+            brand_model: String(ty.brand_model || ''),
+            current_km: Number(ty.current_km || 0),
+            tread_depth_mm: Number(ty.tread_depth_mm ?? 8),
+            storage_location: String(ty.storage_location || ''),
+            is_active: Boolean(ty.is_active),
+            install_date: ty.install_date || null,
+            install_mileage: ty.install_mileage ? Number(ty.install_mileage) : null,
+            quantity: Number(ty.quantity || 4),
+            price_per_unit: Number(ty.price_per_unit || 0),
+            total_price: Number(ty.total_price || 0),
+            rims_name: ty.rims_name || null,
+            rims_price: Number(ty.rims_price || 0),
+            created_at: ty.created_at || this.nowIso(),
+          };
+          existingTyres.push(tyreItem);
+        }
+
+        // Documents
+        const dList = pkg.documents || pkg.insurances || [];
+        for (const doc of dList) {
+          const docItem: DocumentNote = {
+            id: this.nextId(existingDocs),
+            vehicle_id: newId,
+            title: String(doc.title || doc.name || 'Документ'),
+            doc_type: String(doc.doc_type || doc.type || 'other') as any,
+            company: String(doc.company || ''),
+            document_number: String(doc.document_number || doc.policy_number || ''),
+            issue_date: doc.issue_date || doc.start_date || null,
+            expiration_date: doc.expiration_date || doc.end_date || null,
+            price: Number(doc.price || 0),
+            mileage: doc.mileage ? Number(doc.mileage) : null,
+            engine_hours: doc.engine_hours ? Number(doc.engine_hours) : null,
+            is_active: doc.is_active !== undefined ? Boolean(doc.is_active) : true,
+            notes: String(doc.notes || doc.note || ''),
+            created_at: doc.created_at || this.nowIso(),
+          };
+          existingDocs.push(docItem);
+        }
+      }
+
+      this.save(STORAGE_KEYS.VEHICLES, existingVehicles);
+      this.save(STORAGE_KEYS.SERVICES, existingServices);
+      this.save(STORAGE_KEYS.FUEL, existingFuel);
+      this.save(STORAGE_KEYS.REMINDERS, existingReminders);
+      this.save(STORAGE_KEYS.TYRES, existingTyres);
+      this.save(STORAGE_KEYS.DOCUMENTS, existingDocs);
+
+      return { success: true, vehicle_id: importedVehicleId };
+    } catch (e: any) {
       console.error('[LocalDB] Import error:', e);
-      return false;
+      return { success: false, error: e?.message || 'Ошибка импорта бэкапа' };
     }
   }
 
@@ -1027,3 +1408,4 @@ export class LocalDatabaseEngine {
 }
 
 export const localDb = LocalDatabaseEngine.getInstance();
+

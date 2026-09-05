@@ -682,17 +682,26 @@ export const api = {
   exportExcelUrl: (vehicleId: number) => `${API_BASE}/vehicles/${vehicleId}/export/excel`,
   exportPdfUrl: (vehicleId: number) => `${API_BASE}/vehicles/${vehicleId}/export/pdf`,
   exportServiceBookletUrl: (vehicleId: number) => `${API_BASE}/vehicles/${vehicleId}/export/pdf`,
-  exportAllBackupUrl: () => `${API_BASE}/auth/export-full-backup`,
+  exportVehicleBackupUrl: (vehicleId: number) => {
+    const token = getAuthToken();
+    const tokenParam = token ? `?token=${encodeURIComponent(token)}` : '';
+    return `${API_BASE}/backup/export/${vehicleId}${tokenParam}`;
+  },
+  exportAllBackupUrl: () => {
+    const token = getAuthToken();
+    const tokenParam = token ? `?token=${encodeURIComponent(token)}` : '';
+    return `${API_BASE}/backup/export-all${tokenParam}`;
+  },
   exportBackup: (vehicleId: number) => {
     if (localDb.isStandaloneMode()) {
-      const json = localDb.exportFullBackup();
+      const json = localDb.exportVehicleBackup(vehicleId);
       const blob = new Blob([json], { type: 'application/json' });
       return Promise.resolve(blob);
     }
     const token = getAuthToken();
     const headers: Record<string, string> = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
-    return fetch(`${API_BASE}/vehicles/${vehicleId}/export/backup`, { headers }).then((res) => {
+    return fetch(`${API_BASE}/backup/export/${vehicleId}`, { headers }).then((res) => {
       if (!res.ok) throw new Error('Backup export failed');
       return res.blob();
     });
@@ -706,30 +715,50 @@ export const api = {
     const token = getAuthToken();
     const headers: Record<string, string> = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
-    return fetch(`${API_BASE}/auth/export-full-backup`, { headers }).then((res) => {
-      if (!res.ok) throw new Error('Full server backup export failed');
+    return fetch(`${API_BASE}/backup/export-all`, { headers }).then((res) => {
+      if (!res.ok) throw new Error('Full backup export failed');
       return res.blob();
     });
   },
-  importBackup: async (file: File) => {
+  importBackup: async (parsedDataOrFile: any) => {
     if (localDb.isStandaloneMode()) {
-      const text = await file.text();
-      const ok = localDb.importFullBackup(text);
-      if (!ok) throw new Error('Некорректная структура файла резервной копии');
-      return { status: 'success', message: 'Данные успешно импортированы' };
+      let payload = parsedDataOrFile;
+      if (parsedDataOrFile instanceof File) {
+        const text = await parsedDataOrFile.text();
+        payload = JSON.parse(text);
+      } else if (typeof parsedDataOrFile === 'string') {
+        payload = JSON.parse(parsedDataOrFile);
+      }
+      const res = localDb.importFullBackup(payload);
+      if (!res.success) {
+        throw new Error(res.error || 'Некорректная структура файла резервной копии');
+      }
+      return {
+        status: 'success',
+        vehicle_id: res.vehicle_id || 1,
+        message: 'Данные успешно импортированы',
+      };
     }
-    const formData = new FormData();
-    formData.append('file', file);
-    const token = getAuthToken();
-    const headers: Record<string, string> = {};
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-    const res = await fetch(`${API_BASE}/auth/import-backup`, {
-      method: 'POST',
-      headers,
-      body: formData,
-    });
-    if (!res.ok) throw new Error('Backup import failed');
-    return res.json();
+
+    // Server mode
+    let payload = parsedDataOrFile;
+    if (parsedDataOrFile instanceof File) {
+      const text = await parsedDataOrFile.text();
+      payload = JSON.parse(text);
+    } else if (typeof parsedDataOrFile === 'string') {
+      payload = JSON.parse(parsedDataOrFile);
+    }
+
+    return request<{ status: string; vehicle_id: number; message: string }>(
+      `${API_BASE}/backup/import`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      },
+      {
+        description: 'Импорт резервной копии JSON',
+      }
+    );
   },
 
   // -------------------------------------------------------------
