@@ -10,7 +10,7 @@ import {
   Database,
   Download,
 } from 'lucide-react';
-import { Vehicle } from '../types';
+import { Vehicle, User } from '../types';
 import { api } from '../services/api';
 
 interface ImportBackupModalProps {
@@ -20,6 +20,7 @@ interface ImportBackupModalProps {
   vehicles?: Vehicle[];
   selectedVehicle?: Vehicle | null;
   initialTab?: 'import' | 'export';
+  currentUser?: User | null;
 }
 
 export const ImportBackupModal: React.FC<ImportBackupModalProps> = ({
@@ -29,12 +30,18 @@ export const ImportBackupModal: React.FC<ImportBackupModalProps> = ({
   vehicles = [],
   selectedVehicle,
   initialTab = 'import',
+  currentUser,
 }) => {
   const [activeTab, setActiveTab] = useState<'import' | 'export'>(initialTab);
   const [jsonText, setJsonText] = useState('');
   const [parsedData, setParsedData] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const isAdmin = currentUser?.role === 'admin' || api.isStandalone();
+  const exportableVehicles = isAdmin
+    ? vehicles
+    : vehicles.filter((v) => v.is_owner !== false);
 
   if (!isOpen) return null;
 
@@ -87,7 +94,10 @@ export const ImportBackupModal: React.FC<ImportBackupModalProps> = ({
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `bortovoi_full_backup_${new Date().toISOString().slice(0, 10)}.json`;
+      const dateStr = new Date().toISOString().slice(0, 10);
+      link.download = isAdmin
+        ? `bortovoi_full_backup_${dateStr}.json`
+        : `my_garage_backup_${dateStr}.json`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -311,40 +321,54 @@ export const ImportBackupModal: React.FC<ImportBackupModalProps> = ({
             /* EXPORT TAB */
             <div className="space-y-4">
               <div className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                Выгрузите полную резервную копию всех ваших данных в формате <strong>JSON</strong> для надежного хранения на компьютере, телефоне или переноса на другой сервер.
+                {isAdmin
+                  ? 'Выгрузите полную резервную копию всех данных системы или конкретного автомобиля в формате JSON для надежного хранения или переноса на другой сервер.'
+                  : 'Выгрузите резервную копию ваших автомобилей и всей истории их обслуживания в формате JSON.'}
               </div>
 
               {/* Export Full Database Button */}
               <div className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-500/10 space-y-2.5">
                 <div className="flex items-center space-x-2 text-emerald-700 dark:text-emerald-300 font-bold text-xs">
                   <Database className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                  <span>Полный бэкап всей базы данных</span>
+                  <span>
+                    {isAdmin
+                      ? 'Полный бэкап всей базы данных (Администратор)'
+                      : 'Резервная копия всех моих автомобилей'}
+                  </span>
                 </div>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  Включает все автомобили в гараже, полную историю ТО, все заправки, регламенты, комплекты шин и полисы страхования.
+                  {isAdmin
+                    ? 'Включает всех пользователей, все автомобили в базе данных, полную историю ТО, все заправки, регламенты, комплекты шин и полисы страхования.'
+                    : 'Включает все автомобили из вашего личного гаража, их полную историю ТО, заправки, регламенты, шины и документы.'}
                 </p>
                 <button
                   onClick={handleExportFull}
                   className="w-full flex items-center justify-center space-x-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-all shadow-md shadow-emerald-500/20 active:scale-95"
                 >
                   <Download className="w-4 h-4" />
-                  <span>Скачать полный архив базы данных (.json)</span>
+                  <span>
+                    {isAdmin
+                      ? 'Скачать полный архив базы данных (.json)'
+                      : 'Скачать бэкап моих автомобилей (.json)'}
+                  </span>
                 </button>
               </div>
 
               {/* Export Individual Vehicle */}
               <div className="space-y-2 pt-2">
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                  Или скачать бэкап конкретного автомобиля:
+                  {isAdmin
+                    ? 'Или скачать бэкап конкретного автомобиля:'
+                    : 'Или скачать бэкап конкретного автомобиля из вашего гаража:'}
                 </label>
 
-                {vehicles.length === 0 ? (
+                {exportableVehicles.length === 0 ? (
                   <div className="text-xs text-slate-400 p-3 bg-slate-50 dark:bg-dark-800 rounded-xl text-center">
-                    В гараже пока нет автомобилей
+                    В вашем гараже пока нет добавленных автомобилей
                   </div>
                 ) : (
                   <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                    {vehicles.map((v) => (
+                    {exportableVehicles.map((v) => (
                       <div
                         key={v.id}
                         className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-dark-800 border border-slate-200 dark:border-dark-700 hover:border-brand-500/40 transition-colors"

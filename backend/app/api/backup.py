@@ -168,10 +168,13 @@ async def export_vehicle_backup(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Exports a complete JSON backup for a single vehicle owned by user.
+    Exports a complete JSON backup for a single vehicle owned by user (or by admin).
     """
     user = await resolve_user_from_header_or_query(authorization, token, db)
-    vehicle = await verify_vehicle_access(db, vehicle_id, user)
+    if not user:
+        raise HTTPException(status_code=401, detail="Требуется авторизация")
+    # Only owner or admin can export full vehicle backup (contains sensitive data)
+    vehicle = await verify_vehicle_access(db, vehicle_id, user, require_owner=True, allow_admin_override=True)
 
     srv_res = await db.execute(
         select(ServiceRecord)
@@ -232,18 +235,21 @@ async def export_all_backup(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Exports a complete JSON backup of all vehicles owned by user.
+    Exports a complete JSON backup of vehicles.
+    Admin: exports all vehicles in the database.
+    Regular user: exports ONLY vehicles owned by this user.
     """
     user = await resolve_user_from_header_or_query(authorization, token, db)
     if not user:
         raise HTTPException(status_code=401, detail="Требуется авторизация")
 
+    date_str = datetime.datetime.utcnow().strftime("%Y-%m-%d")
     if user.role == UserRole.ADMIN:
         query = select(Vehicle).order_by(Vehicle.id.asc())
+        filename = f"bortovoi_full_backup_{date_str}.json"
     else:
-        query = select(Vehicle).where(
-            or_(Vehicle.user_id == user.id, Vehicle.user_id.is_(None))
-        ).order_by(Vehicle.id.asc())
+        query = select(Vehicle).where(Vehicle.user_id == user.id).order_by(Vehicle.id.asc())
+        filename = f"my_garage_backup_{date_str}.json"
 
     veh_res = await db.execute(query)
     vehicles = veh_res.scalars().all()
@@ -289,13 +295,12 @@ async def export_all_backup(
         "version": "1.0",
         "exported_at": datetime.datetime.utcnow().isoformat(),
         "app": "Бортовой Журнал",
+        "is_admin_full_backup": bool(user.role == UserRole.ADMIN),
         "vehicles_count": len(all_data),
         "data": all_data,
     }
 
     json_str = json.dumps(payload, ensure_ascii=False, indent=2)
-    date_str = datetime.datetime.utcnow().strftime("%Y-%m-%d")
-    filename = f"bortovoi_full_backup_{date_str}.json"
     encoded_filename = urllib.parse.quote(filename)
 
     return Response(

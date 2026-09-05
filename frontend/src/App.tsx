@@ -707,6 +707,7 @@ export function App() {
         onSuccess={handleImportSuccess}
         vehicles={vehicles}
         selectedVehicle={selectedVehicle}
+        currentUser={currentUser}
       />
 
       {selectedVehicle && (
