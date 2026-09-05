@@ -12,6 +12,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { Vehicle, User } from '../types';
+import { localDB } from '../services/localDatabase';
 
 interface NavbarProps {
   vehicles: Vehicle[];
