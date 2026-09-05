@@ -156,10 +156,11 @@ export const PublicServiceBooklet: React.FC = () => {
                 {vehicle.make} {vehicle.model}
               </h1>
 
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-                {vehicle.body_type || ''} {vehicle.engine ? `• ДВС: ${vehicle.engine}` : ''}{' '}
-                {vehicle.transmission ? `• КПП: ${vehicle.transmission}` : ''}
-              </p>
+              {vehicle.engine && (
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+                  ДВС / КПП: {vehicle.engine}
+                </p>
+              )}
             </div>
 
             {/* Odometer & Verification Badge */}
