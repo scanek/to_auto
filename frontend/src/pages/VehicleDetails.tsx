@@ -110,6 +110,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   onBack,
   onRefreshVehicle,
   onEditVehicle,
+  onDeleteVehicle,
   onOpenServiceModal,
   onOpenFuelModal,
   onOpenReminderModal,
