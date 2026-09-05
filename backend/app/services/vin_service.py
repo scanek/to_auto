@@ -53,6 +53,7 @@ WMI_MAP: Dict[str, Dict[str, str]] = {
     # Chinese manufacturers
     "LS5": {"make": "Changan", "country": "Китай"},
     "LS4": {"make": "Changan", "country": "Китай"},
+    "LS6": {"make": "Changan", "country": "Китай"},
     "LSG": {"make": "SAIC-GM", "country": "Китай"},
     "LB3": {"make": "Geely", "country": "Китай"},
     "LVV": {"make": "Chery", "country": "Китай"},
@@ -201,7 +202,7 @@ class VinService:
                     fuel_type="АИ-95", country="Россия", oil_spec="5W-40 / 5W-30 (3.2 л)",
                     source="catalog"
                 )
-            elif model_code.startswith("GFL") or model_code.startswith("GFK"):
+            elif model_code.startswith("GF"):
                 return VinDecodeResult(
                     vin=vin, make="LADA", model="Vesta", year=year,
                     engine="1.6L 106 л.с. ВАЗ-21129", displacement="1.6L", horsepower=106,
@@ -250,8 +251,8 @@ class VinService:
                     source="catalog"
                 )
 
-        # --- Changan (LS5, LS4) ---
-        if vin.startswith("LS5") or vin.startswith("LS4"):
+        # --- Changan (LS5, LS4, LS6) ---
+        if vin.startswith("LS5") or vin.startswith("LS4") or vin.startswith("LS6"):
             model = "CS55 Plus"
             engine = "1.5T 181 л.с. BlueCore Turbo"
             hp = 181
