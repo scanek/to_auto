@@ -128,6 +128,14 @@ async def auto_migrate_sqlite(conn):
             ("tpms_fr_id", "VARCHAR(50)"),
             ("tpms_rl_id", "VARCHAR(50)"),
             ("tpms_rr_id", "VARCHAR(50)"),
+        ],
+        "vehicle_consumables": [
+            ("specification", "VARCHAR(255)"),
+            ("oem_part_number", "VARCHAR(100)"),
+            ("aftermarket_parts", "VARCHAR(255)"),
+            ("replacement_interval", "VARCHAR(100)"),
+            ("notes", "TEXT"),
+            ("order_index", "INTEGER DEFAULT 0"),
         ]
     }
 

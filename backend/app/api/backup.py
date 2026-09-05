@@ -23,6 +23,7 @@ from app.models import (
     TyreSet,
     FuelLog,
     Setting,
+    VehicleConsumable,
 )
 from app.core.config import settings, DATA_DIR
 from app.services.reminder_service import is_item_match_for_plan
@@ -31,7 +32,7 @@ from app.services.auth_helper import verify_vehicle_access, resolve_user_from_he
 
 router = APIRouter(prefix="/backup", tags=["Backup & Restore"])
 
-def serialize_vehicle_dict(vehicle: Vehicle, service_records, fuel_logs, reminders, tyres, documents) -> Dict[str, Any]:
+def serialize_vehicle_dict(vehicle: Vehicle, service_records, fuel_logs, reminders, tyres, documents, consumables=None) -> Dict[str, Any]:
     """Helper to serialize full vehicle entity with all related history."""
     return {
         "vehicle": {
@@ -177,6 +178,20 @@ def serialize_vehicle_dict(vehicle: Vehicle, service_records, fuel_logs, reminde
             }
             for d in documents
         ],
+        "consumables": [
+            {
+                "id": c.id,
+                "category": c.category,
+                "name": c.name,
+                "specification": c.specification,
+                "oem_part_number": c.oem_part_number,
+                "aftermarket_parts": c.aftermarket_parts,
+                "replacement_interval": c.replacement_interval,
+                "notes": c.notes,
+                "order_index": c.order_index,
+            }
+            for c in (consumables if consumables is not None else getattr(vehicle, "consumables", []))
+        ],
     }
 
 @router.get("/export/{vehicle_id}")
@@ -225,7 +240,14 @@ async def export_vehicle_backup(
     )
     documents = doc_res.scalars().all()
 
-    backup_payload = serialize_vehicle_dict(vehicle, service_records, fuel_logs, reminders, tyres, documents)
+    con_res = await db.execute(
+        select(VehicleConsumable)
+        .where(VehicleConsumable.vehicle_id == vehicle_id)
+        .order_by(VehicleConsumable.order_index.asc())
+    )
+    consumables = con_res.scalars().all()
+
+    backup_payload = serialize_vehicle_dict(vehicle, service_records, fuel_logs, reminders, tyres, documents, consumables)
     backup_payload["version"] = "1.0"
     backup_payload["exported_at"] = datetime.datetime.utcnow().isoformat()
     backup_payload["app"] = "Бортовой Журнал"
@@ -334,7 +356,14 @@ async def export_all_backup(
         )
         documents = doc_res.scalars().all()
 
-        all_data.append(serialize_vehicle_dict(vehicle, service_records, fuel_logs, reminders, tyres, documents))
+        con_res = await db.execute(
+            select(VehicleConsumable)
+            .where(VehicleConsumable.vehicle_id == vehicle.id)
+            .order_by(VehicleConsumable.order_index.asc())
+        )
+        consumables = con_res.scalars().all()
+
+        all_data.append(serialize_vehicle_dict(vehicle, service_records, fuel_logs, reminders, tyres, documents, consumables))
 
     payload = {
         "version": "1.0",
@@ -483,6 +512,7 @@ async def import_backup(
             flat_reminders = data.get("reminders") or data.get("trackers") or []
             flat_tyres = data.get("tyres") or data.get("tyre_sets") or []
             flat_docs = data.get("documents") or data.get("insurances") or []
+            flat_consumables = data.get("consumables") or []
 
             single_v = len(flat_vehicles) == 1
 
@@ -495,6 +525,7 @@ async def import_backup(
                     "trackers": [r for r in flat_reminders if single_v or r.get("vehicle_id") == vid],
                     "tyre_sets": [t for t in flat_tyres if single_v or t.get("vehicle_id") == vid],
                     "documents": [d for d in flat_docs if single_v or d.get("vehicle_id") == vid],
+                    "consumables": [c for c in flat_consumables if single_v or c.get("vehicle_id") == vid],
                 })
         elif isinstance(data, dict) and any(k in data for k in ("brand", "make", "model", "name")):
             packages = [{"vehicle": data, "trackers": data.get("trackers") or data.get("reminders") or []}]
@@ -1056,6 +1087,38 @@ async def import_backup(
                     db.add(doc)
                     existing_docs.append(doc)
                     new_docs_count += 1
+
+            # Consumables / Specifications
+            raw_consumables = pkg.get("consumables") or []
+            existing_cons_res = await db.execute(select(VehicleConsumable).where(VehicleConsumable.vehicle_id == vehicle.id))
+            existing_cons = existing_cons_res.scalars().all()
+            for c in raw_consumables:
+                if not isinstance(c, dict):
+                    continue
+                c_name = str(c.get("name") or "").strip()
+                if not c_name:
+                    continue
+                c_match = next((ec for ec in existing_cons if ec.name.strip().lower() == c_name.lower()), None)
+                if c_match:
+                    if c.get("specification"): c_match.specification = str(c["specification"])
+                    if c.get("oem_part_number"): c_match.oem_part_number = str(c["oem_part_number"])
+                    if c.get("aftermarket_parts"): c_match.aftermarket_parts = str(c["aftermarket_parts"])
+                    if c.get("replacement_interval"): c_match.replacement_interval = str(c["replacement_interval"])
+                    if c.get("notes"): c_match.notes = str(c["notes"])
+                else:
+                    new_c = VehicleConsumable(
+                        vehicle_id=vehicle.id,
+                        category=str(c.get("category") or "engine"),
+                        name=c_name,
+                        specification=str(c.get("specification")) if c.get("specification") else None,
+                        oem_part_number=str(c.get("oem_part_number")) if c.get("oem_part_number") else None,
+                        aftermarket_parts=str(c.get("aftermarket_parts")) if c.get("aftermarket_parts") else None,
+                        replacement_interval=str(c.get("replacement_interval")) if c.get("replacement_interval") else None,
+                        notes=str(c.get("notes")) if c.get("notes") else None,
+                        order_index=int(c.get("order_index") or 0),
+                    )
+                    db.add(new_c)
+                    existing_cons.append(new_c)
 
         await db.commit()
 

@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { QuickMileageModal } from '../components/QuickMileageModal';
 import { QrBookletModal } from '../components/QrBookletModal';
 import { StarLineModal } from '../components/StarLineModal';
+import { ConsumablesTab } from '../components/ConsumablesTab';
+import { ConsumableModal } from '../components/ConsumableModal';
 import { downloadIcsReminder } from '../utils/qrcodeHelper';
 import {
   Wrench,
@@ -73,6 +75,7 @@ import {
   DocumentNote,
   VehicleAnalytics,
   TyreSet,
+  VehicleConsumable,
 } from '../types';
 import { api } from '../services/api';
 import { notificationService } from '../services/notificationService';
@@ -107,7 +110,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   const [activeTab, setActiveTab] = useState<
     'service' | 'repairs' | 'upgrades' | 'fuel' | 'reminders' | 'tyres' | 'analytics' | 'documents' | 'more'
   >('service');
-  const [moreSubTab, setMoreSubTab] = useState<'tyres' | 'documents' | 'tools'>('tyres');
+  const [moreSubTab, setMoreSubTab] = useState<'specs' | 'tyres' | 'documents' | 'tools'>('specs');
   const [serviceFilter, setServiceFilter] = useState<'all' | 'service' | 'repair' | 'upgrade'>('all');
 
   const isOwner = isAuthenticated && vehicle.is_owner !== false;
@@ -117,6 +120,9 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   const [reminders, setReminders] = useState<MaintenancePlan[]>([]);
   const [documents, setDocuments] = useState<DocumentNote[]>([]);
   const [tyres, setTyres] = useState<TyreSet[]>([]);
+  const [consumables, setConsumables] = useState<VehicleConsumable[]>([]);
+  const [isConsumableModalOpen, setIsConsumableModalOpen] = useState(false);
+  const [editingConsumable, setEditingConsumable] = useState<VehicleConsumable | null>(null);
   const [analytics, setAnalytics] = useState<VehicleAnalytics | null>(null);
 
   const [editingOdometer, setEditingOdometer] = useState(false);
@@ -227,13 +233,14 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
 
   const loadData = async () => {
     try {
-      const [srv, fuel, rem, docs, an, ty] = await Promise.all([
+      const [srv, fuel, rem, docs, an, ty, con] = await Promise.all([
         api.getServiceRecords(vehicle.id),
         api.getFuelLogs(vehicle.id),
         api.getReminders(vehicle.id),
         api.getDocuments(vehicle.id),
         api.getAnalytics(vehicle.id),
         api.getTyreSets(vehicle.id),
+        api.getConsumables(vehicle.id),
       ]);
       setServiceRecords(srv);
       setFuelLogs(fuel);
@@ -241,12 +248,22 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
       setDocuments(docs);
       setAnalytics(an);
       setTyres(ty);
+      setConsumables(con);
 
       // Check upcoming maintenance and insurance triggers for push alerts
       notificationService.checkAndNotifyVehicle(vehicle, rem, docs).catch(() => {});
     } catch (err) {
       console.error('Error loading vehicle data', err);
     }
+  };
+
+  const handleSaveConsumable = async (data: Partial<VehicleConsumable>) => {
+    if (editingConsumable) {
+      await api.updateConsumable(editingConsumable.id, data);
+    } else {
+      await api.createConsumable(vehicle.id, data);
+    }
+    await loadData();
   };
 
   useEffect(() => {
@@ -543,6 +560,18 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                     >
                       <QrCode className="w-4 h-4 text-brand-500 flex-shrink-0" />
                       <span className="font-semibold">Бирка ТО и QR-книжка</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setIsActionMenuOpen(false);
+                        setActiveTab('more');
+                        setMoreSubTab('specs');
+                      }}
+                      className="w-full px-3.5 py-2.5 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-dark-800 flex items-center space-x-2.5 transition"
+                    >
+                      <Wrench className="w-4 h-4 text-cyan-500 flex-shrink-0" />
+                      <span className="font-semibold">Паспорт расходников (Шпаргалка)</span>
                     </button>
 
                     {isOwner && (
@@ -1997,6 +2026,19 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
             {/* Sub-tab Navigation */}
             <div className="flex items-center space-x-1.5 p-1 bg-slate-200/70 dark:bg-dark-800 rounded-xl border border-slate-200 dark:border-dark-750 max-w-full overflow-x-auto scrollbar-none">
               <button
+                onClick={() => { setActiveTab('more'); setMoreSubTab('specs'); }}
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                  (activeTab === 'more' && moreSubTab === 'specs')
+                    ? 'bg-brand-500 text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Wrench className="w-3.5 h-3.5" />
+                <span>Паспорт расходников</span>
+                {consumables.length > 0 && <span className="text-[10px] opacity-80">({consumables.length})</span>}
+              </button>
+
+              <button
                 onClick={() => { setActiveTab('more'); setMoreSubTab('tyres'); }}
                 className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
                   (activeTab === 'tyres' || (activeTab === 'more' && moreSubTab === 'tyres'))
@@ -2034,6 +2076,20 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 <span>Бирка ТО и QR-книжка</span>
               </button>
             </div>
+
+            {/* Sub-tab 0: Consumables & Specifications (Шпаргалка ТО) */}
+            {activeTab === 'more' && moreSubTab === 'specs' && (
+              <ConsumablesTab
+                vehicle={vehicle}
+                consumables={consumables}
+                isOwner={isOwner}
+                onRefresh={loadData}
+                onOpenModal={(item) => {
+                  setEditingConsumable(item || null);
+                  setIsConsumableModalOpen(true);
+                }}
+              />
+            )}
 
             {/* Sub-tab 1: Tyres */}
             {(activeTab === 'tyres' || (activeTab === 'more' && moreSubTab === 'tyres')) && (
@@ -2504,6 +2560,20 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
             await onRefreshVehicle();
             await loadData();
           }}
+        />
+      )}
+
+      {/* Vehicle Consumable Modal */}
+      {isConsumableModalOpen && (
+        <ConsumableModal
+          isOpen={isConsumableModalOpen}
+          onClose={() => {
+            setIsConsumableModalOpen(false);
+            setEditingConsumable(null);
+          }}
+          onSave={handleSaveConsumable}
+          consumable={editingConsumable}
+          vehicle={vehicle}
         />
       )}
     </div>

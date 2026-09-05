@@ -6,6 +6,7 @@ import {
   DocumentNote,
   VehicleAnalytics,
   TyreSet,
+  VehicleConsumable,
   User,
   AdminUser,
   AuthResponse,
@@ -532,6 +533,65 @@ export const api = {
       }
     );
   },
+
+  // -------------------------------------------------------------
+  // Consumables & Specifications (Шпаргалка ТО)
+  // -------------------------------------------------------------
+  getConsumables: (vehicleId: number) => {
+    const url = new URL(`${window.location.origin}${API_BASE}/consumables`);
+    url.searchParams.set('vehicle_id', String(vehicleId));
+    return request<VehicleConsumable[]>(url.pathname + url.search, undefined, {
+      cacheKey: `consumables_${vehicleId}`,
+      fallbackMock: () => [],
+    });
+  },
+  createConsumable: (vehicleId: number, data: Partial<VehicleConsumable>) =>
+    request<VehicleConsumable>(
+      `${API_BASE}/consumables?vehicle_id=${vehicleId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      },
+      {
+        description: `Добавление расходника: ${data.name || 'Расходник'}`,
+        entityType: 'other',
+        fallbackMock: () => ({ id: Date.now(), vehicle_id: vehicleId, ...data } as VehicleConsumable),
+      }
+    ),
+  prefillConsumablesTemplate: (vehicleId: number) =>
+    request<VehicleConsumable[]>(
+      `${API_BASE}/consumables/template?vehicle_id=${vehicleId}`,
+      {
+        method: 'POST',
+      },
+      {
+        description: `Заполнение стандартного шаблона расходников`,
+        entityType: 'other',
+        fallbackMock: () => [],
+      }
+    ),
+  updateConsumable: (id: number, data: Partial<VehicleConsumable>) =>
+    request<VehicleConsumable>(
+      `${API_BASE}/consumables/${id}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      },
+      {
+        description: `Обновление расходника #${id}`,
+        entityType: 'other',
+        fallbackMock: () => ({ id, ...data } as VehicleConsumable),
+      }
+    ),
+  deleteConsumable: (id: number) =>
+    request<void>(
+      `${API_BASE}/consumables/${id}`,
+      { method: 'DELETE' },
+      {
+        description: `Удаление расходника #${id}`,
+        entityType: 'other',
+      }
+    ),
 
   // -------------------------------------------------------------
   // Analytics

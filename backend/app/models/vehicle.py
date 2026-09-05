@@ -68,3 +68,4 @@ class Vehicle(Base):
     documents = relationship("DocumentNote", back_populates="vehicle", cascade="all, delete-orphan")
     attachments = relationship("Attachment", back_populates="vehicle", cascade="all, delete-orphan")
     tyre_sets = relationship("TyreSet", back_populates="vehicle", cascade="all, delete-orphan")
+    consumables = relationship("VehicleConsumable", back_populates="vehicle", cascade="all, delete-orphan", order_by="VehicleConsumable.order_index")

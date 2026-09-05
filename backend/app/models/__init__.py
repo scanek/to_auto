@@ -7,6 +7,7 @@ from app.models.document import DocumentNote
 from app.models.attachment import Attachment
 from app.models.tyre import TyreSet
 from app.models.setting import Setting
+from app.models.consumable import VehicleConsumable
 
 __all__ = [
     "User",
@@ -21,4 +22,5 @@ __all__ = [
     "Attachment",
     "TyreSet",
     "Setting",
+    "VehicleConsumable",
 ]

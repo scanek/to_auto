@@ -18,6 +18,7 @@ from app.api import (
     export,
     uploads,
     tyres,
+    consumables,
     backup,
     telematics,
     telegram,
@@ -70,6 +71,7 @@ app.include_router(analytics.router, prefix=api_v1_prefix)
 app.include_router(export.router, prefix=api_v1_prefix)
 app.include_router(uploads.router, prefix=api_v1_prefix)
 app.include_router(tyres.router, prefix=api_v1_prefix)
+app.include_router(consumables.router, prefix=api_v1_prefix)
 app.include_router(backup.router, prefix=api_v1_prefix)
 app.include_router(telematics.router, prefix=api_v1_prefix)
 app.include_router(telegram.router, prefix=api_v1_prefix)

@@ -301,3 +301,18 @@ export interface TelegramBotConfig {
   is_active: boolean;
   status_detail?: string | null;
 }
+
+export interface VehicleConsumable {
+  id: number;
+  vehicle_id: number;
+  category: 'engine' | 'filters' | 'transmission' | 'brakes' | 'cooling' | 'electrical' | 'wipers' | 'other';
+  name: string;
+  specification?: string | null;
+  oem_part_number?: string | null;
+  aftermarket_parts?: string | null;
+  replacement_interval?: string | null;
+  notes?: string | null;
+  order_index: number;
+  created_at?: string;
+  updated_at?: string;
+}
