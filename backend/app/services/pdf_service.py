@@ -228,24 +228,24 @@ def generate_service_booklet_html(
     # -------------------------------------------------------------
     consumables_html = ""
     if consumables and len(consumables) > 0:
-        cat_names = {
-            "engine": "Двигатель и масло",
-            "filters": "Фильтры",
-            "transmission": "Трансмиссия и КПП",
-            "brakes": "Тормозная система",
-            "cooling": "Охлаждение",
-            "electrical": "Электрика и свечи",
-            "wipers": "Стеклоочистители",
-            "other": "Прочее",
+        cat_meta = {
+            "engine": {"label": "Двигатель и масло", "bg": "#ecfdf5", "color": "#047857", "border": "#a7f3d0"},
+            "filters": {"label": "Фильтры", "bg": "#eff6ff", "color": "#1d4ed8", "border": "#bfdbfe"},
+            "transmission": {"label": "Трансмиссия и КПП", "bg": "#fdf4ff", "color": "#86198f", "border": "#f5d0fe"},
+            "brakes": {"label": "Тормозная система", "bg": "#fff1f2", "color": "#be123c", "border": "#fecdd3"},
+            "cooling": {"label": "Охлаждение и климат", "bg": "#ecfeff", "color": "#0e7490", "border": "#a5f3fc"},
+            "electrical": {"label": "Электрика и свечи", "bg": "#fefce8", "color": "#a16207", "border": "#fef08a"},
+            "wipers": {"label": "Стеклоочистители", "bg": "#f1f5f9", "color": "#475569", "border": "#cbd5e1"},
+            "other": {"label": "Прочее", "bg": "#f8fafc", "color": "#64748b", "border": "#e2e8f0"},
         }
         cons_rows = ""
         for c in consumables:
-            cat_label = cat_names.get(c.category, c.category)
+            meta = cat_meta.get(c.category, {"label": c.category, "bg": "#f8fafc", "color": "#475569", "border": "#cbd5e1"})
             oem_str = f"<code>{c.oem_part_number}</code>" if c.oem_part_number else "—"
             after_str = f"<small>{c.aftermarket_parts}</small>" if c.aftermarket_parts else "—"
             cons_rows += f"""
             <tr>
-                <td><span class="badge badge-tag">{cat_label}</span></td>
+                <td><span class="badge" style="background:{meta['bg']}; color:{meta['color']}; border:1px solid {meta['border']}; font-weight:700;">{meta['label']}</span></td>
                 <td><strong>{c.name}</strong></td>
                 <td>{c.specification or '—'}</td>
                 <td>{oem_str}</td>
@@ -442,7 +442,7 @@ def generate_service_booklet_html(
         .badge-service {{ background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }}
         .badge-repair {{ background: #ffe4e6; color: #be123c; border: 1px solid #fecdd3; }}
         .badge-upgrade {{ background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }}
-        .badge-tag {{ background: #0f172a; color: #fff; }}
+        .badge-tag {{ background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }}
         .badge-active {{ background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }}
         .badge-summer {{ background: #fef9c3; color: #854d0e; border: 1px solid #fef08a; }}
         .badge-winter {{ background: #e0f2fe; color: #075985; border: 1px solid #bae6fd; }}

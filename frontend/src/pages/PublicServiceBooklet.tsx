@@ -21,6 +21,17 @@ import {
   RotateCcw,
 } from 'lucide-react';
 
+const CONSUMABLE_CATEGORIES: Record<string, { label: string; bg: string; text: string; border: string }> = {
+  engine: { label: 'ДВС и масло', bg: 'bg-emerald-50 dark:bg-emerald-950/40', text: 'text-emerald-700 dark:text-emerald-400', border: 'border-emerald-200 dark:border-emerald-800' },
+  filters: { label: 'Фильтры', bg: 'bg-blue-50 dark:bg-blue-950/40', text: 'text-blue-700 dark:text-blue-400', border: 'border-blue-200 dark:border-blue-800' },
+  transmission: { label: 'КПП и мосты', bg: 'bg-purple-50 dark:bg-purple-950/40', text: 'text-purple-700 dark:text-purple-400', border: 'border-purple-200 dark:border-purple-800' },
+  brakes: { label: 'Тормоза', bg: 'bg-rose-50 dark:bg-rose-950/40', text: 'text-rose-700 dark:text-rose-400', border: 'border-rose-200 dark:border-rose-800' },
+  cooling: { label: 'Охлаждение', bg: 'bg-cyan-50 dark:bg-cyan-950/40', text: 'text-cyan-700 dark:text-cyan-400', border: 'border-cyan-200 dark:border-cyan-800' },
+  electrical: { label: 'Электрика и свечи', bg: 'bg-amber-50 dark:bg-amber-950/40', text: 'text-amber-700 dark:text-amber-400', border: 'border-amber-200 dark:border-amber-800' },
+  wipers: { label: 'Дворники', bg: 'bg-slate-100 dark:bg-slate-800', text: 'text-slate-700 dark:text-slate-300', border: 'border-slate-200 dark:border-slate-700' },
+  other: { label: 'Прочее', bg: 'bg-slate-50 dark:bg-slate-800/60', text: 'text-slate-600 dark:text-slate-400', border: 'border-slate-200 dark:border-slate-700' },
+};
+
 export const PublicServiceBooklet: React.FC = () => {
   const [data, setData] = useState<PublicBookletData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -296,7 +307,7 @@ export const PublicServiceBooklet: React.FC = () => {
                             {currentType.label}
                           </span>
                           {r.to_tag && (
-                            <span className="px-2 py-0.5 text-[11px] font-bold rounded-md bg-slate-900 text-white dark:bg-slate-700">
+                            <span className="px-2 py-0.5 text-[11px] font-bold rounded-md bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
                               {r.to_tag}
                             </span>
                           )}
@@ -517,18 +528,25 @@ export const PublicServiceBooklet: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {consumables.map((c) => (
-                      <tr key={c.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20">
-                        <td className="p-3">
-                          <span className="font-bold text-slate-900 dark:text-white block">
-                            {c.name}
-                          </span>
-                          {c.aftermarket_parts && (
-                            <span className="text-[11px] text-slate-400 block mt-0.5">
-                              Аналоги: {c.aftermarket_parts}
+                    {consumables.map((c) => {
+                      const catInfo = CONSUMABLE_CATEGORIES[c.category] || CONSUMABLE_CATEGORIES.other;
+                      return (
+                        <tr key={c.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20">
+                          <td className="p-3">
+                            <span
+                              className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold border mb-1.5 ${catInfo.bg} ${catInfo.text} ${catInfo.border}`}
+                            >
+                              {catInfo.label}
                             </span>
-                          )}
-                        </td>
+                            <span className="font-bold text-slate-900 dark:text-white block">
+                              {c.name}
+                            </span>
+                            {c.aftermarket_parts && (
+                              <span className="text-[11px] text-slate-400 block mt-0.5">
+                                Аналоги: {c.aftermarket_parts}
+                              </span>
+                            )}
+                          </td>
                         <td className="p-3 text-slate-700 dark:text-slate-300">
                           {c.specification || '—'}
                         </td>
@@ -544,8 +562,8 @@ export const PublicServiceBooklet: React.FC = () => {
                         <td className="p-3 text-slate-500 text-[11px]">
                           {c.replacement_interval || '—'}
                         </td>
-                      </tr>
-                    ))}
+                        </tr>
+                      ); })}
                   </tbody>
                 </table>
               </div>
