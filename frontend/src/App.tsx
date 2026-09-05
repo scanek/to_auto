@@ -18,6 +18,8 @@ import { AuthModal } from './components/AuthModal';
 import { NotificationSettingsModal } from './components/NotificationSettingsModal';
 import { SettingsModal } from './components/SettingsModal';
 import { Github, ZapOff, RefreshCw, CheckCircle2, AlertTriangle, ShieldAlert, Info, X } from 'lucide-react';
+import { App as CapApp } from '@capacitor/app';
+import { StatusBar, Style } from '@capacitor/status-bar';
 
 export function App() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -75,6 +77,15 @@ export function App() {
   };
 
   const checkAuthStatus = useCallback(async () => {
+    if (api.isStandalone()) {
+      const user = await api.getMe();
+      setCurrentUser(user);
+      setIsAuthenticated(true);
+      await Promise.all([loadVehicles(), loadAnnouncement()]);
+      setLoading(false);
+      return;
+    }
+
     const token = localStorage.getItem('autotracker_admin_token');
     if (token) {
       try {
@@ -211,6 +222,64 @@ export function App() {
   const [editingTyre, setEditingTyre] = useState<TyreSet | null>(null);
 
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+
+  // Capacitor Mobile Hardware Back Button & Status Bar
+  useEffect(() => {
+    try {
+      StatusBar.setStyle({ style: theme === 'dark' ? Style.Dark : Style.Light });
+      StatusBar.setBackgroundColor({ color: theme === 'dark' ? '#0f172a' : '#f8fafc' });
+    } catch {}
+
+    let backListenerHandle: any = null;
+    try {
+      CapApp.addListener('backButton', ({ canGoBack }) => {
+        if (isVehicleModalOpen) { setIsVehicleModalOpen(false); return; }
+        if (isServiceModalOpen) { setIsServiceModalOpen(false); return; }
+        if (isFuelModalOpen) { setIsFuelModalOpen(false); return; }
+        if (isReminderModalOpen) { setIsReminderModalOpen(false); return; }
+        if (isDocModalOpen) { setIsDocModalOpen(false); return; }
+        if (isTyreModalOpen) { setIsTyreModalOpen(false); return; }
+        if (isImportModalOpen) { setIsImportModalOpen(false); return; }
+        if (isSettingsModalOpen) { setIsSettingsModalOpen(false); return; }
+        if (isAuthModalOpen) { setIsAuthModalOpen(false); return; }
+        if (isNotificationModalOpen) { setIsNotificationModalOpen(false); return; }
+        if (isInstallModalOpen) { setIsInstallModalOpen(false); return; }
+
+        if (selectedVehicle) {
+          setSelectedVehicle(null);
+          return;
+        }
+
+        if (canGoBack) {
+          window.history.back();
+        } else {
+          CapApp.exitApp();
+        }
+      }).then((handle) => {
+        backListenerHandle = handle;
+      });
+    } catch {}
+
+    return () => {
+      if (backListenerHandle?.remove) {
+        backListenerHandle.remove();
+      }
+    };
+  }, [
+    theme,
+    isVehicleModalOpen,
+    isServiceModalOpen,
+    isFuelModalOpen,
+    isReminderModalOpen,
+    isDocModalOpen,
+    isTyreModalOpen,
+    isImportModalOpen,
+    isSettingsModalOpen,
+    isAuthModalOpen,
+    isNotificationModalOpen,
+    isInstallModalOpen,
+    selectedVehicle,
+  ]);
 
   // Manual & Automatic Sync Handler
   const handleSyncOfflineQueue = useCallback(async () => {
@@ -707,7 +776,7 @@ export function App() {
           </div>
           <div className="flex items-center space-x-2 font-mono text-[11px]">
             <span className="px-2.5 py-1 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 font-bold border border-brand-500/25 shadow-sm">
-              Версия программы: v2.8.2
+              Версия программы: v2.9.0
             </span>
           </div>
         </div>

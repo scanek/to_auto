@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import { User, AdminUser, Vehicle, TelegramBotConfig } from '../types';
 import { api, removeAuthToken } from '../services/api';
+import { localDb } from '../services/localDatabase';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -98,6 +99,37 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [showBotToken, setShowBotToken] = useState(false);
   const [isSavingBotToken, setIsSavingBotToken] = useState(false);
   const [botTokenMsg, setBotTokenMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  // Standalone mode state
+  const [isStandalone, setIsStandalone] = useState(() => api.isStandalone());
+  const [serverUrlInput, setServerUrlInput] = useState(() => api.getServerUrl());
+  const [standaloneMsg, setStandaloneMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  const handleToggleStandalone = async (enableStandalone: boolean) => {
+    api.setStandalone(enableStandalone);
+    setIsStandalone(enableStandalone);
+    setStandaloneMsg({
+      text: enableStandalone
+        ? '📱 Включен автономный режим: данные хранятся локально на устройстве'
+        : '🌐 Включен режим подключения к серверу',
+      type: 'success',
+    });
+    await onRefreshVehicles();
+  };
+
+  const handleSaveServerUrl = () => {
+    if (!serverUrlInput.trim()) return;
+    api.setServerUrl(serverUrlInput.trim());
+    setStandaloneMsg({ text: 'Адрес сервера сохранен', type: 'success' });
+  };
+
+  const handleResetLocalDatabase = async () => {
+    if (!window.confirm('⚠️ Вы уверены, что хотите сбросить локальную базу данных на этом устройстве? Все несохраненные локальные записи будут удалены.')) return;
+    localDb.resetAllData();
+    await onRefreshVehicles();
+    onSelectVehicle(null);
+    setStandaloneMsg({ text: 'Локальная база данных сброшена к начальному состоянию', type: 'success' });
+  };
 
   const isAdmin = currentUser?.role === 'admin';
 
@@ -533,6 +565,90 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </div>
                     <span className="text-xs font-bold text-brand-500">Настроить</span>
                   </button>
+                </div>
+              </div>
+
+              {/* App Mode & Standalone Engine */}
+              <div className="space-y-2.5">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                  <span>📱 Режим работы и Автономность</span>
+                  {isStandalone && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                      100% Offline Active
+                    </span>
+                  )}
+                </h3>
+                <div className="p-4 rounded-2xl border border-slate-200 dark:border-dark-750 bg-slate-50/60 dark:bg-dark-800/60 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center space-x-3">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isStandalone ? 'bg-emerald-500/10 text-emerald-500' : 'bg-brand-500/10 text-brand-500'}`}>
+                        <Smartphone className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-slate-900 dark:text-white">
+                          {isStandalone ? '📱 Автономный режим (Локальное хранилище)' : '🌐 Клиент-серверный режим'}
+                        </div>
+                        <div className="text-[11px] text-slate-500">
+                          {isStandalone
+                            ? 'Все записи ТО, заправки, шины, документы и расчеты сохраняются на вашем смартфоне/устройстве.'
+                            : 'Данные синхронизируются с сервером AutoTracker.'}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleToggleStandalone(!isStandalone)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
+                        isStandalone
+                          ? 'bg-slate-200 dark:bg-dark-700 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-dark-600 hover:bg-slate-300'
+                          : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 shadow-sm'
+                      }`}
+                    >
+                      {isStandalone ? 'Подключить сервер' : 'Включить автономный режим'}
+                    </button>
+                  </div>
+
+                  {standaloneMsg && (
+                    <div className={`p-2.5 rounded-xl text-xs font-medium ${standaloneMsg.type === 'success' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'}`}>
+                      {standaloneMsg.text}
+                    </div>
+                  )}
+
+                  {/* If in server mode, show URL input */}
+                  {!isStandalone && (
+                    <div className="pt-2 border-t border-slate-200 dark:border-dark-700 space-y-2">
+                      <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block">
+                        Адрес сервера AutoTracker (Backend URL):
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="url"
+                          value={serverUrlInput}
+                          onChange={(e) => setServerUrlInput(e.target.value)}
+                          placeholder="http://192.168.1.100:9900 или https://my-autotracker.com"
+                          className="flex-1 bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+                        />
+                        <button
+                          onClick={handleSaveServerUrl}
+                          className="px-3.5 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold transition shadow-sm"
+                        >
+                          Сохранить
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Reset Local DB Button if standalone */}
+                  {isStandalone && (
+                    <div className="pt-2 border-t border-slate-200 dark:border-dark-700 flex justify-end">
+                      <button
+                        onClick={handleResetLocalDatabase}
+                        className="text-[11px] font-bold text-rose-500 hover:text-rose-600 dark:text-rose-400 hover:underline flex items-center space-x-1"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Сбросить локальную базу данных</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

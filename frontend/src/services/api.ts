@@ -12,6 +12,7 @@ import {
   SetupStatus,
 } from '../types';
 import { offlineStorage, QueuedAction } from './offlineStorage';
+import { localDb } from './localDatabase';
 
 const API_BASE = '/api/v1';
 
@@ -78,33 +79,28 @@ async function request<T>(
         throw new Error(errorMsg);
       }
 
-      offlineStorage.setOnline(true);
-      const data: T = await res.json();
+      const data = await res.json();
       await offlineStorage.setCache(cacheKey, data);
-      return data;
+      offlineStorage.setOnline(true);
+      return data as T;
     } catch (err: any) {
-      const isNetworkError =
-        !navigator.onLine ||
-        err.name === 'AbortError' ||
-        err.message?.includes('Failed to fetch') ||
-        err.message?.includes('NetworkError');
+      console.warn(`[Offline Mode] Network failed for GET ${url}. Reading from cache...`, err?.message);
+      offlineStorage.setOnline(false);
 
-      if (isNetworkError) {
-        console.warn(`[Offline Mode] Network request failed for ${url}, reading from offline cache...`, err);
-        offlineStorage.setOnline(false);
-        const cached = await offlineStorage.getCache<T>(cacheKey);
-        if (cached !== null && cached !== undefined) {
-          return cached;
-        }
-        if (offlineConfig?.fallbackMock) {
-          return offlineConfig.fallbackMock();
-        }
+      const cached = await offlineStorage.getCache<T>(cacheKey);
+      if (cached !== null) {
+        return cached;
       }
+
+      if (offlineConfig?.fallbackMock) {
+        return offlineConfig.fallbackMock();
+      }
+
       throw err;
     }
   }
 
-  // 2. If mutating request (POST, PUT, DELETE): Try network, enqueue on offline
+  // 2. If mutating request (POST, PUT, DELETE)
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 6000);
@@ -123,28 +119,22 @@ async function request<T>(
         if (errJson?.detail) {
           errorMsg = typeof errJson.detail === 'string' ? errJson.detail : JSON.stringify(errJson.detail);
         }
-      } catch {
-        const errorBody = await res.text();
-        if (errorBody) errorMsg = errorBody;
-      }
+      } catch {}
       throw new Error(errorMsg);
     }
 
     offlineStorage.setOnline(true);
-
-    if (res.status === 204) {
-      return {} as T;
+    const contentType = res.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      return (await res.json()) as T;
     }
-
-    return await res.json();
+    return {} as T;
   } catch (err: any) {
-    // If it's a network/connection error, enqueue for background sync
     const isNetworkError =
       !navigator.onLine ||
-      err.name === 'AbortError' ||
-      err.message?.includes('Failed to fetch') ||
-      err.message?.includes('NetworkError') ||
-      err.message?.includes('Network request failed');
+      err?.name === 'AbortError' ||
+      err?.message?.includes('Failed to fetch') ||
+      err?.message?.includes('NetworkError');
 
     if (isNetworkError) {
       console.warn(`[Offline Mode] Connection lost. Enqueueing ${method} ${url} for background sync.`);
@@ -159,7 +149,6 @@ async function request<T>(
         entityType: offlineConfig?.entityType,
       });
 
-      // Optimistic simulated mock return
       if (offlineConfig?.fallbackMock) {
         return offlineConfig.fallbackMock();
       }
@@ -172,26 +161,62 @@ async function request<T>(
 
 export const api = {
   // -------------------------------------------------------------
+  // Mode & Database Access
+  // -------------------------------------------------------------
+  isStandalone: () => localDb.isStandaloneMode(),
+  setStandalone: (val: boolean) => localDb.setAppMode(val ? 'standalone' : 'server'),
+  getServerUrl: () => localDb.getServerUrl(),
+  setServerUrl: (url: string) => localDb.setServerUrl(url),
+
+  // -------------------------------------------------------------
   // Auth & Permissions
   // -------------------------------------------------------------
-  getSetupStatus: () =>
-    request<SetupStatus>(`${API_BASE}/auth/setup-status`, undefined, {
+  getSetupStatus: () => {
+    if (localDb.isStandaloneMode()) {
+      return Promise.resolve({ has_users: true, allow_registration: true });
+    }
+    return request<SetupStatus>(`${API_BASE}/auth/setup-status`, undefined, {
       fallbackMock: () => ({ has_users: true, allow_registration: true }),
-    }),
-  getMe: () =>
-    request<User>(`${API_BASE}/auth/me`, undefined, {
+    });
+  },
+  getMe: () => {
+    if (localDb.isStandaloneMode()) {
+      return Promise.resolve(localDb.getCurrentUser());
+    }
+    return request<User>(`${API_BASE}/auth/me`, undefined, {
       cacheKey: 'current_user',
-    }),
-  register: (data: { username: string; email?: string; password: string; full_name?: string }) =>
-    request<AuthResponse>(`${API_BASE}/auth/register`, {
+    });
+  },
+  register: (data: { username: string; email?: string; password: string; full_name?: string }) => {
+    if (localDb.isStandaloneMode()) {
+      const u = localDb.getCurrentUser();
+      return Promise.resolve({
+        access_token: 'standalone_token',
+        token_type: 'bearer',
+        user: u,
+        message: 'Автономный режим активен',
+      });
+    }
+    return request<AuthResponse>(`${API_BASE}/auth/register`, {
       method: 'POST',
       body: JSON.stringify(data),
-    }),
-  login: (data: { username: string; password: string }) =>
-    request<AuthResponse>(`${API_BASE}/auth/login`, {
+    });
+  },
+  login: (data: { username: string; password: string }) => {
+    if (localDb.isStandaloneMode()) {
+      const u = localDb.getCurrentUser();
+      return Promise.resolve({
+        access_token: 'standalone_token',
+        token_type: 'bearer',
+        user: u,
+        message: 'Автономный режим активен',
+      });
+    }
+    return request<AuthResponse>(`${API_BASE}/auth/login`, {
       method: 'POST',
       body: JSON.stringify(data),
-    }),
+    });
+  },
   changePassword: (data: { old_password: string; new_password: string }) =>
     request<{ message: string }>(`${API_BASE}/auth/change-password`, {
       method: 'POST',
@@ -213,25 +238,44 @@ export const api = {
   // -------------------------------------------------------------
   // Vehicles
   // -------------------------------------------------------------
-  getVehicles: () =>
-    request<Vehicle[]>(`${API_BASE}/vehicles`, undefined, {
+  getVehicles: () => {
+    if (localDb.isStandaloneMode()) {
+      return localDb.getVehicles();
+    }
+    return request<Vehicle[]>(`${API_BASE}/vehicles`, undefined, {
       cacheKey: 'vehicles_list',
       fallbackMock: () => [],
-    }),
-  getAdminAllVehicles: () =>
-    request<Vehicle[]>(`${API_BASE}/vehicles/admin/all`, undefined, {
+    });
+  },
+  getAdminAllVehicles: () => {
+    if (localDb.isStandaloneMode()) {
+      return localDb.getVehicles();
+    }
+    return request<Vehicle[]>(`${API_BASE}/vehicles/admin/all`, undefined, {
       cacheKey: 'admin_vehicles_all',
-    }),
-  deleteAdminVehicle: (vehicleId: number) =>
-    request<void>(`${API_BASE}/vehicles/admin/${vehicleId}`, {
+    });
+  },
+  deleteAdminVehicle: (vehicleId: number) => {
+    if (localDb.isStandaloneMode()) {
+      return localDb.deleteVehicle(vehicleId).then(() => {});
+    }
+    return request<void>(`${API_BASE}/vehicles/admin/${vehicleId}`, {
       method: 'DELETE',
-    }),
-  getVehicle: (id: number) =>
-    request<Vehicle>(`${API_BASE}/vehicles/${id}`, undefined, {
+    });
+  },
+  getVehicle: (id: number) => {
+    if (localDb.isStandaloneMode()) {
+      return localDb.getVehicle(id) as Promise<Vehicle>;
+    }
+    return request<Vehicle>(`${API_BASE}/vehicles/${id}`, undefined, {
       cacheKey: `vehicle_${id}`,
-    }),
-  createVehicle: (data: Partial<Vehicle>) =>
-    request<Vehicle>(
+    });
+  },
+  createVehicle: (data: Partial<Vehicle>) => {
+    if (localDb.isStandaloneMode()) {
+      return localDb.createVehicle(data);
+    }
+    return request<Vehicle>(
       `${API_BASE}/vehicles`,
       {
         method: 'POST',
@@ -242,411 +286,459 @@ export const api = {
         entityType: 'vehicle',
         fallbackMock: () => ({ id: Date.now(), ...data } as Vehicle),
       }
-    ),
-  updateVehicle: (id: number, data: Partial<Vehicle>) =>
-    request<Vehicle>(
+    );
+  },
+  updateVehicle: (id: number, data: Partial<Vehicle>) => {
+    if (localDb.isStandaloneMode()) {
+      return localDb.updateVehicle(id, data);
+    }
+    return request<Vehicle>(
       `${API_BASE}/vehicles/${id}`,
       {
         method: 'PUT',
         body: JSON.stringify(data),
       },
       {
-        description: `Обновление автомобиля #${id}`,
+        description: `Обновление параметров авто #${id}`,
         entityType: 'vehicle',
-        fallbackMock: () => ({ id, ...data } as Vehicle),
       }
-    ),
-  deleteVehicle: (id: number) =>
-    request<void>(
+    );
+  },
+  deleteVehicle: (id: number) => {
+    if (localDb.isStandaloneMode()) {
+      return localDb.deleteVehicle(id).then(() => {});
+    }
+    return request<void>(
       `${API_BASE}/vehicles/${id}`,
-      { method: 'DELETE' },
+      {
+        method: 'DELETE',
+      },
       {
         description: `Удаление автомобиля #${id}`,
         entityType: 'vehicle',
       }
-    ),
+    );
+  },
 
   // -------------------------------------------------------------
   // Service Records
   // -------------------------------------------------------------
-  getServiceRecords: (vehicleId: number, recordType?: string) => {
-    const url = new URL(`${window.location.origin}${API_BASE}/service-records`);
-    url.searchParams.set('vehicle_id', String(vehicleId));
-    if (recordType) url.searchParams.set('record_type', recordType);
-    const key = `service_records_${vehicleId}_${recordType || 'all'}`;
-    return request<ServiceRecord[]>(url.pathname + url.search, undefined, {
-      cacheKey: key,
+  getServiceRecords: (vehicleId: number) => {
+    if (localDb.isStandaloneMode()) {
+      return localDb.getServices(vehicleId);
+    }
+    return request<ServiceRecord[]>(`${API_BASE}/vehicles/${vehicleId}/services`, undefined, {
+      cacheKey: `services_${vehicleId}`,
       fallbackMock: () => [],
     });
   },
-  createServiceRecord: (vehicleId: number, data: Partial<ServiceRecord>) =>
-    request<ServiceRecord>(
-      `${API_BASE}/service-records?vehicle_id=${vehicleId}`,
+  createServiceRecord: (vehicleId: number, data: Partial<ServiceRecord>) => {
+    if (localDb.isStandaloneMode()) {
+      return localDb.createService({ ...data, vehicle_id: vehicleId });
+    }
+    return request<ServiceRecord>(
+      `${API_BASE}/vehicles/${vehicleId}/services`,
       {
         method: 'POST',
         body: JSON.stringify(data),
       },
       {
-        description: `Запись ТО: ${data.title || 'Обслуживание'}`,
+        description: `Добавление записи ТО/Ремонта "${data.title || ''}"`,
         entityType: 'service',
         fallbackMock: () => ({ id: Date.now(), vehicle_id: vehicleId, ...data } as ServiceRecord),
       }
-    ),
-  updateServiceRecord: (id: number, data: Partial<ServiceRecord>) =>
-    request<ServiceRecord>(
-      `${API_BASE}/service-records/${id}`,
+    );
+  },
+  updateServiceRecord: (id: number, data: Partial<ServiceRecord>) => {
+    if (localDb.isStandaloneMode()) {
+      return localDb.updateService(id, data);
+    }
+    return request<ServiceRecord>(
+      `${API_BASE}/services/${id}`,
       {
         method: 'PUT',
         body: JSON.stringify(data),
       },
       {
-        description: `Обновление записи ТО #${id}`,
+        description: `Редактирование записи ТО #${id}`,
         entityType: 'service',
-        fallbackMock: () => ({ id, ...data } as ServiceRecord),
       }
-    ),
-  deleteServiceRecord: (id: number) =>
-    request<void>(
-      `${API_BASE}/service-records/${id}`,
-      { method: 'DELETE' },
+    );
+  },
+  deleteServiceRecord: (id: number) => {
+    if (localDb.isStandaloneMode()) {
+      return localDb.deleteService(id).then(() => {});
+    }
+    return request<void>(
+      `${API_BASE}/services/${id}`,
+      {
+        method: 'DELETE',
+      },
       {
         description: `Удаление записи ТО #${id}`,
         entityType: 'service',
       }
-    ),
+    );
+  },
 
   // -------------------------------------------------------------
   // Fuel Logs
   // -------------------------------------------------------------
   getFuelLogs: (vehicleId: number) => {
-    const url = new URL(`${window.location.origin}${API_BASE}/fuel-logs`);
-    url.searchParams.set('vehicle_id', String(vehicleId));
-    return request<FuelLog[]>(url.pathname + url.search, undefined, {
-      cacheKey: `fuel_logs_${vehicleId}`,
+    if (localDb.isStandaloneMode()) {
+      return localDb.getFuelLogs(vehicleId);
+    }
+    return request<FuelLog[]>(`${API_BASE}/vehicles/${vehicleId}/fuel`, undefined, {
+      cacheKey: `fuel_${vehicleId}`,
       fallbackMock: () => [],
     });
   },
-  createFuelLog: (vehicleId: number, data: Partial<FuelLog>) =>
-    request<FuelLog>(
-      `${API_BASE}/fuel-logs?vehicle_id=${vehicleId}`,
+  createFuelLog: (vehicleId: number, data: Partial<FuelLog>) => {
+    if (localDb.isStandaloneMode()) {
+      return localDb.createFuelLog({ ...data, vehicle_id: vehicleId });
+    }
+    return request<FuelLog>(
+      `${API_BASE}/vehicles/${vehicleId}/fuel`,
       {
         method: 'POST',
         body: JSON.stringify(data),
       },
       {
-        description: `Заправка ${data.fuel_amount || 0} л (${data.total_cost || 0} ₽)`,
+        description: `Заправка ${data.fuel_amount || 0} л на сумму ${data.total_cost || 0}`,
         entityType: 'fuel',
         fallbackMock: () => ({ id: Date.now(), vehicle_id: vehicleId, ...data } as FuelLog),
       }
-    ),
-  updateFuelLog: (id: number, data: Partial<FuelLog>) =>
-    request<FuelLog>(
-      `${API_BASE}/fuel-logs/${id}`,
+    );
+  },
+  updateFuelLog: (id: number, data: Partial<FuelLog>) => {
+    if (localDb.isStandaloneMode()) {
+      return localDb.updateFuelLog(id, data);
+    }
+    return request<FuelLog>(
+      `${API_BASE}/fuel/${id}`,
       {
         method: 'PUT',
         body: JSON.stringify(data),
       },
       {
-        description: `Обновление заправки #${id}`,
+        description: `Редактирование заправки #${id}`,
         entityType: 'fuel',
-        fallbackMock: () => ({ id, ...data } as FuelLog),
       }
-    ),
-  deleteFuelLog: (id: number) =>
-    request<void>(
-      `${API_BASE}/fuel-logs/${id}`,
-      { method: 'DELETE' },
+    );
+  },
+  deleteFuelLog: (id: number) => {
+    if (localDb.isStandaloneMode()) {
+      return localDb.deleteFuelLog(id).then(() => {});
+    }
+    return request<void>(
+      `${API_BASE}/fuel/${id}`,
+      {
+        method: 'DELETE',
+      },
       {
         description: `Удаление заправки #${id}`,
         entityType: 'fuel',
       }
-    ),
+    );
+  },
 
   // -------------------------------------------------------------
-  // Reminders / Maintenance Planner
+  // Maintenance Plans / Reminders
   // -------------------------------------------------------------
-  getReminders: (vehicleId: number) => {
-    const url = new URL(`${window.location.origin}${API_BASE}/reminders`);
-    url.searchParams.set('vehicle_id', String(vehicleId));
-    return request<MaintenancePlan[]>(url.pathname + url.search, undefined, {
+  getMaintenancePlans: (vehicleId: number) => {
+    if (localDb.isStandaloneMode()) {
+      return localDb.getReminders(vehicleId);
+    }
+    return request<MaintenancePlan[]>(`${API_BASE}/vehicles/${vehicleId}/reminders`, undefined, {
       cacheKey: `reminders_${vehicleId}`,
       fallbackMock: () => [],
     });
   },
-  createReminder: (vehicleId: number, data: Partial<MaintenancePlan>) =>
-    request<MaintenancePlan>(
-      `${API_BASE}/reminders?vehicle_id=${vehicleId}`,
+  createMaintenancePlan: (vehicleId: number, data: Partial<MaintenancePlan>) => {
+    if (localDb.isStandaloneMode()) {
+      return localDb.createReminder({ ...data, vehicle_id: vehicleId });
+    }
+    return request<MaintenancePlan>(
+      `${API_BASE}/vehicles/${vehicleId}/reminders`,
       {
         method: 'POST',
         body: JSON.stringify(data),
       },
       {
-        description: `Регламент: ${data.title || ''}`,
+        description: `Добавление регламента ТО "${data.title || ''}"`,
         entityType: 'reminder',
         fallbackMock: () => ({ id: Date.now(), vehicle_id: vehicleId, ...data } as MaintenancePlan),
       }
-    ),
-  updateReminder: (id: number, data: Partial<MaintenancePlan>) =>
-    request<MaintenancePlan>(
+    );
+  },
+  updateMaintenancePlan: (id: number, data: Partial<MaintenancePlan>) => {
+    if (localDb.isStandaloneMode()) {
+      return localDb.updateReminder(id, data);
+    }
+    return request<MaintenancePlan>(
       `${API_BASE}/reminders/${id}`,
       {
         method: 'PUT',
         body: JSON.stringify(data),
       },
       {
-        description: `Обновление регламента #${id}`,
+        description: `Обновление регламента ТО #${id}`,
         entityType: 'reminder',
-        fallbackMock: () => ({ id, ...data } as MaintenancePlan),
       }
-    ),
-  deleteReminder: (id: number) =>
-    request<void>(
+    );
+  },
+  completeMaintenancePlan: (
+    id: number,
+    data: {
+      date?: string;
+      odometer?: number;
+      engine_hours?: number | null;
+      create_service_record?: boolean;
+      cost_labor?: number;
+      cost_parts?: number;
+      notes?: string;
+    }
+  ) => {
+    if (localDb.isStandaloneMode()) {
+      return localDb.completeReminder(id, data);
+    }
+    return request<MaintenancePlan>(
+      `${API_BASE}/reminders/${id}/complete`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      },
+      {
+        description: `Выполнение регламента ТО #${id}`,
+        entityType: 'reminder',
+      }
+    );
+  },
+  deleteMaintenancePlan: (id: number) => {
+    if (localDb.isStandaloneMode()) {
+      return localDb.deleteReminder(id).then(() => {});
+    }
+    return request<void>(
       `${API_BASE}/reminders/${id}`,
-      { method: 'DELETE' },
+      {
+        method: 'DELETE',
+      },
       {
         description: `Удаление регламента #${id}`,
         entityType: 'reminder',
       }
-    ),
-  applyDefaultReminders: (vehicleId: number) =>
-    request<MaintenancePlan[]>(
-      `${API_BASE}/reminders/apply-default-pack?vehicle_id=${vehicleId}`,
-      { method: 'POST' }
-    ),
-  markReminderDone: (id: number, odo?: number, hours?: number) => {
-    const url = new URL(`${window.location.origin}${API_BASE}/reminders/${id}/mark-done`);
-    if (odo !== undefined) url.searchParams.set('odometer', String(odo));
-    if (hours !== undefined) url.searchParams.set('hours', String(hours));
-    return request<MaintenancePlan>(
-      url.pathname + url.search,
-      { method: 'POST' },
-      {
-        description: `Выполнение регламента #${id}`,
-        entityType: 'reminder',
-      }
     );
   },
 
   // -------------------------------------------------------------
-  // Documents & Insurance
-  // -------------------------------------------------------------
-  getDocuments: (vehicleId: number) => {
-    const url = new URL(`${window.location.origin}${API_BASE}/documents`);
-    url.searchParams.set('vehicle_id', String(vehicleId));
-    return request<DocumentNote[]>(url.pathname + url.search, undefined, {
-      cacheKey: `documents_${vehicleId}`,
-      fallbackMock: () => [],
-    });
-  },
-  createDocument: (vehicleId: number, data: Partial<DocumentNote>) =>
-    request<DocumentNote>(
-      `${API_BASE}/documents?vehicle_id=${vehicleId}`,
-      {
-        method: 'POST',
-        body: JSON.stringify(data),
-      },
-      {
-        description: `Документ: ${data.title || ''}`,
-        entityType: 'document',
-        fallbackMock: () => ({ id: Date.now(), vehicle_id: vehicleId, ...data } as DocumentNote),
-      }
-    ),
-  updateDocument: (id: number, data: Partial<DocumentNote>) =>
-    request<DocumentNote>(
-      `${API_BASE}/documents/${id}`,
-      {
-        method: 'PUT',
-        body: JSON.stringify(data),
-      },
-      {
-        description: `Обновление документа #${id}`,
-        entityType: 'document',
-        fallbackMock: () => ({ id, ...data } as DocumentNote),
-      }
-    ),
-  deleteDocument: (id: number) =>
-    request<void>(
-      `${API_BASE}/documents/${id}`,
-      { method: 'DELETE' },
-      {
-        description: `Удаление документа #${id}`,
-        entityType: 'document',
-      }
-    ),
-
-  // -------------------------------------------------------------
-  // Tyres & Wheels
+  // Tyre Sets
   // -------------------------------------------------------------
   getTyreSets: (vehicleId: number) => {
-    const url = new URL(`${window.location.origin}${API_BASE}/tyres`);
-    url.searchParams.set('vehicle_id', String(vehicleId));
-    return request<TyreSet[]>(url.pathname + url.search, undefined, {
+    if (localDb.isStandaloneMode()) {
+      return localDb.getTyres(vehicleId);
+    }
+    return request<TyreSet[]>(`${API_BASE}/vehicles/${vehicleId}/tyres`, undefined, {
       cacheKey: `tyres_${vehicleId}`,
       fallbackMock: () => [],
     });
   },
-  createTyreSet: (vehicleId: number, data: Partial<TyreSet>) =>
-    request<TyreSet>(
-      `${API_BASE}/tyres?vehicle_id=${vehicleId}`,
+  createTyreSet: (vehicleId: number, data: Partial<TyreSet>) => {
+    if (localDb.isStandaloneMode()) {
+      return localDb.createTyre({ ...data, vehicle_id: vehicleId });
+    }
+    return request<TyreSet>(
+      `${API_BASE}/vehicles/${vehicleId}/tyres`,
       {
         method: 'POST',
         body: JSON.stringify(data),
       },
       {
-        description: `Комплект шин: ${data.name || ''}`,
+        description: `Добавление комплекта шин "${data.name || ''}"`,
         entityType: 'tyre',
         fallbackMock: () => ({ id: Date.now(), vehicle_id: vehicleId, ...data } as TyreSet),
       }
-    ),
-  updateTyreSet: (id: number, data: Partial<TyreSet>) =>
-    request<TyreSet>(
+    );
+  },
+  updateTyreSet: (id: number, data: Partial<TyreSet>) => {
+    if (localDb.isStandaloneMode()) {
+      return localDb.updateTyre(id, data);
+    }
+    return request<TyreSet>(
       `${API_BASE}/tyres/${id}`,
       {
         method: 'PUT',
         body: JSON.stringify(data),
       },
       {
-        description: `Обновление комплекта шин #${id}`,
+        description: `Редактирование комплекта шин #${id}`,
         entityType: 'tyre',
-        fallbackMock: () => ({ id, ...data } as TyreSet),
       }
-    ),
-  deleteTyreSet: (id: number) =>
-    request<void>(
+    );
+  },
+  activateTyreSet: (id: number, mileage?: number) => {
+    if (localDb.isStandaloneMode()) {
+      return localDb.activateTyre(id, mileage);
+    }
+    return request<TyreSet>(
+      `${API_BASE}/tyres/${id}/activate`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ mileage }),
+      },
+      {
+        description: `Активация комплекта шин #${id}`,
+        entityType: 'tyre',
+      }
+    );
+  },
+  deleteTyreSet: (id: number) => {
+    if (localDb.isStandaloneMode()) {
+      return localDb.deleteTyre(id).then(() => {});
+    }
+    return request<void>(
       `${API_BASE}/tyres/${id}`,
-      { method: 'DELETE' },
+      {
+        method: 'DELETE',
+      },
       {
         description: `Удаление комплекта шин #${id}`,
-        entityType: 'tyre',
-      }
-    ),
-  activateTyreSet: (id: number, mileage?: number) => {
-    const url = new URL(`${window.location.origin}${API_BASE}/tyres/${id}/activate`);
-    if (mileage !== undefined) url.searchParams.set('mileage', String(mileage));
-    return request<TyreSet>(
-      url.pathname + url.search,
-      { method: 'POST' },
-      {
-        description: `Смена комплекта шин #${id}`,
         entityType: 'tyre',
       }
     );
   },
 
   // -------------------------------------------------------------
-  // Analytics
+  // Documents
   // -------------------------------------------------------------
-  getAnalytics: (vehicleId: number) =>
-    request<VehicleAnalytics>(`${API_BASE}/analytics/${vehicleId}`, undefined, {
-      cacheKey: `analytics_${vehicleId}`,
-      fallbackMock: () => ({
-        vehicle_id: vehicleId,
-        total_distance_tracked: 0,
-        total_spend: 0,
-        total_service_spend: 0,
-        total_repair_spend: 0,
-        total_upgrade_spend: 0,
-        total_fuel_spend: 0,
-        total_tyre_spend: 0,
-        total_document_spend: 0,
-        cost_per_distance_unit: 0,
-        avg_fuel_consumption: null,
-        avg_fuel_price: null,
-        total_fuel_liters: 0,
-        categories: [],
-        monthly_costs: [],
-        fuel_trend: [],
-      }),
-    }),
-
-  // -------------------------------------------------------------
-  // File Upload
-  // -------------------------------------------------------------
-  uploadFile: async (
-    file: File,
-    params?: {
-      vehicleId?: number;
-      serviceRecordId?: number;
-      fuelLogId?: number;
-      documentId?: number;
+  getDocumentNotes: (vehicleId: number) => {
+    if (localDb.isStandaloneMode()) {
+      return localDb.getDocuments(vehicleId);
     }
-  ) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    const url = new URL(`${window.location.origin}${API_BASE}/uploads`);
-    if (params?.vehicleId) url.searchParams.set('vehicle_id', String(params.vehicleId));
-    if (params?.serviceRecordId)
-      url.searchParams.set('service_record_id', String(params.serviceRecordId));
-    if (params?.fuelLogId) url.searchParams.set('fuel_log_id', String(params.fuelLogId));
-    if (params?.documentId) url.searchParams.set('document_id', String(params.documentId));
+    return request<DocumentNote[]>(`${API_BASE}/vehicles/${vehicleId}/documents`, undefined, {
+      cacheKey: `documents_${vehicleId}`,
+      fallbackMock: () => [],
+    });
+  },
+  createDocumentNote: (vehicleId: number, data: Partial<DocumentNote>) => {
+    if (localDb.isStandaloneMode()) {
+      return localDb.createDocument({ ...data, vehicle_id: vehicleId });
+    }
+    return request<DocumentNote>(
+      `${API_BASE}/vehicles/${vehicleId}/documents`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      },
+      {
+        description: `Добавление документа "${data.title || ''}"`,
+        entityType: 'document',
+        fallbackMock: () => ({ id: Date.now(), vehicle_id: vehicleId, ...data } as DocumentNote),
+      }
+    );
+  },
+  updateDocumentNote: (id: number, data: Partial<DocumentNote>) => {
+    if (localDb.isStandaloneMode()) {
+      return localDb.updateDocument(id, data);
+    }
+    return request<DocumentNote>(
+      `${API_BASE}/documents/${id}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      },
+      {
+        description: `Редактирование документа #${id}`,
+        entityType: 'document',
+      }
+    );
+  },
+  deleteDocumentNote: (id: number) => {
+    if (localDb.isStandaloneMode()) {
+      return localDb.deleteDocument(id).then(() => {});
+    }
+    return request<void>(
+      `${API_BASE}/documents/${id}`,
+      {
+        method: 'DELETE',
+      },
+      {
+        description: `Удаление документа #${id}`,
+        entityType: 'document',
+      }
+    );
+  },
 
+  // -------------------------------------------------------------
+  // Analytics & Exports
+  // -------------------------------------------------------------
+  getVehicleAnalytics: (vehicleId: number) => {
+    if (localDb.isStandaloneMode()) {
+      return localDb.getAnalytics(vehicleId);
+    }
+    return request<VehicleAnalytics>(`${API_BASE}/vehicles/${vehicleId}/analytics`, undefined, {
+      cacheKey: `analytics_${vehicleId}`,
+    });
+  },
+  exportExcelUrl: (vehicleId: number) => `${API_BASE}/vehicles/${vehicleId}/export/excel`,
+  exportPdfUrl: (vehicleId: number) => `${API_BASE}/vehicles/${vehicleId}/export/pdf`,
+  exportServiceBookletUrl: (vehicleId: number) => `${API_BASE}/vehicles/${vehicleId}/export/pdf`,
+  exportAllBackupUrl: () => `${API_BASE}/auth/export-full-backup`,
+  exportBackup: (vehicleId: number) => {
+    if (localDb.isStandaloneMode()) {
+      const json = localDb.exportFullBackup();
+      const blob = new Blob([json], { type: 'application/json' });
+      return Promise.resolve(blob);
+    }
     const token = getAuthToken();
     const headers: Record<string, string> = {};
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    const res = await fetch(url.pathname + url.search, {
-      method: 'POST',
-      body: formData,
-      headers,
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return fetch(`${API_BASE}/vehicles/${vehicleId}/export/backup`, { headers }).then((res) => {
+      if (!res.ok) throw new Error('Backup export failed');
+      return res.blob();
     });
-    if (!res.ok) {
-      throw new Error(`Upload failed: ${res.statusText}`);
+  },
+  exportFullServerBackup: () => {
+    if (localDb.isStandaloneMode()) {
+      const json = localDb.exportFullBackup();
+      const blob = new Blob([json], { type: 'application/json' });
+      return Promise.resolve(blob);
     }
+    const token = getAuthToken();
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return fetch(`${API_BASE}/auth/export-full-backup`, { headers }).then((res) => {
+      if (!res.ok) throw new Error('Full server backup export failed');
+      return res.blob();
+    });
+  },
+  importBackup: async (file: File) => {
+    if (localDb.isStandaloneMode()) {
+      const text = await file.text();
+      const ok = localDb.importFullBackup(text);
+      if (!ok) throw new Error('Некорректная структура файла резервной копии');
+      return { status: 'success', message: 'Данные успешно импортированы' };
+    }
+    const formData = new FormData();
+    formData.append('file', file);
+    const token = getAuthToken();
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE}/auth/import-backup`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+    if (!res.ok) throw new Error('Backup import failed');
     return res.json();
   },
-  uploadPhoto: (file: File) => api.uploadFile(file),
 
   // -------------------------------------------------------------
-  // Backup & Export
+  // Offline Sync Queue Management
   // -------------------------------------------------------------
-  importBackup: (data: any) =>
-    request<{ message: string; vehicle_id: number }>(`${API_BASE}/backup/import`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
-  exportVehicleBackupUrl: (vehicleId: number) => {
+  getPendingQueueCount: () => offlineStorage.getPendingQueueCount(),
+  getPendingQueue: () => offlineStorage.getQueue(),
+  syncOfflineQueue: async () => {
     const token = getAuthToken();
-    return `${API_BASE}/backup/export/${vehicleId}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
-  },
-  exportAllBackupUrl: () => {
-    const token = getAuthToken();
-    return `${API_BASE}/backup/export-all${token ? `?token=${encodeURIComponent(token)}` : ''}`;
-  },
-  exportServiceBookletUrl: (vehicleId: number) => {
-    const token = getAuthToken();
-    return `${API_BASE}/export/service-booklet/${vehicleId}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
-  },
-  exportExcelUrl: (vehicleId: number) => {
-    const token = getAuthToken();
-    return `${API_BASE}/export/excel/${vehicleId}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
-  },
-  downloadServiceBooklet: async (vehicleId: number) => {
-    try {
-      const ticketRes = await request<{ ticket: string }>(`${API_BASE}/export/ticket/${vehicleId}`, { method: 'POST' });
-      window.open(`${API_BASE}/export/service-booklet/${vehicleId}?ticket=${encodeURIComponent(ticketRes.ticket)}`, '_blank');
-    } catch {
-      const token = getAuthToken();
-      window.open(`${API_BASE}/export/service-booklet/${vehicleId}${token ? `?token=${encodeURIComponent(token)}` : ''}`, '_blank');
-    }
-  },
-  downloadExcelFile: async (vehicleId: number) => {
-    try {
-      const ticketRes = await request<{ ticket: string }>(`${API_BASE}/export/ticket/${vehicleId}`, { method: 'POST' });
-      window.location.href = `${API_BASE}/export/excel/${vehicleId}?ticket=${encodeURIComponent(ticketRes.ticket)}`;
-    } catch {
-      const token = getAuthToken();
-      window.location.href = `${API_BASE}/export/excel/${vehicleId}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
-    }
-  },
-
-  // -------------------------------------------------------------
-  // Synchronize Offline Queue
-  // -------------------------------------------------------------
-  syncOfflineQueue: async (): Promise<{ processed: number; failed: number }> => {
-    const token = getAuthToken();
-
     return await offlineStorage.processSyncQueue(async (action) => {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
@@ -667,6 +759,7 @@ export const api = {
       return true;
     });
   },
+
   // --- Telematics & StarLine S96 API ---
   authStarLine: (
     vehicleId: number,

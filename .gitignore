@@ -48,3 +48,11 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
+
+# Mobile & Android
+*.apk
+*.aab
+frontend/android/.gradle/
+frontend/android/app/build/
+frontend/android/build/
+frontend/android/local.properties

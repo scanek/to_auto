@@ -1,7 +1,7 @@
 {
   "name": "autotracker-frontend",
   "private": true,
-  "version": "2.8.2",
+  "version": "2.9.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,6 +9,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.1",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/cli": "^8.5.1",
+    "@capacitor/core": "^8.5.1",
+    "@capacitor/preferences": "^8.0.1",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.3",
     "clsx": "^2.1.0",
     "lucide-react": "^0.359.0",
     "react": "^18.2.0",
