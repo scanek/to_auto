@@ -37,6 +37,12 @@ export function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [settingsModalTab, setSettingsModalTab] = useState<'tools' | 'profile' | 'admin'>('tools');
+
+  const handleOpenSettingsModal = (tab: 'tools' | 'profile' | 'admin' = 'tools') => {
+    setSettingsModalTab(tab);
+    setIsSettingsModalOpen(true);
+  };
 
   // Offline & Synchronization state
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
@@ -465,7 +471,7 @@ export function App() {
         isOnline={isOnline}
         pendingSyncCount={pendingSyncCount}
         onSelectVehicle={setSelectedVehicle}
-        onOpenSettingsModal={() => setIsSettingsModalOpen(true)}
+        onOpenSettingsModal={handleOpenSettingsModal}
         onOpenAuthModal={() => setIsAuthModalOpen(true)}
         onAddVehicle={handleOpenAddVehicle}
         onLogout={handleLogout}
@@ -628,6 +634,7 @@ export function App() {
         onLogout={handleLogout}
         onRefreshVehicles={loadVehicles}
         onSelectVehicle={setSelectedVehicle}
+        initialTab={settingsModalTab}
       />
 
       <AuthModal

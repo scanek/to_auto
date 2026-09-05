@@ -586,106 +586,19 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                     className="fixed inset-0 z-40"
                     onClick={() => setIsActionMenuOpen(false)}
                   />
-                  <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-dark-850 rounded-2xl shadow-xl border border-slate-200 dark:border-dark-750 py-1.5 z-50 animate-scaleIn origin-top-right text-xs">
-                    <button
-                      onClick={() => {
-                        setIsActionMenuOpen(false);
-                        setIsQrModalOpen(true);
-                      }}
-                      className="w-full px-3.5 py-2.5 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-dark-800 flex items-center space-x-2.5 transition"
-                    >
-                      <QrCode className="w-4 h-4 text-brand-500 flex-shrink-0" />
-                      <span className="font-semibold">Бирка ТО и QR-книжка</span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setIsActionMenuOpen(false);
-                        setActiveTab('more');
-                        setMoreSubTab('specs');
-                      }}
-                      className="w-full px-3.5 py-2.5 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-dark-800 flex items-center space-x-2.5 transition"
-                    >
-                      <Wrench className="w-4 h-4 text-cyan-500 flex-shrink-0" />
-                      <span className="font-semibold">Паспорт расходников (Шпаргалка)</span>
-                    </button>
-
-                    {isOwner && (
+                  <div className="absolute right-0 mt-2 w-60 bg-white dark:bg-dark-850 rounded-2xl shadow-xl border border-slate-200 dark:border-dark-750 py-1.5 z-50 animate-scaleIn origin-top-right text-xs">
+                    {isOwner && onEditVehicle && (
                       <button
                         onClick={() => {
                           setIsActionMenuOpen(false);
-                          onOpenReminderModal();
+                          onEditVehicle();
                         }}
                         className="w-full px-3.5 py-2.5 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-dark-800 flex items-center space-x-2.5 transition"
                       >
-                        <CalendarClock className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                        <span className="font-semibold">Добавить регламент ТО</span>
+                        <Edit2 className="w-4 h-4 text-brand-500 flex-shrink-0" />
+                        <span className="font-semibold">Редактировать автомобиль</span>
                       </button>
                     )}
-
-                    {isOwner && (
-                      <button
-                        onClick={() => {
-                          setIsActionMenuOpen(false);
-                          setIsPublicShareModalOpen(true);
-                        }}
-                        className="w-full px-3.5 py-2.5 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-dark-800 flex items-center space-x-2.5 transition"
-                      >
-                        <Share2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                        <span className="font-semibold">Поделиться сервисной книжкой (QR / Авито)</span>
-                      </button>
-                    )}
-
-                    <button
-                      onClick={() => {
-                        setIsActionMenuOpen(false);
-                        api.downloadServiceBooklet(vehicle.id);
-                      }}
-                      className="w-full px-3.5 py-2.5 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-dark-800 flex items-center space-x-2.5 transition"
-                    >
-                      <FileText className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                      <span className="font-semibold">Сервисная книжка (PDF)</span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setIsActionMenuOpen(false);
-                        handleExportVehicleBackup();
-                      }}
-                      className="w-full px-3.5 py-2.5 text-left text-slate-700 dark:text-slate-200 hover:bg-amber-50 dark:hover:bg-amber-950/40 flex items-center space-x-2.5 transition"
-                      title="Выгрузить данные этого авто в JSON для переноса на телефон"
-                    >
-                      <Download className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                      <span className="font-semibold text-amber-700 dark:text-amber-400">
-                        Бэкап этого авто (JSON)
-                      </span>
-                    </button>
-
-                    {isOwner && (
-                      <button
-                        onClick={() => {
-                          setIsActionMenuOpen(false);
-                          setIsReceiptScanOpen(true);
-                        }}
-                        className="w-full px-3.5 py-2.5 text-left text-slate-700 dark:text-slate-200 hover:bg-purple-50 dark:hover:bg-purple-950/40 flex items-center space-x-2.5 transition"
-                      >
-                        <Camera className="w-4 h-4 text-purple-600 dark:text-purple-400 flex-shrink-0" />
-                        <span className="font-semibold text-purple-700 dark:text-purple-300">
-                          Распознать заказ-наряд / чек (OCR)
-                        </span>
-                      </button>
-                    )}
-
-                    <button
-                      onClick={() => {
-                        setIsActionMenuOpen(false);
-                        api.downloadExcelFile(vehicle.id);
-                      }}
-                      className="w-full px-3.5 py-2.5 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-dark-800 flex items-center space-x-2.5 transition"
-                    >
-                      <FileSpreadsheet className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                      <span className="font-semibold">Экспорт в Excel (.xlsx)</span>
-                    </button>
 
                     {isOwner && (
                       <button
@@ -696,21 +609,35 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                         className="w-full px-3.5 py-2.5 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-dark-800 flex items-center space-x-2.5 transition"
                       >
                         <Satellite className="w-4 h-4 text-sky-500 flex-shrink-0" />
-                        <span className="font-semibold">Настройки StarLine</span>
+                        <span className="font-semibold">Телематика StarLine</span>
                       </button>
                     )}
 
-                    {isOwner && onEditVehicle && (
+                    <button
+                      onClick={() => {
+                        setIsActionMenuOpen(false);
+                        setActiveTab('more');
+                        setMoreSubTab('tools');
+                      }}
+                      className="w-full px-3.5 py-2.5 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-dark-800 flex items-center space-x-2.5 transition"
+                    >
+                      <Sparkles className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                      <span className="font-semibold">Все инструменты и экспорт...</span>
+                    </button>
+
+                    {isOwner && onDeleteVehicle && (
                       <div className="border-t border-slate-100 dark:border-dark-750 my-1 pt-1">
                         <button
                           onClick={() => {
                             setIsActionMenuOpen(false);
-                            onEditVehicle();
+                            if (confirm(`Удалить ${vehicle.make} ${vehicle.model} и все связанные записи?`)) {
+                              onDeleteVehicle();
+                            }
                           }}
-                          className="w-full px-3.5 py-2.5 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-dark-800 flex items-center space-x-2.5 transition"
+                          className="w-full px-3.5 py-2.5 text-left text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 flex items-center space-x-2.5 transition font-semibold"
                         >
-                          <Edit2 className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                          <span className="font-semibold">Редактировать автомобиль</span>
+                          <Trash2 className="w-4 h-4 flex-shrink-0" />
+                          <span>Удалить автомобиль</span>
                         </button>
                       </div>
                     )}

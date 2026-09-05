@@ -10,6 +10,7 @@ import {
   ZapOff,
   RefreshCw,
   ShieldCheck,
+  User as UserIcon,
 } from 'lucide-react';
 import { Vehicle, User } from '../types';
 import { localDB } from '../services/localDatabase';
@@ -21,7 +22,7 @@ interface NavbarProps {
   isOnline?: boolean;
   pendingSyncCount?: number;
   onSelectVehicle: (v: Vehicle | null) => void;
-  onOpenSettingsModal: () => void;
+  onOpenSettingsModal: (tab?: 'tools' | 'profile' | 'admin') => void;
   onOpenInstallModal?: () => void;
   onOpenAuthModal: () => void;
   onAddVehicle: () => void;
@@ -101,20 +102,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
-          {/* Garage Switcher (Back to Garage button) */}
-          {selectedVehicle && (
-            <button
-              onClick={() => onSelectVehicle(null)}
-              className="flex items-center space-x-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-dark-700 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95"
-              title="Вернуться к списку всех авто"
-            >
-              <Car className="w-3.5 h-3.5 text-brand-500" />
-              <span className="hidden sm:inline">Гараж</span>
-            </button>
-          )}
-
-          {/* Add Vehicle Quick Button */}
-          {currentUser && (
+          {/* Add Vehicle Quick Button (shown when viewing a car to quickly add another without leaving) */}
+          {currentUser && selectedVehicle && (
             <button
               onClick={onAddVehicle}
               className="flex items-center space-x-1 bg-brand-500 hover:bg-brand-600 active:scale-95 text-white px-2.5 py-1.5 rounded-xl text-xs font-bold shadow-md shadow-brand-500/20 transition-all"
@@ -125,7 +114,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
-                    {/* Install PWA Button (only on web, not native) */}
+          {/* Install PWA Button (only on web, not native) */}
           {onOpenInstallModal && !localDB.isNative() && (
             <button
               onClick={onOpenInstallModal}
@@ -139,9 +128,9 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Unified Settings & Tools Button */}
           <button
-            onClick={onOpenSettingsModal}
+            onClick={() => onOpenSettingsModal('tools')}
             className="flex items-center space-x-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-dark-700 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95"
-            title="Настройки, экспорт, сервисная книжка, бэкап и профиль"
+            title="Настройки, экспорт, бэкап и профиль"
           >
             <Settings className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 group-hover:rotate-45 transition-transform" />
             <span className="hidden sm:inline">Настройки</span>
@@ -193,28 +182,41 @@ export const Navbar: React.FC<NavbarProps> = ({
                       </div>
                     </div>
 
-                    {onOpenInstallModal && (
+                    {!localDB.isStandalone() && (
                       <button
                         onClick={() => {
                           setIsUserMenuOpen(false);
-                          onOpenInstallModal();
+                          onOpenSettingsModal('profile');
                         }}
-                        className="w-full flex items-center space-x-2 p-2 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-dark-800 font-semibold transition-colors text-left"
+                        className="w-full flex items-center space-x-2 p-2 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-dark-800 font-semibold transition-colors text-left text-xs"
                       >
-                        <Smartphone className="w-4 h-4 text-brand-500" />
-                        <span>Установить приложение</span>
+                        <UserIcon className="w-4 h-4 text-brand-500" />
+                        <span>Мой профиль</span>
+                      </button>
+                    )}
+
+                    {currentUser.role === 'admin' && !localDB.isStandalone() && (
+                      <button
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          onOpenSettingsModal('admin');
+                        }}
+                        className="w-full flex items-center space-x-2 p-2 rounded-xl text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 font-bold transition-colors text-left text-xs"
+                      >
+                        <ShieldCheck className="w-4 h-4 text-amber-500" />
+                        <span>Админ-панель</span>
                       </button>
                     )}
 
                     <button
                       onClick={() => {
                         setIsUserMenuOpen(false);
-                        onOpenSettingsModal();
+                        onOpenSettingsModal('tools');
                       }}
-                      className="w-full flex items-center space-x-2 p-2 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-dark-800 font-semibold transition-colors text-left"
+                      className="w-full flex items-center space-x-2 p-2 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-dark-800 font-semibold transition-colors text-left text-xs"
                     >
                       <Settings className="w-4 h-4 text-slate-400" />
-                      <span>Панель настроек</span>
+                      <span>Инструменты и бэкапы</span>
                     </button>
 
                     {!localDB.isStandalone() && (

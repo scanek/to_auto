@@ -53,6 +53,7 @@ interface SettingsModalProps {
   onLogout: () => void;
   onRefreshVehicles: () => Promise<void>;
   onSelectVehicle: (v: Vehicle | null) => void;
+  initialTab?: 'tools' | 'profile' | 'admin';
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -71,8 +72,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onLogout,
   onRefreshVehicles,
   onSelectVehicle,
+  initialTab = 'tools',
 }) => {
-  const [activeTab, setActiveTab] = useState<'tools' | 'profile' | 'admin'>('tools');
+  const [activeTab, setActiveTab] = useState<'tools' | 'profile' | 'admin'>(initialTab);
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab, isOpen]);
 
   // Password change state
   const [isChangingPassword, setIsChangingPassword] = useState(false);
@@ -365,7 +373,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   };
 
-  const currentVehicleToExport = selectedVehicle || vehicles[0] || null;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 animate-fadeIn">
@@ -441,56 +448,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           {/* TAB 1: Tools & Exports */}
           {activeTab === 'tools' && (
             <div className="space-y-6">
-              {/* Quick Exports Grid */}
-              <div className="space-y-2.5">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  Выгрузка данных и отчеты
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {/* Excel Export */}
-                  {currentVehicleToExport ? (
-                    <a
-                      href={api.exportExcelUrl(currentVehicleToExport.id)}
-                      download
-                      className="p-3.5 rounded-2xl border border-slate-200 dark:border-dark-750 bg-slate-50/60 dark:bg-dark-800/60 hover:border-emerald-500/40 hover:bg-emerald-500/5 transition flex items-center space-x-3 group"
-                    >
-                      <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-                        <FileSpreadsheet className="w-5 h-5" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-xs font-bold text-slate-900 dark:text-white">
-                          Экспорт в Excel (.xlsx)
-                        </div>
-                        <div className="text-[11px] text-slate-500 truncate">
-                          {currentVehicleToExport.make} {currentVehicleToExport.model}
-                        </div>
-                      </div>
-                    </a>
-                  ) : null}
-
-                  {/* PDF Service Booklet */}
-                  {currentVehicleToExport ? (
-                    <a
-                      href={api.exportServiceBookletUrl(currentVehicleToExport.id)}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="p-3.5 rounded-2xl border border-slate-200 dark:border-dark-750 bg-slate-50/60 dark:bg-dark-800/60 hover:border-blue-500/40 hover:bg-blue-500/5 transition flex items-center space-x-3 group"
-                    >
-                      <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-                        <BookOpen className="w-5 h-5" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-xs font-bold text-slate-900 dark:text-white">
-                          Сервисная книжка (PDF)
-                        </div>
-                        <div className="text-[11px] text-slate-500 truncate">
-                          Печать полной истории ТО
-                        </div>
-                      </div>
-                    </a>
-                  ) : null}
-                </div>
-              </div>
 
               {/* Backup & System Data */}
               <div className="space-y-2.5">
@@ -641,58 +598,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
               </div>
 
-              {/* App & Actions */}
+              {/* Interface & App */}
               <div className="space-y-2.5">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  Быстрые действия
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <button
-                    onClick={() => {
-                      onClose();
-                      onAddVehicle();
-                    }}
-                    className="p-3.5 rounded-2xl border border-slate-200 dark:border-dark-750 bg-slate-50/60 dark:bg-dark-800/60 hover:border-brand-500/40 hover:bg-brand-500/5 transition flex items-center space-x-3 text-left"
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-brand-500/10 text-brand-500 flex items-center justify-center flex-shrink-0">
-                      <Plus className="w-5 h-5" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-xs font-bold text-slate-900 dark:text-white">
-                        Добавить новый автомобиль
-                      </div>
-                      <div className="text-[11px] text-slate-500">
-                        Создать карточку авто
-                      </div>
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      onClose();
-                      onOpenInstallModal();
-                    }}
-                    className="p-3.5 rounded-2xl border border-slate-200 dark:border-dark-750 bg-slate-50/60 dark:bg-dark-800/60 hover:border-purple-500/40 hover:bg-purple-500/5 transition flex items-center space-x-3 text-left"
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center flex-shrink-0">
-                      <Smartphone className="w-5 h-5" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-xs font-bold text-slate-900 dark:text-white">
-                        Установить приложение (PWA)
-                      </div>
-                      <div className="text-[11px] text-slate-500">
-                        На телефон или рабочий стол
-                      </div>
-                    </div>
-                  </button>
-                </div>
-              </div>
-
-              {/* Theme & Notifications */}
-              <div className="space-y-2.5">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  Интерфейс и уведомления
+                  Интерфейс и приложение
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <button
@@ -732,6 +641,27 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </div>
                     </div>
                     <span className="text-xs font-bold text-brand-500">Настроить</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      onClose();
+                      onOpenInstallModal();
+                    }}
+                    className="p-3.5 rounded-2xl border border-slate-200 dark:border-dark-750 bg-slate-50/60 dark:bg-dark-800/60 hover:bg-slate-100 dark:hover:bg-dark-800 transition flex items-center justify-between sm:col-span-2"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center flex-shrink-0">
+                        <Smartphone className="w-5 h-5" />
+                      </div>
+                      <div className="text-left">
+                        <div className="text-xs font-bold text-slate-900 dark:text-white">Установить приложение (PWA)</div>
+                        <div className="text-[11px] text-slate-500">
+                          Добавить на главный экран телефона или рабочий стол
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-xs font-bold text-purple-500">Установить</span>
                   </button>
                 </div>
               </div>
