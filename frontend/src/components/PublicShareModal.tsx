@@ -300,6 +300,30 @@ export const PublicShareModal: React.FC<PublicShareModalProps> = ({
                 Сгенерировать новую ссылку (аннулировать старую)
               </button>
             </div>
+            {/* PDF Booklet Download Card */}
+            <div className="bg-slate-50 dark:bg-slate-900/40 rounded-xl p-3.5 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <span className="p-2 bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 rounded-lg">
+                  <Printer className="w-4 h-4" />
+                </span>
+                <div>
+                  <span className="font-bold text-slate-800 dark:text-slate-200 text-xs block">
+                    Брендированный PDF-отчет (A4)
+                  </span>
+                  <span className="text-[11px] text-slate-400 block">
+                    Печатная сервисная книжка с регламентами и историей
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => api.downloadServiceBooklet(vehicle.id)}
+                className="shrink-0 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-semibold rounded-lg shadow-sm transition-all flex items-center gap-1.5"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>Скачать PDF</span>
+              </button>
+            </div>
           </div>
         )}
 

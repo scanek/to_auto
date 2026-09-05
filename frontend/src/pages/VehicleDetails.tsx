@@ -1169,6 +1169,64 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
         </div>
       </div>
 
+      {/* Quick Action Bar for Service Booklet & PDF (Prominent on Mobile & Desktop) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+        <button
+          onClick={() => api.downloadServiceBooklet(vehicle.id)}
+          className="w-full py-2.5 sm:py-3 px-3.5 sm:px-4 bg-white dark:bg-dark-850 hover:bg-slate-50 dark:hover:bg-dark-800 active:scale-[0.99] border border-slate-200 dark:border-dark-750 hover:border-emerald-500/50 rounded-2xl text-xs font-bold flex items-center justify-between shadow-xs transition group"
+        >
+          <div className="flex items-center space-x-2.5">
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
+              <FileText className="w-4 h-4" />
+            </div>
+            <div className="text-left">
+              <div className="text-slate-900 dark:text-white font-bold group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                Брендированный PDF-отчет
+              </div>
+              <div className="text-[10.5px] text-slate-400 font-normal">
+                Сервисная книжка A4 для печати и архива
+              </div>
+            </div>
+          </div>
+          <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 px-2.5 py-1 rounded-lg flex items-center space-x-1">
+            <Printer className="w-3 h-3 flex-shrink-0" />
+            <span>PDF A4</span>
+          </span>
+        </button>
+
+        {isOwner && (
+          <button
+            onClick={() => setIsPublicShareModalOpen(true)}
+            className="w-full py-2.5 sm:py-3 px-3.5 sm:px-4 bg-white dark:bg-dark-850 hover:bg-slate-50 dark:hover:bg-dark-800 active:scale-[0.99] border border-slate-200 dark:border-dark-750 hover:border-sky-500/50 rounded-2xl text-xs font-bold flex items-center justify-between shadow-xs transition group"
+          >
+            <div className="flex items-center space-x-2.5">
+              <div className="w-8 h-8 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center flex-shrink-0">
+                <Share2 className="w-4 h-4" />
+              </div>
+              <div className="text-left">
+                <div className="text-slate-900 dark:text-white font-bold group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors flex items-center gap-1.5">
+                  <span>Публичная цифровая книжка</span>
+                  {vehicle.public_booklet_enabled && (
+                    <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  )}
+                </div>
+                <div className="text-[10.5px] text-slate-400 font-normal">
+                  QR-код и ссылка для покупателей на Авито
+                </div>
+              </div>
+            </div>
+            <span className={`text-[11px] font-bold px-2.5 py-1 rounded-lg flex items-center space-x-1 border ${
+              vehicle.public_booklet_enabled
+                ? 'text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 border-emerald-200 dark:border-emerald-800'
+                : 'text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/50 border-sky-200 dark:border-sky-800'
+            }`}>
+              <QrCode className="w-3 h-3 flex-shrink-0" />
+              <span>{vehicle.public_booklet_enabled ? 'Активна' : 'Настроить'}</span>
+            </span>
+          </button>
+        )}
+      </div>
+
       {/* Modern 5-Column Segmented Tab Bar (Fits on 1 line on mobile and desktop) */}
       <div className="grid grid-cols-5 gap-1 p-1 bg-slate-200/70 dark:bg-dark-800 border border-slate-200 dark:border-dark-750 rounded-2xl">
         {navTabs.map((tab) => {
@@ -1207,6 +1265,44 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
         {/* Service / Repairs / Upgrades Combined Tab */}
         {['service', 'repairs', 'upgrades'].includes(activeTab) && (
           <div className="space-y-3.5">
+            {/* Service Booklet Quick Bar */}
+            <div className="bg-slate-100/80 dark:bg-dark-800/80 rounded-2xl p-3 border border-slate-200 dark:border-dark-750 flex flex-wrap items-center justify-between gap-2.5">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
+                  <FileText className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-slate-900 dark:text-white block">
+                    Сервисная книжка автомобиля
+                  </span>
+                  <span className="text-[10.5px] text-slate-500 dark:text-slate-400">
+                    Официальный PDF-отчет A4 и публичный QR-доступ для продажи
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2 w-full sm:w-auto">
+                <button
+                  onClick={() => api.downloadServiceBooklet(vehicle.id)}
+                  className="flex-1 sm:flex-initial px-3 py-1.5 bg-white dark:bg-dark-750 hover:bg-slate-50 dark:hover:bg-dark-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-dark-700 rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 transition shadow-xs active:scale-95"
+                  title="Скачать сервисный PDF-отчет формата A4"
+                >
+                  <Printer className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>Скачать PDF</span>
+                </button>
+                {isOwner && (
+                  <button
+                    onClick={() => setIsPublicShareModalOpen(true)}
+                    className="flex-1 sm:flex-initial px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 transition shadow-xs shadow-emerald-600/20"
+                    title="Поделиться цифровой ссылкой и QR-кодом"
+                  >
+                    <Share2 className="w-3.5 h-3.5" />
+                    <span>Поделиться (QR)</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
             {/* Filter Chips + Search and Action Bar */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5">
               {/* Filter Chips */}
@@ -2551,22 +2647,165 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
             {/* Sub-tab 3: Tools */}
             {activeTab === 'more' && moreSubTab === 'tools' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-                <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-5 shadow-sm space-y-3">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-xl bg-brand-500/10 text-brand-500 flex items-center justify-center flex-shrink-0">
-                      <QrCode className="w-5 h-5" />
+                {/* 1. Public Digital Service Booklet */}
+                <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-5 shadow-sm space-y-4 flex flex-col justify-between">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center flex-shrink-0">
+                          <Share2 className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                            Публичная цифровая сервисная книжка
+                          </h4>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            Онлайн-ссылка и QR-код для покупателей на Авито / Авто.ру
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-slate-900 dark:text-white">QR-код и Бирка ТО под капот</h4>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">Печать сервисной наклейки о замене масла и быстрый доступ по QR-коду.</p>
+
+                    <div className="p-3 bg-slate-50 dark:bg-dark-900/60 rounded-xl border border-slate-200/80 dark:border-dark-750 text-xs space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-500 dark:text-slate-400">Статус публичного доступа:</span>
+                        <span
+                          className={`font-bold px-2 py-0.5 rounded text-[11px] border ${
+                            vehicle.public_booklet_enabled
+                              ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                              : 'bg-slate-100 text-slate-600 dark:bg-dark-800 dark:text-slate-400 border-slate-200 dark:border-dark-700'
+                          }`}
+                        >
+                          {vehicle.public_booklet_enabled ? 'Активен по ссылке' : 'Отключен'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 leading-relaxed">
+                        Покупатели могут смотреть даты ТО, пробег и регламенты прямо в браузере без входа в систему. Ваши пароли и личные данные защищены.
+                      </p>
                     </div>
                   </div>
+
+                  <div className="flex items-center space-x-2 pt-1">
+                    {isOwner && (
+                      <button
+                        onClick={() => setIsPublicShareModalOpen(true)}
+                        className="flex-1 py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-1.5 transition shadow-md shadow-sky-600/20 active:scale-95"
+                      >
+                        <Share2 className="w-3.5 h-3.5" />
+                        <span>Настроить и QR-код</span>
+                      </button>
+                    )}
+                    {vehicle.public_booklet_enabled && vehicle.public_booklet_token && (
+                      <a
+                        href={`/booklet/${vehicle.public_booklet_token}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="py-2.5 px-3 bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-200 font-bold rounded-xl text-xs flex items-center justify-center space-x-1 transition border border-slate-200 dark:border-dark-700"
+                        title="Открыть страницу онлайн"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>Открыть</span>
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                {/* 2. Branded PDF Report */}
+                <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-5 shadow-sm space-y-4 flex flex-col justify-between">
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
+                        <FileText className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                          Брендированный PDF-отчет (A4)
+                        </h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          Фирменная сервисная книжка для распечатки и хранения
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-slate-50 dark:bg-dark-900/60 rounded-xl border border-slate-200/80 dark:border-dark-750 text-xs space-y-1.5">
+                      <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
+                        <span>Формат:</span>
+                        <span className="font-semibold text-slate-700 dark:text-slate-200">A4 PDF / Печать</span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 leading-relaxed">
+                        Включает паспорт автомобиля, цветные бейджи расходников, регламенты обслуживания и полную историю выполненных работ.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => api.downloadServiceBooklet(vehicle.id)}
+                    className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-2 transition shadow-md shadow-emerald-600/20 active:scale-95"
+                  >
+                    <Printer className="w-4 h-4" />
+                    <span>Сформировать и скачать PDF</span>
+                  </button>
+                </div>
+
+                {/* 3. Underhood QR Sticker */}
+                <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-5 shadow-sm space-y-4 flex flex-col justify-between">
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 rounded-xl bg-brand-500/10 text-brand-500 flex items-center justify-center flex-shrink-0">
+                        <QrCode className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                          QR-код и Бирка ТО под капот
+                        </h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          Печать сервисной наклейки о замене масла и быстрый доступ
+                        </p>
+                      </div>
+                    </div>
+
+                    <p className="text-[11px] text-slate-400 leading-relaxed p-3 bg-slate-50 dark:bg-dark-900/60 rounded-xl border border-slate-200/80 dark:border-dark-750">
+                      Сервисная бирка формата визитки для размещения в подкапотном пространстве со спецификацией масла, датой заливки и QR-кодом.
+                    </p>
+                  </div>
+
                   <button
                     onClick={() => setIsQrModalOpen(true)}
-                    className="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-2 transition shadow-md shadow-brand-500/20"
+                    className="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-2 transition shadow-md shadow-brand-500/20 active:scale-95"
                   >
                     <Printer className="w-4 h-4" />
                     <span>Открыть генератор бирки и QR-кода</span>
+                  </button>
+                </div>
+
+                {/* 4. Excel Export */}
+                <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-5 shadow-sm space-y-4 flex flex-col justify-between">
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center flex-shrink-0">
+                        <FileSpreadsheet className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                          Экспорт в Excel (.xlsx)
+                        </h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          Выгрузка всей базы данных автомобиля в таблицу
+                        </p>
+                      </div>
+                    </div>
+
+                    <p className="text-[11px] text-slate-400 leading-relaxed p-3 bg-slate-50 dark:bg-dark-900/60 rounded-xl border border-slate-200/80 dark:border-dark-750">
+                      Экспорт записей ТО, расходов, заправок и графиков для резервного хранения или ручной аналитики в таблицах.
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => api.downloadExcelFile(vehicle.id)}
+                    className="w-full py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-2 transition shadow-md shadow-teal-600/20 active:scale-95"
+                  >
+                    <FileSpreadsheet className="w-4 h-4" />
+                    <span>Экспорт данных в Excel (.xlsx)</span>
                   </button>
                 </div>
               </div>
