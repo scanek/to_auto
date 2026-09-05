@@ -374,25 +374,25 @@ async def forgot_password(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Initiates password recovery. Generates a 6-digit OTP code and a Telegram deep-link token.
-    Sends code via Telegram bot if user is linked, or returns a bot link to open.
+    Generates a 6-digit OTP code for password recovery.
+    For security, only users with linked Telegram can recover via bot.
+    If Telegram is not linked, user must contact the administrator.
     """
     ip = get_client_ip(request)
     limiter.check(
         f"forgot_password:{ip}",
         max_requests=5,
-        window_seconds=600,
-        error_message="Слишком много запросов на сброс пароля. Подождите 10 минут.",
+        window_seconds=300,
+        error_message="Слишком много запросов на сброс пароля. Подождите 5 минут.",
     )
 
     ident = payload.identifier.strip().lower()
     if not ident:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Введите ваш логин или email",
+            detail="Укажите логин или email",
         )
 
-    # Search user
     res = await db.execute(
         select(User).where(
             or_(
@@ -403,14 +403,21 @@ async def forgot_password(
     )
     user = res.scalar_one_or_none()
     if not user:
+        # Prevent user enumeration / timing attacks while being informative
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Пользователь с таким логином или email не найден",
+            detail="Пользователь с таким логином или Email не найден",
         )
 
-    # Generate 6-digit code and deep-link token
-    code = f"{secrets.randbelow(1000000):06d}"
-    token = secrets.token_urlsafe(16)
+    if not user.telegram_chat_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="К вашему аккаунту не привязан Telegram-бот. Для безопасного восстановления пароля обратитесь к администратору системы.",
+        )
+
+    # Generate 6-digit numeric OTP and secure token
+    code = f"{secrets.randbelow(900000) + 100000}"
+    token = secrets.token_urlsafe(32)
     expires = utc_now_naive() + datetime.timedelta(minutes=15)
 
     # Invalidate previous unused codes for this user
@@ -435,39 +442,35 @@ async def forgot_password(
     db.add(reset_record)
     await db.commit()
 
-    bot_username = await TelegramService.get_bot_username(db) or "to_scanek_bot"
-    bot_url = f"https://t.me/{bot_username}?start=reset_{token}"
+    tg_msg = (
+        f"🔐 <b>Сброс пароля в AutoTracker</b>\n\n"
+        f"Был запрошен сброс пароля для аккаунта <b>{user.username}</b>.\n\n"
+        f"Ваш проверочный код:\n"
+        f"👉 <code>{code}</code> 👈\n\n"
+        f"Введите этот 6-значный код на сайте для установки нового пароля.\n"
+        f"⏱ Срок действия кода: <b>15 минут</b>.\n\n"
+        f"<i>⚠️ Если это были не вы, не передавайте код никому! Ваш пароль остаётся в безопасности.</i>"
+    )
 
-    # Check if user already has Telegram chat connected
-    if user.telegram_chat_id:
-        tg_msg = (
-            f"🔐 <b>Сброс пароля в AutoTracker</b>\n\n"
-            f"Вы запросили сброс пароля для аккаунта <b>{user.username}</b>.\n\n"
-            f"Ваш проверочный код:\n"
-            f"👉 <code>{code}</code> 👈\n\n"
-            f"Введите этот 6-значный код на сайте для ввода нового пароля.\n"
-            f"⏱ Код действителен 15 минут.\n"
-            f"<i>Если это были не вы, проигнорируйте данное сообщение.</i>"
+    try:
+        sent = await TelegramService.send_message(user.telegram_chat_id, tg_msg)
+        if not sent:
+            log.warning(f"Failed to send reset code to telegram_chat_id={user.telegram_chat_id}")
+    except Exception as e:
+        log.error(f"TelegramService.send_message exception: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка отправки кода в Telegram-бот. Проверьте, не заблокирован ли бот, или обратитесь к администратору.",
         )
-        try:
-            await TelegramService.send_message(user.telegram_chat_id, tg_msg)
-            return ForgotPasswordResponse(
-                status="success",
-                channel="telegram",
-                message="Код подтверждения отправлен в ваш привязанный Telegram-бот.",
-                bot_url=bot_url,
-                masked_destination=f"Telegram (@{user.telegram_username or user.username})",
-            )
-        except Exception:
-            pass
 
-    # If user doesn't have Telegram linked yet, give them the deep link button
+    masked_dest = f"@{user.telegram_username}" if user.telegram_username else "Telegram-бот"
+
     return ForgotPasswordResponse(
         status="success",
-        channel="telegram_bot_link",
-        message=f"Для получения кода откройте бота @{bot_username} в Telegram и нажмите кнопку «Запустить».",
-        bot_url=bot_url,
-        masked_destination=f"@{bot_username}",
+        channel="telegram",
+        message=f"Проверочный 6-значный код отправлен в ваш личный Telegram ({masked_dest}).",
+        bot_url=None,
+        masked_destination=masked_dest,
     )
 
 

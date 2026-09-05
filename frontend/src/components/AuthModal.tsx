@@ -282,9 +282,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 ✈️
               </div>
               <div className="leading-relaxed">
-                <div className="font-bold">Безопасный сброс через Telegram-бот</div>
+                <div className="font-bold">Безопасный сброс через личный Telegram</div>
                 <div className="text-[11px] opacity-80 mt-0.5">
-                  Если бот уже привязан к профилю, он сразу пришлет одноразовый код. Если нет — сформируется ссылка для получения кода в Telegram в 1 клик.
+                  Код безопасности отправляется строго в ваш привязанный Telegram-аккаунт. Если бот ещё не был привязан — сброс выполняет администратор в панели управления.
                 </div>
               </div>
             </div>
@@ -361,26 +361,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </div>
             )}
 
-            {/* Deep link button if returned */}
-            {forgotBotUrl && (
-              <div className="p-3.5 rounded-2xl bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/60 space-y-2 text-center">
-                <p className="text-xs text-slate-700 dark:text-slate-300 font-medium">
-                  Нажмите кнопку ниже, чтобы открыть бота:
-                </p>
-                <a
-                  href={forgotBotUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center space-x-2 w-full py-2.5 px-4 bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-xl text-xs shadow-md shadow-sky-500/20 active:scale-95 transition-all"
-                >
-                  <span>✈️ Открыть @to_scanek_bot</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  В открывшемся боте нажмите <b>Запустить (Start)</b>, и он сразу выдаст 6-значный код.
-                </p>
-              </div>
-            )}
+
 
             {/* OTP Code */}
             <div>
