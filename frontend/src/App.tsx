@@ -17,7 +17,7 @@ import { InstallAppModal } from './components/InstallAppModal';
 import { AuthModal } from './components/AuthModal';
 import { NotificationSettingsModal } from './components/NotificationSettingsModal';
 import { SettingsModal } from './components/SettingsModal';
-import { Github, ZapOff, RefreshCw, CheckCircle2, AlertTriangle, ShieldAlert, Info, X } from 'lucide-react';
+import { Github, RefreshCw, CheckCircle2, AlertTriangle, ShieldAlert, Info, X } from 'lucide-react';
 import { App as CapApp } from '@capacitor/app';
 import { StatusBar, Style } from '@capacitor/status-bar';
 
@@ -515,23 +515,6 @@ export function App() {
         onLogout={handleLogout}
         onSyncNow={handleSyncOfflineQueue}
       />
-
-      {/* Offline Alert Banner */}
-      {!isOnline && (
-        <div className="bg-amber-500/15 border-b border-amber-500/30 text-amber-800 dark:text-amber-300 px-4 py-2 text-xs font-semibold flex items-center justify-between animate-fade-in">
-          <div className="flex items-center space-x-2">
-            <ZapOff className="w-4 h-4 text-amber-500 flex-shrink-0" />
-            <span>
-              <strong>Автономный режим (Офлайн)</strong> — все изменения сохраняются на телефоне и будут автоматически отправлены на сервер при подключении.
-            </span>
-          </div>
-          {pendingSyncCount > 0 && (
-            <span className="bg-amber-500/20 px-2 py-0.5 rounded text-[11px] font-bold">
-              В очереди: {pendingSyncCount}
-            </span>
-          )}
-        </div>
-      )}
 
       {/* Sync Notification Toast */}
       {syncToast && (

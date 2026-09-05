@@ -124,34 +124,27 @@ export const ImportBackupModal: React.FC<ImportBackupModalProps> = ({
     }
   };
 
-  const veh = parsedData?.vehicle || parsedData?.vehicles?.[0] || parsedData?.data?.[0]?.vehicle;
-  const recordsCount =
-    parsedData?.service_records?.length ||
-    parsedData?.maintenance_records?.length ||
-    parsedData?.services?.length ||
-    parsedData?.data?.[0]?.service_records?.length ||
-    0;
-  const trackersCount =
-    parsedData?.trackers?.length ||
-    parsedData?.reminders?.length ||
-    veh?.trackers?.length ||
-    parsedData?.data?.[0]?.trackers?.length ||
-    0;
-  const tyresCount =
-    parsedData?.tyre_sets?.length ||
-    parsedData?.tyres?.length ||
-    parsedData?.data?.[0]?.tyre_sets?.length ||
-    0;
-  const insCount =
-    parsedData?.documents?.length ||
-    parsedData?.insurances?.length ||
-    parsedData?.data?.[0]?.documents?.length ||
-    0;
-  const fuelCount =
-    parsedData?.fuel_logs?.length ||
-    parsedData?.fuel?.length ||
-    parsedData?.data?.[0]?.fuel_logs?.length ||
-    0;
+  const veh = parsedData?.vehicle || parsedData?.vehicles?.[0] || parsedData?.data?.[0]?.vehicle || parsedData?.data?.[0];
+  let recordsCount = (parsedData?.service_records?.length || parsedData?.services?.length || parsedData?.maintenance_records?.length || 0);
+  let trackersCount = (parsedData?.trackers?.length || parsedData?.reminders?.length || veh?.trackers?.length || 0);
+  let tyresCount = (parsedData?.tyre_sets?.length || parsedData?.tyres?.length || 0);
+  let insCount = (parsedData?.documents?.length || parsedData?.insurances?.length || 0);
+  let fuelCount = (parsedData?.fuel_logs?.length || parsedData?.fuel?.length || 0);
+
+  if (Array.isArray(parsedData?.data)) {
+    recordsCount = 0;
+    trackersCount = 0;
+    tyresCount = 0;
+    insCount = 0;
+    fuelCount = 0;
+    for (const item of parsedData.data) {
+      recordsCount += (item?.service_records?.length || item?.services?.length || item?.maintenance_records?.length || 0);
+      trackersCount += (item?.trackers?.length || item?.reminders?.length || item?.vehicle?.trackers?.length || 0);
+      tyresCount += (item?.tyre_sets?.length || item?.tyres?.length || 0);
+      insCount += (item?.documents?.length || item?.insurances?.length || 0);
+      fuelCount += (item?.fuel_logs?.length || item?.fuel?.length || 0);
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm animate-fade-in">

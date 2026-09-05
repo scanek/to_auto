@@ -7,7 +7,6 @@ import {
   Smartphone,
   LogIn,
   LogOut,
-  ZapOff,
   RefreshCw,
   ShieldCheck,
 } from 'lucide-react';
@@ -78,17 +77,6 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Actions */}
         <div className="flex items-center space-x-1.5 sm:space-x-2 flex-shrink-0">
-          {/* Offline / Pending Sync Badges */}
-          {!isOnline && (
-            <div
-              className="flex items-center space-x-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-2 py-1 rounded-lg text-[10px] font-bold"
-              title="Приложение работает в автономном режиме без подключения к интернету"
-            >
-              <ZapOff className="w-3 h-3 text-amber-500" />
-              <span className="hidden sm:inline">Офлайн</span>
-            </div>
-          )}
-
           {pendingSyncCount > 0 && (
             <button
               onClick={onSyncNow}
