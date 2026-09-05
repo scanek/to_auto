@@ -738,144 +738,144 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               </div>
             )}
 
-            {/* Telemetry Metric Cards: Horizontal Momentum Scroll on Mobile, Full Grid on Desktop */}
+            {/* Telemetry Metric Cards: 2-Row Hierarchical Grid on Mobile, Full Grid on Desktop (No horizontal scroll) */}
             {!isTelematicsCollapsed && (
-              <div className="flex overflow-x-auto sm:grid sm:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-2.5 pb-1 sm:pb-0 scrollbar-none snap-x snap-mandatory animate-fadeIn">
-              {/* Odometer */}
-              <div
-                onClick={handleQuickChangeOdometer}
-                className="flex-shrink-0 w-[114px] sm:w-auto snap-start cursor-pointer bg-white/80 dark:bg-dark-800/90 hover:bg-sky-50/50 dark:hover:bg-dark-750 backdrop-blur-md p-2.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm transition group select-none"
-                title="Нажмите для быстрой корректировки общего пробега"
-              >
-                <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 flex items-center justify-between">
-                  <span className="group-hover:text-sky-500 transition-colors">Пробег</span>
-                  <Disc className="w-3 h-3 text-sky-500" />
+              <div className="grid grid-cols-12 sm:grid-cols-4 lg:grid-cols-7 gap-1.5 sm:gap-2.5 animate-fadeIn">
+                {/* 1. Odometer (Row 1 on mobile: 4 cols) */}
+                <div
+                  onClick={handleQuickChangeOdometer}
+                  className="col-span-4 sm:col-span-1 lg:col-span-1 cursor-pointer bg-white/80 dark:bg-dark-800/90 hover:bg-sky-50/50 dark:hover:bg-dark-750 backdrop-blur-md p-2 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm transition group select-none"
+                  title="Нажмите для быстрой корректировки общего пробега"
+                >
+                  <div className="text-[9.5px] sm:text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 flex items-center justify-between">
+                    <span className="group-hover:text-sky-500 transition-colors truncate">Пробег</span>
+                    <Disc className="w-3 h-3 text-sky-500 flex-shrink-0 ml-1" />
+                  </div>
+                  <div className="text-xs sm:text-base font-black text-slate-900 dark:text-white font-mono mt-0.5 sm:mt-1 flex items-baseline space-x-0.5 sm:space-x-1">
+                    <span className="truncate">{Math.round(vehicle.current_odometer).toLocaleString('ru-RU')}</span>
+                    <span className="text-[9px] sm:text-xs font-semibold text-slate-500">{vehicle.distance_unit || 'км'}</span>
+                  </div>
                 </div>
-                <div className="text-sm sm:text-base font-black text-slate-900 dark:text-white font-mono mt-1 flex items-baseline space-x-1">
-                  <span>{Math.round(vehicle.current_odometer).toLocaleString('ru-RU')}</span>
-                  <span className="text-[10px] sm:text-xs font-semibold text-slate-500">{vehicle.distance_unit || 'км'}</span>
-                </div>
-              </div>
 
-              {/* Engine Hours */}
-              <div
-                onClick={handleQuickChangeEngineHours}
-                className="flex-shrink-0 w-[114px] sm:w-auto snap-start cursor-pointer bg-white/80 dark:bg-dark-800/90 hover:bg-amber-50/50 dark:hover:bg-dark-750 backdrop-blur-md p-2.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm transition group select-none"
-                title="Нажмите для быстрой корректировки моточасов"
-              >
-                <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 flex items-center justify-between">
-                  <span className="group-hover:text-amber-500 transition-colors">Моточасы</span>
-                  <CalendarClock className="w-3 h-3 text-amber-500" />
-                </div>
-                <div className="text-sm sm:text-base font-black text-amber-600 dark:text-amber-400 font-mono mt-1 flex items-baseline space-x-1">
-                  {vehicle.current_engine_hours > 0 ? (
-                    <>
-                      <span>{vehicle.current_engine_hours}</span>
-                      <span className="text-[10px] sm:text-xs font-semibold text-slate-500">м/ч</span>
-                    </>
-                  ) : (
-                    <span className="text-xs text-slate-400">В норме</span>
-                  )}
-                </div>
-              </div>
-
-              {/* Battery Voltage */}
-              <div className="flex-shrink-0 w-[114px] sm:w-auto snap-start bg-white/80 dark:bg-dark-800/90 backdrop-blur-md p-2.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm">
-                <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 flex items-center justify-between">
-                  <span>АКБ</span>
-                  <BatteryCharging className="w-3 h-3 text-emerald-500" />
-                </div>
-                <div className="text-sm sm:text-base font-black font-mono mt-1 text-emerald-600 dark:text-emerald-400 flex items-baseline space-x-1">
-                  <span>{vehicle.starline_battery ? vehicle.starline_battery.toFixed(1) : '12.4'}</span>
-                  <span className="text-[10px] sm:text-xs font-semibold text-slate-500">В</span>
-                </div>
-              </div>
-
-              {/* Fuel Level with Clean Interactive Litres / Percent Toggle */}
-              <div
-                onClick={() => setShowFuelInLitres(!showFuelInLitres)}
-                className="flex-shrink-0 w-[114px] sm:w-auto snap-start cursor-pointer bg-white/80 dark:bg-dark-800/90 hover:bg-sky-50/50 dark:hover:bg-dark-750 backdrop-blur-md p-2.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm transition group select-none"
-                title="Нажмите, чтобы переключить Литры / Проценты"
-              >
-                <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 flex items-center justify-between">
-                  <span className="group-hover:text-sky-500 transition-colors">Бак ({showFuelInLitres ? 'л' : '%'})</span>
-                  <Fuel className="w-3 h-3 text-sky-500" />
-                </div>
-                <div className="space-y-1 mt-1">
-                  <div className="flex items-baseline justify-between">
-                    <span className="text-sm sm:text-base font-black text-sky-600 dark:text-sky-400 font-mono">
-                      {vehicle.starline_fuel_percent !== null && vehicle.starline_fuel_percent !== undefined ? (
-                        showFuelInLitres ? (
-                          <>{((vehicle.fuel_tank_capacity || 55) * (vehicle.starline_fuel_percent / 100)).toFixed(1)} <span className="text-[10px] sm:text-xs font-semibold text-slate-500">л</span></>
-                        ) : (
-                          `${Math.round(vehicle.starline_fuel_percent)}%`
-                        )
-                      ) : '—'}
-                    </span>
-                    {vehicle.starline_fuel_percent !== null && vehicle.starline_fuel_percent !== undefined && (
-                      <span className="text-[9px] sm:text-[10px] text-slate-400 font-mono font-bold">
-                        {showFuelInLitres
-                          ? `${Math.round(vehicle.starline_fuel_percent)}%`
-                          : `${((vehicle.fuel_tank_capacity || 55) * (vehicle.starline_fuel_percent / 100)).toFixed(1)} л`}
-                      </span>
+                {/* 2. Engine Hours (Row 1 on mobile: 3 cols) */}
+                <div
+                  onClick={handleQuickChangeEngineHours}
+                  className="col-span-3 sm:col-span-1 lg:col-span-1 cursor-pointer bg-white/80 dark:bg-dark-800/90 hover:bg-amber-50/50 dark:hover:bg-dark-750 backdrop-blur-md p-2 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm transition group select-none"
+                  title="Нажмите для быстрой корректировки моточасов"
+                >
+                  <div className="text-[9.5px] sm:text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 flex items-center justify-between">
+                    <span className="group-hover:text-amber-500 transition-colors truncate">Моточасы</span>
+                    <CalendarClock className="w-3 h-3 text-amber-500 flex-shrink-0 ml-1" />
+                  </div>
+                  <div className="text-xs sm:text-base font-black text-amber-600 dark:text-amber-400 font-mono mt-0.5 sm:mt-1 flex items-baseline space-x-0.5 sm:space-x-1">
+                    {vehicle.current_engine_hours > 0 ? (
+                      <>
+                        <span>{vehicle.current_engine_hours}</span>
+                        <span className="text-[9px] sm:text-xs font-semibold text-slate-500">м/ч</span>
+                      </>
+                    ) : (
+                      <span className="text-[10px] sm:text-xs text-slate-400 font-medium">В норме</span>
                     )}
                   </div>
-                  {vehicle.starline_fuel_percent !== null && vehicle.starline_fuel_percent !== undefined && (
-                    <div className="w-full bg-slate-200 dark:bg-dark-700 h-1.5 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all duration-500 ${
-                          vehicle.starline_fuel_percent <= 15
-                            ? 'bg-rose-500 animate-pulse'
-                            : vehicle.starline_fuel_percent <= 30
-                            ? 'bg-amber-500'
-                            : 'bg-sky-500'
-                        }`}
-                        style={{ width: `${Math.min(100, Math.max(0, vehicle.starline_fuel_percent))}%` }}
-                      />
+                </div>
+
+                {/* 3. Fuel Level (Row 1 on mobile: 5 cols for wider progress bar) */}
+                <div
+                  onClick={() => setShowFuelInLitres(!showFuelInLitres)}
+                  className="col-span-5 sm:col-span-1 lg:col-span-1 cursor-pointer bg-white/80 dark:bg-dark-800/90 hover:bg-sky-50/50 dark:hover:bg-dark-750 backdrop-blur-md p-2 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm transition group select-none"
+                  title="Нажмите, чтобы переключить Литры / Проценты"
+                >
+                  <div className="text-[9.5px] sm:text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 flex items-center justify-between">
+                    <span className="group-hover:text-sky-500 transition-colors truncate">Бак ({showFuelInLitres ? 'л' : '%'})</span>
+                    <Fuel className="w-3 h-3 text-sky-500 flex-shrink-0 ml-1" />
+                  </div>
+                  <div className="space-y-0.5 sm:space-y-1 mt-0.5 sm:mt-1">
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-xs sm:text-base font-black text-sky-600 dark:text-sky-400 font-mono">
+                        {vehicle.starline_fuel_percent !== null && vehicle.starline_fuel_percent !== undefined ? (
+                          showFuelInLitres ? (
+                            <>{((vehicle.fuel_tank_capacity || 55) * (vehicle.starline_fuel_percent / 100)).toFixed(1)} <span className="text-[9px] sm:text-xs font-semibold text-slate-500">л</span></>
+                          ) : (
+                            `${Math.round(vehicle.starline_fuel_percent)}%`
+                          )
+                        ) : '—'}
+                      </span>
+                      {vehicle.starline_fuel_percent !== null && vehicle.starline_fuel_percent !== undefined && (
+                        <span className="text-[8.5px] sm:text-[10px] text-slate-400 font-mono font-bold">
+                          {showFuelInLitres
+                            ? `${Math.round(vehicle.starline_fuel_percent)}%`
+                            : `${((vehicle.fuel_tank_capacity || 55) * (vehicle.starline_fuel_percent / 100)).toFixed(1)} л`}
+                        </span>
+                      )}
                     </div>
-                  )}
+                    {vehicle.starline_fuel_percent !== null && vehicle.starline_fuel_percent !== undefined && (
+                      <div className="w-full bg-slate-200 dark:bg-dark-700 h-1 sm:h-1.5 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            vehicle.starline_fuel_percent <= 15
+                              ? 'bg-rose-500 animate-pulse'
+                              : vehicle.starline_fuel_percent <= 30
+                              ? 'bg-amber-500'
+                              : 'bg-sky-500'
+                          }`}
+                          style={{ width: `${Math.min(100, Math.max(0, vehicle.starline_fuel_percent))}%` }}
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              {/* Engine Temp */}
-              <div className="flex-shrink-0 w-[114px] sm:w-auto snap-start bg-white/80 dark:bg-dark-800/90 backdrop-blur-md p-2.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm">
-                <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 flex items-center justify-between">
-                  <span>ДВС</span>
-                  <Thermometer className="w-3 h-3 text-rose-500" />
+                {/* 4. Battery Voltage (Row 2 on mobile: 3 cols) */}
+                <div className="col-span-3 sm:col-span-1 lg:col-span-1 bg-white/80 dark:bg-dark-800/90 backdrop-blur-md p-1.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm">
+                  <div className="text-[9px] sm:text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 flex items-center justify-between">
+                    <span className="truncate">АКБ</span>
+                    <BatteryCharging className="w-3 h-3 text-emerald-500 flex-shrink-0" />
+                  </div>
+                  <div className="text-xs sm:text-base font-black font-mono mt-0.5 sm:mt-1 text-emerald-600 dark:text-emerald-400 flex items-baseline space-x-0.5 sm:space-x-1">
+                    <span>{vehicle.starline_battery ? vehicle.starline_battery.toFixed(1) : '12.4'}</span>
+                    <span className="text-[9px] sm:text-xs font-semibold text-slate-500">В</span>
+                  </div>
                 </div>
-                <div className="text-sm sm:text-base font-black font-mono mt-1 text-slate-800 dark:text-slate-200">
-                  {vehicle.starline_engine_temp !== null && vehicle.starline_engine_temp !== undefined
-                    ? `${Math.round(vehicle.starline_engine_temp)}°C`
-                    : '—'}
-                </div>
-              </div>
 
-              {/* Cabin / Interior Temp */}
-              <div className="flex-shrink-0 w-[114px] sm:w-auto snap-start bg-white/80 dark:bg-dark-800/90 backdrop-blur-md p-2.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm">
-                <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 flex items-center justify-between">
-                  <span>Салон</span>
-                  <Thermometer className="w-3 h-3 text-sky-500" />
+                {/* 5. Engine Temp (Row 2 on mobile: 3 cols) */}
+                <div className="col-span-3 sm:col-span-1 lg:col-span-1 bg-white/80 dark:bg-dark-800/90 backdrop-blur-md p-1.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm">
+                  <div className="text-[9px] sm:text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 flex items-center justify-between">
+                    <span className="truncate">ДВС</span>
+                    <Thermometer className="w-3 h-3 text-rose-500 flex-shrink-0" />
+                  </div>
+                  <div className="text-xs sm:text-base font-black font-mono mt-0.5 sm:mt-1 text-slate-800 dark:text-slate-200">
+                    {vehicle.starline_engine_temp !== null && vehicle.starline_engine_temp !== undefined
+                      ? `${Math.round(vehicle.starline_engine_temp)}°C`
+                      : '—'}
+                  </div>
                 </div>
-                <div className="text-sm sm:text-base font-black font-mono mt-1 text-sky-600 dark:text-sky-400">
-                  {vehicle.starline_interior_temp !== null && vehicle.starline_interior_temp !== undefined
-                    ? `${Math.round(vehicle.starline_interior_temp)}°C`
-                    : '—'}
-                </div>
-              </div>
 
-              {/* SIM Balance */}
-              <div className="flex-shrink-0 w-[114px] sm:w-auto snap-start bg-white/80 dark:bg-dark-800/90 backdrop-blur-md p-2.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm">
-                <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 flex items-center justify-between">
-                  <span>SIM Баланс</span>
-                  <CreditCard className="w-3 h-3 text-brand-500" />
+                {/* 6. Cabin / Interior Temp (Row 2 on mobile: 3 cols) */}
+                <div className="col-span-3 sm:col-span-1 lg:col-span-1 bg-white/80 dark:bg-dark-800/90 backdrop-blur-md p-1.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm">
+                  <div className="text-[9px] sm:text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 flex items-center justify-between">
+                    <span className="truncate">Салон</span>
+                    <Thermometer className="w-3 h-3 text-sky-500 flex-shrink-0" />
+                  </div>
+                  <div className="text-xs sm:text-base font-black font-mono mt-0.5 sm:mt-1 text-sky-600 dark:text-sky-400">
+                    {vehicle.starline_interior_temp !== null && vehicle.starline_interior_temp !== undefined
+                      ? `${Math.round(vehicle.starline_interior_temp)}°C`
+                      : '—'}
+                  </div>
                 </div>
-                <div className="text-sm sm:text-base font-black font-mono mt-1 text-slate-800 dark:text-slate-200">
-                  {vehicle.starline_balance !== null && vehicle.starline_balance !== undefined
-                    ? `${Math.round(vehicle.starline_balance)} ₽`
-                    : '143 ₽'}
+
+                {/* 7. SIM Balance (Row 2 on mobile: 3 cols) */}
+                <div className="col-span-3 sm:col-span-1 lg:col-span-1 bg-white/80 dark:bg-dark-800/90 backdrop-blur-md p-1.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm">
+                  <div className="text-[9px] sm:text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 flex items-center justify-between">
+                    <span className="truncate">SIM</span>
+                    <CreditCard className="w-3 h-3 text-brand-500 flex-shrink-0" />
+                  </div>
+                  <div className="text-xs sm:text-base font-black font-mono mt-0.5 sm:mt-1 text-slate-800 dark:text-slate-200 truncate">
+                    {vehicle.starline_balance !== null && vehicle.starline_balance !== undefined
+                      ? `${Math.round(vehicle.starline_balance)} ₽`
+                      : '143 ₽'}
+                  </div>
                 </div>
               </div>
-            </div>
             )}
 
             {/* GPS / LBS Location & Parking Map Link */}
