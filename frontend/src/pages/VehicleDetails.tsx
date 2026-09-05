@@ -89,6 +89,7 @@ import { api } from '../services/api';
 import { localDB } from '../services/localDatabase';
 import { notificationService } from '../services/notificationService';
 import { ProgressBar } from '../components/ProgressBar';
+import { VehicleToolsModal } from '../components/VehicleToolsModal';
 
 interface VehicleDetailsProps {
   vehicle: Vehicle;
@@ -120,7 +121,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   const [activeTab, setActiveTab] = useState<
     'service' | 'repairs' | 'upgrades' | 'fuel' | 'reminders' | 'tyres' | 'analytics' | 'documents' | 'more'
   >('service');
-  const [moreSubTab, setMoreSubTab] = useState<'specs' | 'tyres' | 'documents' | 'tools'>('specs');
+  const [moreSubTab, setMoreSubTab] = useState<'specs' | 'tyres' | 'documents'>('specs');
   const [serviceFilter, setServiceFilter] = useState<'all' | 'service' | 'repair' | 'upgrade'>('all');
 
   const isOwner = isAuthenticated && vehicle.is_owner !== false;
@@ -146,7 +147,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   const [isPublicShareModalOpen, setIsPublicShareModalOpen] = useState(false);
   const [isStarLineModalOpen, setIsStarLineModalOpen] = useState(false);
   const [isReceiptScanOpen, setIsReceiptScanOpen] = useState(false);
-  const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
+  const [isToolsModalOpen, setIsToolsModalOpen] = useState(false);
   const [isSyncingStarLine, setIsSyncingStarLine] = useState(false);
   const [showFuelInLitres, setShowFuelInLitres] = useState(true);
   const [recordsSearchQuery, setRecordsSearchQuery] = useState('');
@@ -564,88 +565,16 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               </>
             )}
 
-            {/* Options Dropdown Menu (⚙️ Опции) */}
-            <div className="relative">
-              <button
-                onClick={() => setIsActionMenuOpen(!isActionMenuOpen)}
-                className={`px-2.5 py-2 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition border shadow-sm ${
-                  isActionMenuOpen
-                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-slate-900 dark:border-white shadow-md'
-                    : 'bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-dark-700 active:scale-95'
-                }`}
-                title="Опции, бирка ТО и настройки"
-                aria-label="Опции автомобиля"
-              >
-                <Settings className={`w-4 h-4 flex-shrink-0 ${isActionMenuOpen ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">Опции</span>
-              </button>
-
-              {isActionMenuOpen && (
-                <>
-                  {/* Backdrop */}
-                  <div
-                    className="fixed inset-0 z-40"
-                    onClick={() => setIsActionMenuOpen(false)}
-                  />
-                  <div className="absolute right-0 mt-2 w-60 bg-white dark:bg-dark-850 rounded-2xl shadow-xl border border-slate-200 dark:border-dark-750 py-1.5 z-50 animate-scaleIn origin-top-right text-xs">
-                    {isOwner && onEditVehicle && (
-                      <button
-                        onClick={() => {
-                          setIsActionMenuOpen(false);
-                          onEditVehicle();
-                        }}
-                        className="w-full px-3.5 py-2.5 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-dark-800 flex items-center space-x-2.5 transition"
-                      >
-                        <Edit2 className="w-4 h-4 text-brand-500 flex-shrink-0" />
-                        <span className="font-semibold">Редактировать автомобиль</span>
-                      </button>
-                    )}
-
-                    {isOwner && (
-                      <button
-                        onClick={() => {
-                          setIsActionMenuOpen(false);
-                          setIsStarLineModalOpen(true);
-                        }}
-                        className="w-full px-3.5 py-2.5 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-dark-800 flex items-center space-x-2.5 transition"
-                      >
-                        <Satellite className="w-4 h-4 text-sky-500 flex-shrink-0" />
-                        <span className="font-semibold">Телематика StarLine</span>
-                      </button>
-                    )}
-
-                    <button
-                      onClick={() => {
-                        setIsActionMenuOpen(false);
-                        setActiveTab('more');
-                        setMoreSubTab('tools');
-                      }}
-                      className="w-full px-3.5 py-2.5 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-dark-800 flex items-center space-x-2.5 transition"
-                    >
-                      <Sparkles className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                      <span className="font-semibold">Все инструменты и экспорт...</span>
-                    </button>
-
-                    {isOwner && onDeleteVehicle && (
-                      <div className="border-t border-slate-100 dark:border-dark-750 my-1 pt-1">
-                        <button
-                          onClick={() => {
-                            setIsActionMenuOpen(false);
-                            if (confirm(`Удалить ${vehicle.make} ${vehicle.model} и все связанные записи?`)) {
-                              onDeleteVehicle();
-                            }
-                          }}
-                          className="w-full px-3.5 py-2.5 text-left text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 flex items-center space-x-2.5 transition font-semibold"
-                        >
-                          <Trash2 className="w-4 h-4 flex-shrink-0" />
-                          <span>Удалить автомобиль</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
+            {/* Tools and Settings Button (⚙️ Инструменты) */}
+            <button
+              onClick={() => setIsToolsModalOpen(true)}
+              className="px-3 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition border shadow-sm bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-dark-700 active:scale-95"
+              title="Инструменты, экспорт, бирка под капот и управление авто"
+              aria-label="Инструменты автомобиля"
+            >
+              <Settings className="w-4 h-4 text-slate-500 flex-shrink-0" />
+              <span className="hidden sm:inline">Инструменты</span>
+            </button>
           </div>
         </div>
 
@@ -2069,18 +1998,6 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 <span>Документы и полисы</span>
                 {documents.length > 0 && <span className="text-[10px] opacity-80">({documents.length})</span>}
               </button>
-
-              <button
-                onClick={() => { setActiveTab('more'); setMoreSubTab('tools'); }}
-                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
-                  activeTab === 'more' && moreSubTab === 'tools'
-                    ? 'bg-brand-500 text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <QrCode className="w-3.5 h-3.5" />
-                <span>Бирка ТО и QR-книжка</span>
-              </button>
             </div>
 
             {/* Sub-tab 0: Consumables & Specifications (Шпаргалка ТО) */}
@@ -2535,234 +2452,6 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               </div>
             )}
 
-            {/* Sub-tab 3: Tools */}
-            {activeTab === 'more' && moreSubTab === 'tools' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-                {/* 1. Public Digital Service Booklet */}
-                <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-5 shadow-sm space-y-4 flex flex-col justify-between">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center flex-shrink-0">
-                          <Share2 className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                            Публичная цифровая сервисная книжка
-                          </h4>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">
-                            Онлайн-ссылка и QR-код для покупателей на Авито / Авто.ру
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="p-3 bg-slate-50 dark:bg-dark-900/60 rounded-xl border border-slate-200/80 dark:border-dark-750 text-xs space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-500 dark:text-slate-400">Статус публичного доступа:</span>
-                        <span
-                          className={`font-bold px-2 py-0.5 rounded text-[11px] border ${
-                            vehicle.public_booklet_enabled
-                              ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
-                              : 'bg-slate-100 text-slate-600 dark:bg-dark-800 dark:text-slate-400 border-slate-200 dark:border-dark-700'
-                          }`}
-                        >
-                          {vehicle.public_booklet_enabled ? 'Активен по ссылке' : 'Отключен'}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-slate-400 leading-relaxed">
-                        Покупатели могут смотреть даты ТО, пробег и регламенты прямо в браузере без входа в систему. Ваши пароли и личные данные защищены.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-2 pt-1">
-                    {isOwner && (
-                      <button
-                        onClick={() => setIsPublicShareModalOpen(true)}
-                        className="flex-1 py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-1.5 transition shadow-md shadow-sky-600/20 active:scale-95"
-                      >
-                        <Share2 className="w-3.5 h-3.5" />
-                        <span>Настроить и QR-код</span>
-                      </button>
-                    )}
-                    {vehicle.public_booklet_enabled && vehicle.public_booklet_token && (
-                      <a
-                        href={`/booklet/${vehicle.public_booklet_token}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="py-2.5 px-3 bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-200 font-bold rounded-xl text-xs flex items-center justify-center space-x-1 transition border border-slate-200 dark:border-dark-700"
-                        title="Открыть страницу онлайн"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5" />
-                        <span>Открыть</span>
-                      </a>
-                    )}
-                  </div>
-                </div>
-
-                {/* 2. Branded PDF Report */}
-                <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-5 shadow-sm space-y-4 flex flex-col justify-between">
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
-                        <FileText className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                          Брендированный PDF-отчет (A4)
-                        </h4>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          Фирменная сервисная книжка для распечатки и хранения
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="p-3 bg-slate-50 dark:bg-dark-900/60 rounded-xl border border-slate-200/80 dark:border-dark-750 text-xs space-y-1.5">
-                      <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-                        <span>Формат:</span>
-                        <span className="font-semibold text-slate-700 dark:text-slate-200">A4 PDF / Печать</span>
-                      </div>
-                      <p className="text-[11px] text-slate-400 leading-relaxed">
-                        Включает паспорт автомобиля, цветные бейджи расходников, регламенты обслуживания и полную историю выполненных работ.
-                      </p>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => api.downloadServiceBooklet(vehicle.id)}
-                    className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-2 transition shadow-md shadow-emerald-600/20 active:scale-95"
-                  >
-                    <Printer className="w-4 h-4" />
-                    <span>Сформировать и скачать PDF</span>
-                  </button>
-                </div>
-
-                {/* 3. Underhood QR Sticker */}
-                <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-5 shadow-sm space-y-4 flex flex-col justify-between">
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 rounded-xl bg-brand-500/10 text-brand-500 flex items-center justify-center flex-shrink-0">
-                        <QrCode className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                          QR-код и Бирка ТО под капот
-                        </h4>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          Печать сервисной наклейки о замене масла и быстрый доступ
-                        </p>
-                      </div>
-                    </div>
-
-                    <p className="text-[11px] text-slate-400 leading-relaxed p-3 bg-slate-50 dark:bg-dark-900/60 rounded-xl border border-slate-200/80 dark:border-dark-750">
-                      Сервисная бирка формата визитки для размещения в подкапотном пространстве со спецификацией масла, датой заливки и QR-кодом.
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={() => setIsQrModalOpen(true)}
-                    className="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-2 transition shadow-md shadow-brand-500/20 active:scale-95"
-                  >
-                    <Printer className="w-4 h-4" />
-                    <span>Открыть генератор бирки и QR-кода</span>
-                  </button>
-                </div>
-
-                {/* 4. Excel Export */}
-                <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-5 shadow-sm space-y-4 flex flex-col justify-between">
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center flex-shrink-0">
-                        <FileSpreadsheet className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                          Экспорт в Excel (.xlsx)
-                        </h4>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          Выгрузка всей базы данных автомобиля в таблицу
-                        </p>
-                      </div>
-                    </div>
-
-                    <p className="text-[11px] text-slate-400 leading-relaxed p-3 bg-slate-50 dark:bg-dark-900/60 rounded-xl border border-slate-200/80 dark:border-dark-750">
-                      Экспорт записей ТО, расходов, заправок и графиков для резервного хранения или ручной аналитики в таблицах.
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={() => api.downloadExcelFile(vehicle.id)}
-                    className="w-full py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-2 transition shadow-md shadow-teal-600/20 active:scale-95"
-                  >
-                    <FileSpreadsheet className="w-4 h-4" />
-                    <span>Экспорт данных в Excel (.xlsx)</span>
-                  </button>
-                </div>
-
-                {/* 5. OCR Vision Scan */}
-                <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-5 shadow-sm space-y-4 flex flex-col justify-between">
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center flex-shrink-0">
-                        <Camera className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                          Распознавание заказ-нарядов и чеков (OCR)
-                        </h4>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          AI-сканирование фото заказ-нарядов СТО и чеков с АЗС
-                        </p>
-                      </div>
-                    </div>
-
-                    <p className="text-[11px] text-slate-400 leading-relaxed p-3 bg-slate-50 dark:bg-dark-900/60 rounded-xl border border-slate-200/80 dark:border-dark-750">
-                      Сфотографируйте на телефон заказ-наряд или чек. Нейросеть автоматически распознает дату, пробег, цены, работы и артикулы деталей и перенесет в форму ТО.
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={() => setIsReceiptScanOpen(true)}
-                    className="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-2 transition shadow-md shadow-purple-600/20 active:scale-95"
-                  >
-                    <Camera className="w-4 h-4" />
-                    <span>Сканировать документ по фото</span>
-                  </button>
-                </div>
-
-                {/* 6. Vehicle JSON Backup */}
-                <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-5 shadow-sm space-y-4 flex flex-col justify-between">
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center flex-shrink-0">
-                        <Download className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                          Бэкап этого авто (JSON)
-                        </h4>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          Экспорт данных {vehicle.make} {vehicle.model} для переноса на телефон
-                        </p>
-                      </div>
-                    </div>
-
-                    <p className="text-[11px] text-slate-400 leading-relaxed p-3 bg-slate-50 dark:bg-dark-900/60 rounded-xl border border-slate-200/80 dark:border-dark-750">
-                      Сохраняет полную историю ТО, чеков, шин, расходников, напоминаний и документов только для этого автомобиля. Готовый файл JSON можно сразу импортировать в мобильное приложение Бортового Журнала.
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={handleExportVehicleBackup}
-                    className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-2 transition shadow-md shadow-amber-500/20 active:scale-95"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>Скачать бэкап {vehicle.make} {vehicle.model} (.json)</span>
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         )}
       </div>
@@ -2856,6 +2545,23 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
           }}
         />
       )}
+
+      {/* Vehicle Tools & Options Modal */}
+      <VehicleToolsModal
+        isOpen={isToolsModalOpen}
+        onClose={() => setIsToolsModalOpen(false)}
+        vehicle={vehicle}
+        isOwner={isOwner}
+        onEditVehicle={onEditVehicle}
+        onDeleteVehicle={onDeleteVehicle}
+        onOpenStarLineModal={() => setIsStarLineModalOpen(true)}
+        onOpenQrModal={() => setIsQrModalOpen(true)}
+        onOpenPublicShareModal={() => setIsPublicShareModalOpen(true)}
+        onOpenReceiptScan={() => setIsReceiptScanOpen(true)}
+        onExportVehicleBackup={handleExportVehicleBackup}
+        onDownloadExcel={() => api.downloadExcelFile(vehicle.id)}
+        onDownloadPdf={() => api.downloadServiceBooklet(vehicle.id)}
+      />
     </div>
   );
 };
