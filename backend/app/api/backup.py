@@ -501,12 +501,23 @@ async def import_backup(
                     user_id_map[eu.username] = eu.id
 
         first_vehicle_id: Optional[int] = None
-        restored_vehicles_count = 0
-        total_services_count = 0
-        total_fuel_count = 0
-        total_trackers_count = 0
-        total_tyres_count = 0
-        total_docs_count = 0
+        new_vehicles_count = 0
+        updated_vehicles_count = 0
+
+        new_services_count = 0
+        skipped_services_count = 0
+
+        new_fuel_count = 0
+        skipped_fuel_count = 0
+
+        new_trackers_count = 0
+        updated_trackers_count = 0
+
+        new_tyres_count = 0
+        updated_tyres_count = 0
+
+        new_docs_count = 0
+        updated_docs_count = 0
 
         for pkg in packages:
             v_raw = pkg.get("vehicle") or (pkg.get("vehicles", [{}])[0] if pkg.get("vehicles") else pkg)
@@ -534,68 +545,171 @@ async def import_backup(
             photo_url = str(v_raw.get("photo_url") or "")
             notes = str(v_raw.get("notes") or "")
 
-            vehicle = Vehicle(
-                user_id=owner_id,
-                name=name,
-                make=make,
-                model=model,
-                year=year,
-                engine=engine,
-                license_plate=plate,
-                vin=vin,
-                starting_odometer=starting_km,
-                current_odometer=current_km,
-                current_engine_hours=engine_hours,
-                oil_spec=oil_spec,
-                photo_url=photo_url,
-                notes=notes,
-                distance_unit=str(v_raw.get("distance_unit") or "km"),
-                fuel_unit=str(v_raw.get("fuel_unit") or "L"),
-                currency=str(v_raw.get("currency") or "RUB"),
+            # --- VEHICLE DEDUPLICATION ---
+            user_vehicles_res = await db.execute(
+                select(Vehicle).where(Vehicle.user_id == owner_id)
             )
-            db.add(vehicle)
-            await db.flush()
+            user_vehicles = list(user_vehicles_res.scalars().all())
+
+            clean_vin = vin.strip().upper() if vin else ""
+            clean_plate = plate.strip().upper().replace(" ", "") if plate else ""
+            clean_make = make.strip().lower()
+            clean_model = model.strip().lower()
+
+            matched_vehicle = None
+            if clean_vin:
+                for uv in user_vehicles:
+                    if uv.vin and uv.vin.strip().upper() == clean_vin:
+                        matched_vehicle = uv
+                        break
+            if not matched_vehicle and clean_plate:
+                for uv in user_vehicles:
+                    if uv.license_plate and uv.license_plate.strip().upper().replace(" ", "") == clean_plate:
+                        matched_vehicle = uv
+                        break
+            if not matched_vehicle and clean_make and clean_model:
+                for uv in user_vehicles:
+                    uv_m = (uv.make or "").strip().lower()
+                    uv_mod = (uv.model or "").strip().lower()
+                    if uv_m == clean_make and uv_mod == clean_model:
+                        if year and uv.year and year == uv.year:
+                            matched_vehicle = uv
+                            break
+                        elif not year or not uv.year:
+                            matched_vehicle = uv
+                            break
+
+            if matched_vehicle:
+                vehicle = matched_vehicle
+                if current_km > (vehicle.current_odometer or 0):
+                    vehicle.current_odometer = current_km
+                if engine_hours > (vehicle.current_engine_hours or 0):
+                    vehicle.current_engine_hours = engine_hours
+                if not vehicle.vin and vin:
+                    vehicle.vin = vin
+                if not vehicle.license_plate and plate:
+                    vehicle.license_plate = plate
+                if not vehicle.notes and notes:
+                    vehicle.notes = notes
+                if not vehicle.photo_url and photo_url:
+                    vehicle.photo_url = photo_url
+                updated_vehicles_count += 1
+            else:
+                vehicle = Vehicle(
+                    user_id=owner_id,
+                    name=name,
+                    make=make,
+                    model=model,
+                    year=year,
+                    engine=engine,
+                    license_plate=plate,
+                    vin=vin,
+                    starting_odometer=starting_km,
+                    current_odometer=current_km,
+                    current_engine_hours=engine_hours,
+                    oil_spec=oil_spec,
+                    photo_url=photo_url,
+                    notes=notes,
+                    distance_unit=str(v_raw.get("distance_unit") or "km"),
+                    fuel_unit=str(v_raw.get("fuel_unit") or "L"),
+                    currency=str(v_raw.get("currency") or "RUB"),
+                )
+                db.add(vehicle)
+                await db.flush()
+                new_vehicles_count += 1
 
             if first_vehicle_id is None:
                 first_vehicle_id = vehicle.id
-            restored_vehicles_count += 1
 
-            # 1. Trackers / Reminders
+            # --- 1. TRACKERS / REMINDERS DEDUPLICATION ---
+            existing_plans_res = await db.execute(
+                select(MaintenancePlan).where(MaintenancePlan.vehicle_id == vehicle.id)
+            )
+            existing_plans = list(existing_plans_res.scalars().all())
+
             trackers = pkg.get("trackers") or pkg.get("reminders") or v_raw.get("trackers") or []
             for t in trackers:
                 if not isinstance(t, dict):
                     continue
+                t_title = str(t.get("name") or t.get("title") or "Регламент ТО").strip().lower()
+                t_id = str(t.get("id") or t.get("tracker_id") or "").strip()
                 last_date = safe_parse_datetime(t.get("last_service_date")) or datetime.datetime.utcnow()
+                last_odo = safe_float(t.get("last_service_odometer"))
+                last_hrs = safe_float(t.get("last_service_hours"))
                 interval_km = safe_float(t.get("interval_distance") or t.get("interval_km"), 0.0)
                 interval_hrs = safe_float(t.get("interval_hours"), 0.0)
                 interval_m = safe_int(t.get("interval_months"), 0)
 
-                plan = MaintenancePlan(
-                    vehicle_id=vehicle.id,
-                    tracker_id=str(t.get("id") or t.get("tracker_id") or ""),
-                    title=str(t.get("name") or t.get("title") or "Регламент ТО"),
-                    category=str(t.get("category") or "Обслуживание"),
-                    brand=str(t.get("brand") or ""),
-                    spec=str(t.get("spec") or ""),
-                    article=str(t.get("article") or ""),
-                    icon=str(t.get("icon") or "wrench"),
-                    interval_distance=interval_km if interval_km > 0 else None,
-                    interval_hours=interval_hrs if interval_hrs > 0 else None,
-                    interval_months=interval_m if interval_m > 0 else None,
-                    last_service_odometer=safe_float(t.get("last_service_odometer")),
-                    last_service_hours=safe_float(t.get("last_service_hours")),
-                    last_service_date=last_date,
-                    is_active=bool(t.get("is_active", t.get("enabled", True))),
-                    notify_before_distance=safe_float(t.get("notify_before_distance") or t.get("warn_km"), 500.0),
-                    notify_before_hours=safe_float(t.get("notify_before_hours") or t.get("warn_hours"), 30.0),
-                    notify_before_days=safe_int(t.get("notify_before_days") or t.get("warn_days"), 14),
-                    notes=str(t.get("notes") or ""),
-                )
-                db.add(plan)
-                total_trackers_count += 1
+                matched_plan = None
+                for ep in existing_plans:
+                    if t_id and ep.tracker_id and ep.tracker_id == t_id:
+                        matched_plan = ep
+                        break
+                    if ep.title and ep.title.strip().lower() == t_title:
+                        matched_plan = ep
+                        break
+
+                if matched_plan:
+                    if last_odo is not None and (matched_plan.last_service_odometer is None or last_odo > matched_plan.last_service_odometer):
+                        matched_plan.last_service_odometer = last_odo
+                    if last_date and (not matched_plan.last_service_date or last_date > matched_plan.last_service_date):
+                        matched_plan.last_service_date = last_date
+                    if last_hrs is not None and (matched_plan.last_service_hours is None or last_hrs > matched_plan.last_service_hours):
+                        matched_plan.last_service_hours = last_hrs
+                    updated_trackers_count += 1
+                else:
+                    plan = MaintenancePlan(
+                        vehicle_id=vehicle.id,
+                        tracker_id=t_id,
+                        title=str(t.get("name") or t.get("title") or "Регламент ТО"),
+                        category=str(t.get("category") or "Обслуживание"),
+                        brand=str(t.get("brand") or ""),
+                        spec=str(t.get("spec") or ""),
+                        article=str(t.get("article") or ""),
+                        icon=str(t.get("icon") or "wrench"),
+                        interval_distance=interval_km if interval_km > 0 else None,
+                        interval_hours=interval_hrs if interval_hrs > 0 else None,
+                        interval_months=interval_m if interval_m > 0 else None,
+                        last_service_odometer=last_odo,
+                        last_service_hours=last_hrs,
+                        last_service_date=last_date,
+                        is_active=bool(t.get("is_active", t.get("enabled", True))),
+                        notify_before_distance=safe_float(t.get("notify_before_distance") or t.get("warn_km"), 500.0),
+                        notify_before_hours=safe_float(t.get("notify_before_hours") or t.get("warn_hours"), 30.0),
+                        notify_before_days=safe_int(t.get("notify_before_days") or t.get("warn_days"), 14),
+                        notes=str(t.get("notes") or ""),
+                    )
+                    db.add(plan)
+                    existing_plans.append(plan)
+                    new_trackers_count += 1
             await db.flush()
 
-            # 2. Service Records & Items
+            # --- 2. SERVICE RECORDS DEDUPLICATION ---
+            existing_srv_res = await db.execute(
+                select(ServiceRecord).where(ServiceRecord.vehicle_id == vehicle.id)
+            )
+            existing_srvs = list(existing_srv_res.scalars().all())
+
+            def is_duplicate_service(odo_val, date_val, title_val, cost_val) -> bool:
+                date_str_val = date_val.strftime("%Y-%m-%d") if date_val else None
+                norm_title = (title_val or "").strip().lower()
+                for es in existing_srvs:
+                    es_date_str = es.date.strftime("%Y-%m-%d") if es.date else None
+                    odo_match = (odo_val is not None and es.odometer is not None and abs(es.odometer - odo_val) < 1.0)
+                    date_match = (date_str_val and es_date_str and date_str_val == es_date_str)
+                    
+                    if odo_match and date_match:
+                        if norm_title and es.title and es.title.strip().lower() == norm_title:
+                            return True
+                        if cost_val is not None and es.total_cost is not None and abs(es.total_cost - cost_val) < 1.0:
+                            return True
+                    if odo_match and norm_title and es.title and es.title.strip().lower() == norm_title:
+                        return True
+                    if date_match and norm_title and es.title and es.title.strip().lower() == norm_title:
+                        if cost_val is not None and es.total_cost is not None and abs(es.total_cost - cost_val) < 1.0:
+                            return True
+                return False
+
             s_records = pkg.get("service_records") or pkg.get("services") or []
             if s_records:
                 for s in s_records:
@@ -607,6 +721,11 @@ async def import_backup(
                     total_c = safe_float(s.get("total_cost"), cost_parts + cost_labor)
                     odo = safe_float(s.get("odometer") or s.get("mileage"))
                     eng_hrs = safe_float(s.get("engine_hours"))
+                    s_title = str(s.get("title") or s.get("name") or "Обслуживание")
+
+                    if is_duplicate_service(odo, r_date, s_title, total_c):
+                        skipped_services_count += 1
+                        continue
 
                     raw_type = str(s.get("record_type") or "service").lower()
                     rec_type = RecordType.SERVICE.value
@@ -622,7 +741,7 @@ async def import_backup(
                         date=r_date,
                         odometer=odo,
                         engine_hours=eng_hrs if eng_hrs > 0 else None,
-                        title=str(s.get("title") or s.get("name") or "Обслуживание"),
+                        title=s_title,
                         description=str(s.get("description") or s.get("note") or ""),
                         cost_labor=cost_labor,
                         cost_parts=cost_parts,
@@ -632,8 +751,9 @@ async def import_backup(
                         notes=str(s.get("notes") or ""),
                     )
                     db.add(rec)
+                    existing_srvs.append(rec)
                     await db.flush()
-                    total_services_count += 1
+                    new_services_count += 1
 
                     raw_items = s.get("items") or []
                     if raw_items:
@@ -700,6 +820,10 @@ async def import_backup(
                     title = tag if is_service else str(first.get("item_name") or tag)
                     total_parts = sum(safe_float(it.get("total_price") or (safe_float(it.get("quantity"), 1.0) * safe_float(it.get("price_per_unit")))) for it in items_list)
 
+                    if is_duplicate_service(mileage, r_date, title, total_parts):
+                        skipped_services_count += 1
+                        continue
+
                     rec = ServiceRecord(
                         vehicle_id=vehicle.id,
                         record_type=r_type,
@@ -716,8 +840,9 @@ async def import_backup(
                         url=str(first.get("url") or ""),
                     )
                     db.add(rec)
+                    existing_srvs.append(rec)
                     await db.flush()
-                    total_services_count += 1
+                    new_services_count += 1
 
                     for it in items_list:
                         q = safe_float(it.get("quantity"), 1.0)
@@ -738,7 +863,28 @@ async def import_backup(
                         )
                         db.add(item_entity)
 
-            # 3. Fuel Logs
+            # --- 3. FUEL LOGS DEDUPLICATION ---
+            existing_fuel_res = await db.execute(
+                select(FuelLog).where(FuelLog.vehicle_id == vehicle.id)
+            )
+            existing_fuels = list(existing_fuel_res.scalars().all())
+
+            def is_duplicate_fuel(odo_val, date_val, amount_val, cost_val) -> bool:
+                date_str_val = date_val.strftime("%Y-%m-%d") if date_val else None
+                for ef in existing_fuels:
+                    ef_date_str = ef.date.strftime("%Y-%m-%d") if ef.date else None
+                    odo_match = (odo_val is not None and ef.odometer is not None and abs(ef.odometer - odo_val) < 1.0)
+                    date_match = (date_str_val and ef_date_str and date_str_val == ef_date_str)
+
+                    if odo_match and date_match:
+                        return True
+                    if odo_match and amount_val and ef.fuel_amount and abs(ef.fuel_amount - amount_val) < 0.1:
+                        return True
+                    if date_match and amount_val and ef.fuel_amount and abs(ef.fuel_amount - amount_val) < 0.1:
+                        if cost_val and ef.total_cost and abs(ef.total_cost - cost_val) < 1.0:
+                            return True
+                return False
+
             fuel_logs = pkg.get("fuel_logs") or pkg.get("fuel") or []
             for f in fuel_logs:
                 if not isinstance(f, dict):
@@ -747,11 +893,16 @@ async def import_backup(
                 fuel_amount = safe_float(f.get("fuel_amount") or f.get("liters") or f.get("amount"))
                 unit_price = safe_float(f.get("unit_price") or f.get("price_per_unit") or f.get("price"))
                 total_cost = safe_float(f.get("total_cost") or f.get("cost"), fuel_amount * unit_price)
+                odo = safe_float(f.get("odometer") or f.get("mileage"))
+
+                if is_duplicate_fuel(odo, f_date, fuel_amount, total_cost):
+                    skipped_fuel_count += 1
+                    continue
 
                 fuel_log = FuelLog(
                     vehicle_id=vehicle.id,
                     date=f_date,
-                    odometer=safe_float(f.get("odometer") or f.get("mileage")),
+                    odometer=odo,
                     fuel_amount=fuel_amount,
                     total_cost=total_cost,
                     unit_price=unit_price,
@@ -762,39 +913,71 @@ async def import_backup(
                     notes=str(f.get("notes") or f.get("note") or ""),
                 )
                 db.add(fuel_log)
-                total_fuel_count += 1
+                existing_fuels.append(fuel_log)
+                new_fuel_count += 1
 
-            # 4. Tyre Sets
+            # --- 4. TYRE SETS DEDUPLICATION ---
+            existing_tyres_res = await db.execute(
+                select(TyreSet).where(TyreSet.vehicle_id == vehicle.id)
+            )
+            existing_tyres = list(existing_tyres_res.scalars().all())
+
             tyres = pkg.get("tyre_sets") or pkg.get("tyres") or []
             for t in tyres:
                 if not isinstance(t, dict):
                     continue
+                t_name = str(t.get("name") or "Комплект шин").strip().lower()
+                t_season = str(t.get("season") or "summer").strip().lower()
+                t_size = str(t.get("size") or "").strip().lower()
                 ins_date = safe_parse_datetime(t.get("install_date"))
                 ins_odo = safe_float(t.get("install_mileage") or t.get("install_odometer"))
                 q = safe_float(t.get("quantity"), 4.0)
                 up = safe_float(t.get("price_per_unit"))
                 tp = safe_float(t.get("total_price"), q * up)
+                cur_km = safe_float(t.get("current_km") or t.get("mileage"))
 
-                tyre = TyreSet(
-                    vehicle_id=vehicle.id,
-                    name=str(t.get("name") or "Комплект шин"),
-                    season=str(t.get("season") or "summer"),
-                    size=str(t.get("size") or ""),
-                    brand_model=str(t.get("brand_model") or ""),
-                    current_km=safe_float(t.get("current_km") or t.get("mileage")),
-                    tread_depth_mm=safe_float(t.get("tread_depth_mm"), 8.0),
-                    storage_location=str(t.get("storage_location") or ""),
-                    is_active=bool(t.get("is_active", False)),
-                    install_date=ins_date,
-                    install_mileage=ins_odo if ins_odo > 0 else None,
-                    quantity=q,
-                    price_per_unit=up,
-                    total_price=tp,
-                )
-                db.add(tyre)
-                total_tyres_count += 1
+                matched_tyre = None
+                for et in existing_tyres:
+                    et_season = (et.season or "").strip().lower()
+                    if et_season == t_season:
+                        if et.name and et.name.strip().lower() == t_name:
+                            matched_tyre = et
+                            break
+                        if t_size and et.size and et.size.strip().lower() == t_size:
+                            matched_tyre = et
+                            break
 
-            # 5. Documents / Insurances
+                if matched_tyre:
+                    if cur_km > (matched_tyre.current_km or 0):
+                        matched_tyre.current_km = cur_km
+                    updated_tyres_count += 1
+                else:
+                    tyre = TyreSet(
+                        vehicle_id=vehicle.id,
+                        name=str(t.get("name") or "Комплект шин"),
+                        season=str(t.get("season") or "summer"),
+                        size=str(t.get("size") or ""),
+                        brand_model=str(t.get("brand_model") or ""),
+                        current_km=cur_km,
+                        tread_depth_mm=safe_float(t.get("tread_depth_mm"), 8.0),
+                        storage_location=str(t.get("storage_location") or ""),
+                        is_active=bool(t.get("is_active", False)),
+                        install_date=ins_date,
+                        install_mileage=ins_odo if ins_odo > 0 else None,
+                        quantity=q,
+                        price_per_unit=up,
+                        total_price=tp,
+                    )
+                    db.add(tyre)
+                    existing_tyres.append(tyre)
+                    new_tyres_count += 1
+
+            # --- 5. DOCUMENTS DEDUPLICATION ---
+            existing_docs_res = await db.execute(
+                select(DocumentNote).where(DocumentNote.vehicle_id == vehicle.id)
+            )
+            existing_docs = list(existing_docs_res.scalars().all())
+
             documents = pkg.get("documents") or pkg.get("insurances") or []
             for doc_item in documents:
                 if not isinstance(doc_item, dict):
@@ -803,30 +986,67 @@ async def import_backup(
                 end_d = safe_parse_datetime(doc_item.get("expiration_date") or doc_item.get("end_date"))
                 doc_odo = safe_float(doc_item.get("mileage") or doc_item.get("odometer"))
                 doc_hrs = safe_float(doc_item.get("engine_hours"))
+                doc_title = str(doc_item.get("title") or doc_item.get("name") or "Документ").strip().lower()
+                doc_type_val = str(doc_item.get("doc_type") or doc_item.get("type") or "insurance").strip().lower()
+                doc_num = str(doc_item.get("document_number") or doc_item.get("policy_number") or "").strip().upper()
 
-                doc = DocumentNote(
-                    vehicle_id=vehicle.id,
-                    title=str(doc_item.get("title") or doc_item.get("name") or "Документ"),
-                    doc_type=str(doc_item.get("doc_type") or doc_item.get("type") or "insurance"),
-                    company=str(doc_item.get("company") or ""),
-                    document_number=str(doc_item.get("document_number") or doc_item.get("policy_number") or ""),
-                    issue_date=start_d,
-                    expiration_date=end_d,
-                    price=safe_float(doc_item.get("price") or doc_item.get("cost")),
-                    mileage=doc_odo if doc_odo > 0 else None,
-                    engine_hours=doc_hrs if doc_hrs > 0 else None,
-                    is_active=bool(doc_item.get("is_active", True)),
-                    notes=str(doc_item.get("notes") or doc_item.get("note") or ""),
-                )
-                db.add(doc)
-                total_docs_count += 1
+                matched_doc = None
+                for ed in existing_docs:
+                    if doc_num and ed.document_number and ed.document_number.strip().upper() == doc_num:
+                        matched_doc = ed
+                        break
+                    if ed.doc_type and ed.doc_type.strip().lower() == doc_type_val and ed.title and ed.title.strip().lower() == doc_title:
+                        matched_doc = ed
+                        break
+
+                if matched_doc:
+                    if end_d and (not matched_doc.expiration_date or end_d > matched_doc.expiration_date):
+                        matched_doc.expiration_date = end_d
+                    updated_docs_count += 1
+                else:
+                    doc = DocumentNote(
+                        vehicle_id=vehicle.id,
+                        title=str(doc_item.get("title") or doc_item.get("name") or "Документ"),
+                        doc_type=str(doc_item.get("doc_type") or doc_item.get("type") or "insurance"),
+                        company=str(doc_item.get("company") or ""),
+                        document_number=str(doc_item.get("document_number") or doc_item.get("policy_number") or ""),
+                        issue_date=start_d,
+                        expiration_date=end_d,
+                        price=safe_float(doc_item.get("price") or doc_item.get("cost")),
+                        mileage=doc_odo if doc_odo > 0 else None,
+                        engine_hours=doc_hrs if doc_hrs > 0 else None,
+                        is_active=bool(doc_item.get("is_active", True)),
+                        notes=str(doc_item.get("notes") or doc_item.get("note") or ""),
+                    )
+                    db.add(doc)
+                    existing_docs.append(doc)
+                    new_docs_count += 1
 
         await db.commit()
 
-        if restored_vehicles_count == 1:
-            msg = f"Автомобиль успешно восстановлен: {total_services_count} ТО/ремонтов, {total_fuel_count} заправок, {total_trackers_count} регламентов, {total_tyres_count} шин, {total_docs_count} документов!"
-        else:
-            msg = f"Успешно восстановлено автомобилей: {restored_vehicles_count} ({total_services_count} ТО/ремонтов, {total_fuel_count} заправок, {total_trackers_count} регламентов)!"
+        # Build informative result message
+        details = []
+        if new_vehicles_count > 0:
+            details.append(f"{new_vehicles_count} новых авто")
+        if updated_vehicles_count > 0:
+            details.append(f"{updated_vehicles_count} обновлено")
+
+        details.append(f"ТО: +{new_services_count}")
+        if skipped_services_count > 0:
+            details.append(f"дубликатов ТО пропущено: {skipped_services_count}")
+
+        details.append(f"заправок: +{new_fuel_count}")
+        if skipped_fuel_count > 0:
+            details.append(f"дубликатов заправок пропущено: {skipped_fuel_count}")
+
+        if new_trackers_count > 0 or updated_trackers_count > 0:
+            details.append(f"регламентов: {new_trackers_count + updated_trackers_count}")
+        if new_tyres_count > 0 or updated_tyres_count > 0:
+            details.append(f"шин: {new_tyres_count + updated_tyres_count}")
+        if new_docs_count > 0 or updated_docs_count > 0:
+            details.append(f"документов: {new_docs_count + updated_docs_count}")
+
+        msg = "Импорт завершен успешно: " + ", ".join(details) + "!"
 
         return {
             "status": "success",
