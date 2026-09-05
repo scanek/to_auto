@@ -100,6 +100,69 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [isSavingBotToken, setIsSavingBotToken] = useState(false);
   const [botTokenMsg, setBotTokenMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
+  // Mobile / Standalone Server Sync State
+  const [serverUrlInput, setServerUrlInput] = useState(localDB.getServerUrl() || '');
+  const [isStandalone, setIsStandalone] = useState(localDB.isStandalone());
+  const [serverSyncMsg, setServerSyncMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [isTestingServer, setIsTestingServer] = useState(false);
+
+  const handleSaveServer = async () => {
+    if (!serverUrlInput.trim()) {
+      localDB.setServerUrl(null);
+      localDB.setAppMode('standalone');
+      setIsStandalone(true);
+      setServerSyncMsg({ text: 'Установлен полностью автономный режим (без сервера)', type: 'success' });
+      return;
+    }
+    setIsTestingServer(true);
+    setServerSyncMsg(null);
+    try {
+      let target = serverUrlInput.trim().replace(/\/+$/, '');
+      if (!target.startsWith('http://') && !target.startsWith('https://')) {
+        target = 'https://' + target;
+      }
+      const testRes = await fetch(`${target}/api/v1/auth/setup-status`, { method: 'GET' });
+      if (!testRes.ok) {
+        throw new Error(`Сервер ответил с кодом HTTP ${testRes.status}`);
+      }
+      localDB.setServerUrl(target);
+      localDB.setAppMode('synced');
+      setIsStandalone(false);
+      setServerSyncMsg({ text: 'Связь с сервером успешно установлена!', type: 'success' });
+    } catch (err: any) {
+      setServerSyncMsg({ text: `Не удалось подключиться к серверу: ${err.message}`, type: 'error' });
+    } finally {
+      setIsTestingServer(false);
+    }
+  };
+
+  const handleSetStandalone = () => {
+    localDB.setAppMode('standalone');
+    localDB.setServerUrl(null);
+    setServerUrlInput('');
+    setIsStandalone(true);
+    setServerSyncMsg({ text: 'Включен автономный режим. Все данные хранятся локально на телефоне.', type: 'success' });
+  };
+
+  const handleExportJson = async () => {
+    if (localDB.isStandalone()) {
+      const jsonStr = await localDB.exportAllBackup();
+      const dateStr = new Date().toISOString().split('T')[0];
+      const filename = `autotracker_backup_${dateStr}.json`;
+      const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } else {
+      window.location.href = api.exportAllBackupUrl();
+    }
+  };
+
   const isAdmin = currentUser?.role === 'admin';
 
   useEffect(() => {
@@ -402,23 +465,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   {currentUser?.role === 'admin' ? 'Резервное копирование' : 'Резервная копия гаража'}
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <a
-                    href={api.exportAllBackupUrl()}
-                    download={currentUser?.role === 'admin' ? "autotracker_full_backup.json" : "my_garage_backup.json"}
-                    className="p-3.5 rounded-2xl border border-slate-200 dark:border-dark-750 bg-slate-50/60 dark:bg-dark-800/60 hover:border-brand-500/40 hover:bg-brand-500/5 transition flex items-center space-x-3 group"
+                  <button
+                    onClick={handleExportJson}
+                    className="p-3.5 rounded-2xl border border-slate-200 dark:border-dark-750 bg-slate-50/60 dark:bg-dark-800/60 hover:border-brand-500/40 hover:bg-brand-500/5 transition flex items-center space-x-3 group text-left"
                   >
                     <div className="w-10 h-10 rounded-xl bg-brand-500/10 text-brand-500 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
                       <Download className="w-5 h-5" />
                     </div>
                     <div className="min-w-0">
                       <div className="text-xs font-bold text-slate-900 dark:text-white">
-                        {currentUser?.role === 'admin' ? 'Экспорт всей базы (JSON)' : 'Экспорт моего гаража (JSON)'}
+                        {localDB.isStandalone() ? 'Экспорт бэкапа (JSON)' : (currentUser?.role === 'admin' ? 'Экспорт всей базы (JSON)' : 'Экспорт моего гаража (JSON)')}
                       </div>
                       <div className="text-[11px] text-slate-500">
-                        {currentUser?.role === 'admin' ? 'Все пользователи и авто' : 'Сохранить мои авто и историю ТО'}
+                        {localDB.isStandalone() ? 'Сохранить все данные с устройства' : (currentUser?.role === 'admin' ? 'Все пользователи и авто' : 'Сохранить мои авто и историю ТО')}
                       </div>
                     </div>
-                  </a>
+                  </button>
 
                   <button
                     onClick={() => {
@@ -439,6 +501,65 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </div>
                     </div>
                   </button>
+                </div>
+              </div>
+
+              {/* Standalone / Server Sync Mode */}
+              <div className="space-y-3 p-4 rounded-2xl border border-slate-200 dark:border-dark-750 bg-slate-50/60 dark:bg-dark-800/60">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-base">{isStandalone ? '📱' : '🌐'}</span>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-white">
+                        {isStandalone ? 'Автономный режим (Offline)' : 'Подключение к веб-серверу'}
+                      </h4>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                        {isStandalone
+                          ? 'Данные хранятся локально на этом устройстве без отправки в интернет'
+                          : `Синхронизация с сервером: ${localDB.getServerUrl()}`}
+                      </p>
+                    </div>
+                  </div>
+                  <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${isStandalone ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-brand-500/10 text-brand-600 dark:text-brand-400'}`}>
+                    {isStandalone ? 'Локально' : 'Онлайн'}
+                  </span>
+                </div>
+
+                <div className="space-y-2 pt-1 border-t border-slate-200/60 dark:border-dark-700/60">
+                  <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                    Адрес удаленного сервера (опционально):
+                  </label>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      type="url"
+                      value={serverUrlInput}
+                      onChange={(e) => setServerUrlInput(e.target.value)}
+                      placeholder="https://autotracker.my-domain.ru"
+                      className="flex-1 px-3 py-2 text-xs bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
+                    />
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={handleSaveServer}
+                        disabled={isTestingServer}
+                        className="px-3 py-2 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition shadow-sm"
+                      >
+                        {isTestingServer ? 'Проверка...' : 'Сохранить'}
+                      </button>
+                      {!isStandalone && (
+                        <button
+                          onClick={handleSetStandalone}
+                          className="px-3 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-dark-700 dark:hover:bg-dark-600 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold transition"
+                        >
+                          Офлайн
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  {serverSyncMsg && (
+                    <div className={`text-[11px] p-2 rounded-lg ${serverSyncMsg.type === 'success' ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10' : 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10'}`}>
+                      {serverSyncMsg.text}
+                    </div>
+                  )}
                 </div>
               </div>
 

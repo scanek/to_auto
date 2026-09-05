@@ -15,8 +15,24 @@ import {
   SetupStatus,
 } from '../types';
 import { offlineStorage, QueuedAction } from './offlineStorage';
+import { localDB } from './localDatabase';
+import { Capacitor } from '@capacitor/core';
 
-const API_BASE = '/api/v1';
+export const isNativeApp = (): boolean => {
+  return typeof window !== 'undefined' && Capacitor.isNativePlatform();
+};
+
+export const getApiBase = (): string => {
+  const custom = localDB.getServerUrl();
+  if (custom && !localDB.isStandalone()) {
+    return `${custom}/api/v1`;
+  }
+  return '/api/v1';
+};
+
+const API_BASE = {
+  toString: () => getApiBase(),
+};
 
 export function getAuthToken(): string | null {
   return localStorage.getItem('autotracker_admin_token');
@@ -63,7 +79,13 @@ async function request<T>(
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 4500);
 
-      const res = await fetch(url, {
+      let fetchUrl = url;
+      const srvUrl = localDB.getServerUrl();
+      if (srvUrl && !localDB.isStandalone() && url.startsWith('/api/v1')) {
+        fetchUrl = `${srvUrl}${url}`;
+      }
+
+      const res = await fetch(fetchUrl, {
         ...options,
         headers,
         signal: controller.signal,
@@ -112,7 +134,13 @@ async function request<T>(
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 6000);
 
-    const res = await fetch(url, {
+    let postFetchUrl = url;
+    const postSrvUrl = localDB.getServerUrl();
+    if (postSrvUrl && !localDB.isStandalone() && url.startsWith('/api/v1')) {
+      postFetchUrl = `${postSrvUrl}${url}`;
+    }
+
+    const res = await fetch(postFetchUrl, {
       ...options,
       headers,
       signal: controller.signal,
@@ -177,14 +205,30 @@ export const api = {
   // -------------------------------------------------------------
   // Auth & Permissions
   // -------------------------------------------------------------
-  getSetupStatus: () =>
-    request<SetupStatus>(`${API_BASE}/auth/setup-status`, undefined, {
+  getSetupStatus: async () => {
+    if (localDB.isStandalone()) {
+      return { has_users: true, allow_registration: false };
+    }
+    return request<SetupStatus>(`${API_BASE}/auth/setup-status`, undefined, {
       fallbackMock: () => ({ has_users: true, allow_registration: true }),
-    }),
-  getMe: () =>
-    request<User>(`${API_BASE}/auth/me`, undefined, {
+    });
+  },
+  getMe: async () => {
+    if (localDB.isStandalone()) {
+      return {
+        id: 1,
+        username: 'standalone_user',
+        full_name: 'Пользователь (Офлайн)',
+        role: 'admin' as const,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+    }
+    return request<User>(`${API_BASE}/auth/me`, undefined, {
       cacheKey: 'current_user',
-    }),
+    });
+  },
   register: (data: { username: string; email?: string; password: string; full_name?: string }) =>
     request<AuthResponse>(`${API_BASE}/auth/register`, {
       method: 'POST',
@@ -216,25 +260,52 @@ export const api = {
   // -------------------------------------------------------------
   // Vehicles
   // -------------------------------------------------------------
-  getVehicles: () =>
-    request<Vehicle[]>(`${API_BASE}/vehicles`, undefined, {
+  getVehicles: async () => {
+    if (localDB.isStandalone()) {
+      return localDB.getVehicles();
+    }
+    return request<Vehicle[]>(`${API_BASE}/vehicles`, undefined, {
       cacheKey: 'vehicles_list',
-      fallbackMock: () => [],
-    }),
-  getAdminAllVehicles: () =>
-    request<Vehicle[]>(`${API_BASE}/vehicles/admin/all`, undefined, {
+      fallbackMock: () => localDB.getVehicles(),
+    });
+  },
+  getAdminAllVehicles: async () => {
+    if (localDB.isStandalone()) {
+      return localDB.getVehicles();
+    }
+    return request<Vehicle[]>(`${API_BASE}/vehicles/admin/all`, undefined, {
       cacheKey: 'admin_vehicles_all',
-    }),
-  deleteAdminVehicle: (vehicleId: number) =>
-    request<void>(`${API_BASE}/vehicles/admin/${vehicleId}`, {
+      fallbackMock: () => localDB.getVehicles(),
+    });
+  },
+  deleteAdminVehicle: async (vehicleId: number) => {
+    if (localDB.isStandalone()) {
+      return localDB.deleteVehicle(vehicleId);
+    }
+    return request<void>(`${API_BASE}/vehicles/admin/${vehicleId}`, {
       method: 'DELETE',
-    }),
-  getVehicle: (id: number) =>
-    request<Vehicle>(`${API_BASE}/vehicles/${id}`, undefined, {
+    });
+  },
+  getVehicle: async (id: number) => {
+    if (localDB.isStandalone()) {
+      const v = await localDB.getVehicle(id);
+      if (!v) throw new Error('Автомобиль не найден');
+      return v;
+    }
+    return request<Vehicle>(`${API_BASE}/vehicles/${id}`, undefined, {
       cacheKey: `vehicle_${id}`,
-    }),
-  createVehicle: (data: Partial<Vehicle>) =>
-    request<Vehicle>(
+      fallbackMock: async () => {
+        const v = await localDB.getVehicle(id);
+        if (!v) throw new Error('Автомобиль не найден');
+        return v;
+      },
+    });
+  },
+  createVehicle: async (data: Partial<Vehicle>) => {
+    if (localDB.isStandalone()) {
+      return localDB.createVehicle(data);
+    }
+    const res = await request<Vehicle>(
       `${API_BASE}/vehicles`,
       {
         method: 'POST',
@@ -243,11 +314,17 @@ export const api = {
       {
         description: `Добавление автомобиля ${data.make || ''} ${data.model || ''}`,
         entityType: 'vehicle',
-        fallbackMock: () => ({ id: Date.now(), ...data } as Vehicle),
+        fallbackMock: () => localDB.createVehicle(data),
       }
-    ),
-  updateVehicle: (id: number, data: Partial<Vehicle>) =>
-    request<Vehicle>(
+    );
+    await localDB.createVehicle(res).catch(() => {});
+    return res;
+  },
+  updateVehicle: async (id: number, data: Partial<Vehicle>) => {
+    if (localDB.isStandalone()) {
+      return localDB.updateVehicle(id, data);
+    }
+    const res = await request<Vehicle>(
       `${API_BASE}/vehicles/${id}`,
       {
         method: 'PUT',
@@ -256,34 +333,45 @@ export const api = {
       {
         description: `Обновление автомобиля #${id}`,
         entityType: 'vehicle',
-        fallbackMock: () => ({ id, ...data } as Vehicle),
+        fallbackMock: () => localDB.updateVehicle(id, data),
       }
-    ),
-  deleteVehicle: (id: number) =>
-    request<void>(
+    );
+    await localDB.updateVehicle(id, data).catch(() => {});
+    return res;
+  },
+  deleteVehicle: async (id: number) => {
+    if (localDB.isStandalone()) {
+      return localDB.deleteVehicle(id);
+    }
+    await request<void>(
       `${API_BASE}/vehicles/${id}`,
       { method: 'DELETE' },
       {
         description: `Удаление автомобиля #${id}`,
         entityType: 'vehicle',
       }
-    ),
+    );
+    await localDB.deleteVehicle(id).catch(() => {});
+  },
 
   // -------------------------------------------------------------
   // Service Records
   // -------------------------------------------------------------
-  getServiceRecords: (vehicleId: number, recordType?: string) => {
-    const url = new URL(`${window.location.origin}${API_BASE}/service-records`);
-    url.searchParams.set('vehicle_id', String(vehicleId));
-    if (recordType) url.searchParams.set('record_type', recordType);
-    const key = `service_records_${vehicleId}_${recordType || 'all'}`;
-    return request<ServiceRecord[]>(url.pathname + url.search, undefined, {
-      cacheKey: key,
-      fallbackMock: () => [],
+  getServiceRecords: async (vehicleId: number, recordType?: string) => {
+    if (localDB.isStandalone()) {
+      return localDB.getServiceRecords(vehicleId, recordType);
+    }
+    const query = recordType ? `?vehicle_id=${vehicleId}&record_type=${encodeURIComponent(recordType)}` : `?vehicle_id=${vehicleId}`;
+    return request<ServiceRecord[]>(`${API_BASE}/service-records${query}`, undefined, {
+      cacheKey: `service_records_${vehicleId}_${recordType || 'all'}`,
+      fallbackMock: () => localDB.getServiceRecords(vehicleId, recordType),
     });
   },
-  createServiceRecord: (vehicleId: number, data: Partial<ServiceRecord>) =>
-    request<ServiceRecord>(
+  createServiceRecord: async (vehicleId: number, data: Partial<ServiceRecord>) => {
+    if (localDB.isStandalone()) {
+      return localDB.createServiceRecord(vehicleId, data);
+    }
+    const res = await request<ServiceRecord>(
       `${API_BASE}/service-records?vehicle_id=${vehicleId}`,
       {
         method: 'POST',
@@ -292,11 +380,17 @@ export const api = {
       {
         description: `Запись ТО: ${data.title || 'Обслуживание'}`,
         entityType: 'service',
-        fallbackMock: () => ({ id: Date.now(), vehicle_id: vehicleId, ...data } as ServiceRecord),
+        fallbackMock: () => localDB.createServiceRecord(vehicleId, data),
       }
-    ),
-  updateServiceRecord: (id: number, data: Partial<ServiceRecord>) =>
-    request<ServiceRecord>(
+    );
+    await localDB.createServiceRecord(vehicleId, res).catch(() => {});
+    return res;
+  },
+  updateServiceRecord: async (id: number, data: Partial<ServiceRecord>) => {
+    if (localDB.isStandalone()) {
+      return localDB.updateServiceRecord(id, data);
+    }
+    const res = await request<ServiceRecord>(
       `${API_BASE}/service-records/${id}`,
       {
         method: 'PUT',
@@ -305,32 +399,44 @@ export const api = {
       {
         description: `Обновление записи ТО #${id}`,
         entityType: 'service',
-        fallbackMock: () => ({ id, ...data } as ServiceRecord),
+        fallbackMock: () => localDB.updateServiceRecord(id, data),
       }
-    ),
-  deleteServiceRecord: (id: number) =>
-    request<void>(
+    );
+    await localDB.updateServiceRecord(id, data).catch(() => {});
+    return res;
+  },
+  deleteServiceRecord: async (id: number) => {
+    if (localDB.isStandalone()) {
+      return localDB.deleteServiceRecord(id);
+    }
+    await request<void>(
       `${API_BASE}/service-records/${id}`,
       { method: 'DELETE' },
       {
         description: `Удаление записи ТО #${id}`,
         entityType: 'service',
       }
-    ),
+    );
+    await localDB.deleteServiceRecord(id).catch(() => {});
+  },
 
   // -------------------------------------------------------------
   // Fuel Logs
   // -------------------------------------------------------------
-  getFuelLogs: (vehicleId: number) => {
-    const url = new URL(`${window.location.origin}${API_BASE}/fuel-logs`);
-    url.searchParams.set('vehicle_id', String(vehicleId));
-    return request<FuelLog[]>(url.pathname + url.search, undefined, {
+  getFuelLogs: async (vehicleId: number) => {
+    if (localDB.isStandalone()) {
+      return localDB.getFuelLogs(vehicleId);
+    }
+    return request<FuelLog[]>(`${API_BASE}/fuel-logs?vehicle_id=${vehicleId}`, undefined, {
       cacheKey: `fuel_logs_${vehicleId}`,
-      fallbackMock: () => [],
+      fallbackMock: () => localDB.getFuelLogs(vehicleId),
     });
   },
-  createFuelLog: (vehicleId: number, data: Partial<FuelLog>) =>
-    request<FuelLog>(
+  createFuelLog: async (vehicleId: number, data: Partial<FuelLog>) => {
+    if (localDB.isStandalone()) {
+      return localDB.createFuelLog(vehicleId, data);
+    }
+    const res = await request<FuelLog>(
       `${API_BASE}/fuel-logs?vehicle_id=${vehicleId}`,
       {
         method: 'POST',
@@ -339,11 +445,17 @@ export const api = {
       {
         description: `Заправка ${data.fuel_amount || 0} л (${data.total_cost || 0} ₽)`,
         entityType: 'fuel',
-        fallbackMock: () => ({ id: Date.now(), vehicle_id: vehicleId, ...data } as FuelLog),
+        fallbackMock: () => localDB.createFuelLog(vehicleId, data),
       }
-    ),
-  updateFuelLog: (id: number, data: Partial<FuelLog>) =>
-    request<FuelLog>(
+    );
+    await localDB.createFuelLog(vehicleId, res).catch(() => {});
+    return res;
+  },
+  updateFuelLog: async (id: number, data: Partial<FuelLog>) => {
+    if (localDB.isStandalone()) {
+      return localDB.updateFuelLog(id, data);
+    }
+    const res = await request<FuelLog>(
       `${API_BASE}/fuel-logs/${id}`,
       {
         method: 'PUT',
@@ -352,18 +464,26 @@ export const api = {
       {
         description: `Обновление заправки #${id}`,
         entityType: 'fuel',
-        fallbackMock: () => ({ id, ...data } as FuelLog),
+        fallbackMock: () => localDB.updateFuelLog(id, data),
       }
-    ),
-  deleteFuelLog: (id: number) =>
-    request<void>(
+    );
+    await localDB.updateFuelLog(id, data).catch(() => {});
+    return res;
+  },
+  deleteFuelLog: async (id: number) => {
+    if (localDB.isStandalone()) {
+      return localDB.deleteFuelLog(id);
+    }
+    await request<void>(
       `${API_BASE}/fuel-logs/${id}`,
       { method: 'DELETE' },
       {
         description: `Удаление заправки #${id}`,
         entityType: 'fuel',
       }
-    ),
+    );
+    await localDB.deleteFuelLog(id).catch(() => {});
+  },
 
   // -------------------------------------------------------------
   // Reminders / Maintenance Planner
@@ -433,16 +553,20 @@ export const api = {
   // -------------------------------------------------------------
   // Documents & Insurance
   // -------------------------------------------------------------
-  getDocuments: (vehicleId: number) => {
-    const url = new URL(`${window.location.origin}${API_BASE}/documents`);
-    url.searchParams.set('vehicle_id', String(vehicleId));
-    return request<DocumentNote[]>(url.pathname + url.search, undefined, {
+  getDocuments: async (vehicleId: number) => {
+    if (localDB.isStandalone()) {
+      return localDB.getDocuments(vehicleId);
+    }
+    return request<DocumentNote[]>(`${API_BASE}/documents?vehicle_id=${vehicleId}`, undefined, {
       cacheKey: `documents_${vehicleId}`,
-      fallbackMock: () => [],
+      fallbackMock: () => localDB.getDocuments(vehicleId),
     });
   },
-  createDocument: (vehicleId: number, data: Partial<DocumentNote>) =>
-    request<DocumentNote>(
+  createDocument: async (vehicleId: number, data: Partial<DocumentNote>) => {
+    if (localDB.isStandalone()) {
+      return localDB.createDocument(vehicleId, data);
+    }
+    const res = await request<DocumentNote>(
       `${API_BASE}/documents?vehicle_id=${vehicleId}`,
       {
         method: 'POST',
@@ -451,11 +575,17 @@ export const api = {
       {
         description: `Документ: ${data.title || ''}`,
         entityType: 'document',
-        fallbackMock: () => ({ id: Date.now(), vehicle_id: vehicleId, ...data } as DocumentNote),
+        fallbackMock: () => localDB.createDocument(vehicleId, data),
       }
-    ),
-  updateDocument: (id: number, data: Partial<DocumentNote>) =>
-    request<DocumentNote>(
+    );
+    await localDB.createDocument(vehicleId, res).catch(() => {});
+    return res;
+  },
+  updateDocument: async (id: number, data: Partial<DocumentNote>) => {
+    if (localDB.isStandalone()) {
+      return localDB.updateDocument(id, data);
+    }
+    const res = await request<DocumentNote>(
       `${API_BASE}/documents/${id}`,
       {
         method: 'PUT',
@@ -464,32 +594,44 @@ export const api = {
       {
         description: `Обновление документа #${id}`,
         entityType: 'document',
-        fallbackMock: () => ({ id, ...data } as DocumentNote),
+        fallbackMock: () => localDB.updateDocument(id, data),
       }
-    ),
-  deleteDocument: (id: number) =>
-    request<void>(
+    );
+    await localDB.updateDocument(id, data).catch(() => {});
+    return res;
+  },
+  deleteDocument: async (id: number) => {
+    if (localDB.isStandalone()) {
+      return localDB.deleteDocument(id);
+    }
+    await request<void>(
       `${API_BASE}/documents/${id}`,
       { method: 'DELETE' },
       {
         description: `Удаление документа #${id}`,
         entityType: 'document',
       }
-    ),
+    );
+    await localDB.deleteDocument(id).catch(() => {});
+  },
 
   // -------------------------------------------------------------
   // Tyres & Wheels
   // -------------------------------------------------------------
-  getTyreSets: (vehicleId: number) => {
-    const url = new URL(`${window.location.origin}${API_BASE}/tyres`);
-    url.searchParams.set('vehicle_id', String(vehicleId));
-    return request<TyreSet[]>(url.pathname + url.search, undefined, {
+  getTyreSets: async (vehicleId: number) => {
+    if (localDB.isStandalone()) {
+      return localDB.getTyreSets(vehicleId);
+    }
+    return request<TyreSet[]>(`${API_BASE}/tyres?vehicle_id=${vehicleId}`, undefined, {
       cacheKey: `tyres_${vehicleId}`,
-      fallbackMock: () => [],
+      fallbackMock: () => localDB.getTyreSets(vehicleId),
     });
   },
-  createTyreSet: (vehicleId: number, data: Partial<TyreSet>) =>
-    request<TyreSet>(
+  createTyreSet: async (vehicleId: number, data: Partial<TyreSet>) => {
+    if (localDB.isStandalone()) {
+      return localDB.createTyreSet(vehicleId, data);
+    }
+    const res = await request<TyreSet>(
       `${API_BASE}/tyres?vehicle_id=${vehicleId}`,
       {
         method: 'POST',
@@ -498,11 +640,17 @@ export const api = {
       {
         description: `Комплект шин: ${data.name || ''}`,
         entityType: 'tyre',
-        fallbackMock: () => ({ id: Date.now(), vehicle_id: vehicleId, ...data } as TyreSet),
+        fallbackMock: () => localDB.createTyreSet(vehicleId, data),
       }
-    ),
-  updateTyreSet: (id: number, data: Partial<TyreSet>) =>
-    request<TyreSet>(
+    );
+    await localDB.createTyreSet(vehicleId, res).catch(() => {});
+    return res;
+  },
+  updateTyreSet: async (id: number, data: Partial<TyreSet>) => {
+    if (localDB.isStandalone()) {
+      return localDB.updateTyreSet(id, data);
+    }
+    const res = await request<TyreSet>(
       `${API_BASE}/tyres/${id}`,
       {
         method: 'PUT',
@@ -511,18 +659,26 @@ export const api = {
       {
         description: `Обновление комплекта шин #${id}`,
         entityType: 'tyre',
-        fallbackMock: () => ({ id, ...data } as TyreSet),
+        fallbackMock: () => localDB.updateTyreSet(id, data),
       }
-    ),
-  deleteTyreSet: (id: number) =>
-    request<void>(
+    );
+    await localDB.updateTyreSet(id, data).catch(() => {});
+    return res;
+  },
+  deleteTyreSet: async (id: number) => {
+    if (localDB.isStandalone()) {
+      return localDB.deleteTyreSet(id);
+    }
+    await request<void>(
       `${API_BASE}/tyres/${id}`,
       { method: 'DELETE' },
       {
         description: `Удаление комплекта шин #${id}`,
         entityType: 'tyre',
       }
-    ),
+    );
+    await localDB.deleteTyreSet(id).catch(() => {});
+  },
   activateTyreSet: (id: number, mileage?: number) => {
     const url = new URL(`${window.location.origin}${API_BASE}/tyres/${id}/activate`);
     if (mileage !== undefined) url.searchParams.set('mileage', String(mileage));
@@ -675,11 +831,22 @@ export const api = {
   // -------------------------------------------------------------
   // Backup & Export
   // -------------------------------------------------------------
-  importBackup: (data: any) =>
-    request<{ message: string; vehicle_id: number }>(`${API_BASE}/backup/import`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
+  importBackup: async (data: any) => {
+    if (localDB.isStandalone()) {
+      return localDB.importBackup(data);
+    }
+    try {
+      const res = await request<{ message: string; vehicle_id: number }>(`${API_BASE}/backup/import`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      await localDB.importBackup(data).catch(() => {});
+      return res;
+    } catch (err) {
+      console.warn('Network import failed, importing locally into offline database...', err);
+      return localDB.importBackup(data);
+    }
+  },
   exportVehicleBackupUrl: (vehicleId: number) => {
     const token = getAuthToken();
     return `${API_BASE}/backup/export/${vehicleId}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
@@ -909,3 +1076,5 @@ export const api = {
     return res.json() as Promise<{ success: boolean; data: any }>;
   },
 };
+
+export { localDB };

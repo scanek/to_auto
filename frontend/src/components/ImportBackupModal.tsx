@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Vehicle, User } from '../types';
 import { api } from '../services/api';
+import { localDB } from '../services/localDatabase';
 
 interface ImportBackupModalProps {
   isOpen: boolean;
@@ -94,6 +95,40 @@ export const ImportBackupModal: React.FC<ImportBackupModalProps> = ({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const triggerExport = async (type: 'all' | 'vehicle' | 'db', vehicleId?: number) => {
+    if (localDB.isStandalone()) {
+      let jsonStr = '';
+      let filename = 'autotracker_backup.json';
+      const dateStr = new Date().toISOString().split('T')[0];
+      if (type === 'all' || type === 'db') {
+        jsonStr = await localDB.exportAllBackup();
+        filename = `autotracker_full_backup_${dateStr}.json`;
+      } else if (vehicleId) {
+        jsonStr = await localDB.exportVehicleBackup(vehicleId);
+        const v = vehicles.find((item) => item.id === vehicleId);
+        const cleanName = v ? `${v.make}_${v.model}`.replace(/\s+/g, '_') : `vehicle_${vehicleId}`;
+        filename = `backup_${cleanName}_${dateStr}.json`;
+      }
+      const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+    } else {
+      if (type === 'all') {
+        downloadJson(api.exportAllBackupUrl());
+      } else if (type === 'db') {
+        downloadJson(api.exportDatabaseUrl());
+      } else if (vehicleId) {
+        downloadJson(api.exportVehicleBackupUrl(vehicleId));
+      }
+    }
   };
 
   const veh = parsedData?.vehicle || parsedData?.vehicles?.[0];
@@ -288,7 +323,7 @@ export const ImportBackupModal: React.FC<ImportBackupModalProps> = ({
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
                     <button
-                      onClick={() => downloadJson(api.exportAllBackupUrl())}
+                      onClick={() => triggerExport('all')}
                       className="flex items-center justify-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-3 rounded-xl text-xs transition-all shadow-md shadow-emerald-500/20 active:scale-95"
                       title="Выгрузить всех пользователей и автомобили в JSON"
                     >
@@ -296,7 +331,7 @@ export const ImportBackupModal: React.FC<ImportBackupModalProps> = ({
                       <span>Полный JSON базы</span>
                     </button>
                     <button
-                      onClick={() => downloadJson(api.exportDatabaseUrl())}
+                      onClick={() => triggerExport('db')}
                       className="flex items-center justify-center space-x-2 bg-slate-800 hover:bg-slate-900 dark:bg-dark-700 dark:hover:bg-dark-600 text-white font-bold py-2.5 px-3 rounded-xl text-xs transition-all shadow-md active:scale-95 border border-slate-700"
                       title="Скачать горячий ACID-снимок файла autotracker.db"
                     >
@@ -315,7 +350,7 @@ export const ImportBackupModal: React.FC<ImportBackupModalProps> = ({
                     Включает все ваши автомобили, полную историю ТО, все заправки, регламенты, комплекты шин и документы.
                   </p>
                   <button
-                    onClick={() => downloadJson(api.exportAllBackupUrl())}
+                    onClick={() => triggerExport('all')}
                     className="w-full flex items-center justify-center space-x-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-all shadow-md shadow-emerald-500/20 active:scale-95"
                   >
                     <Download className="w-4 h-4" />
@@ -356,7 +391,7 @@ export const ImportBackupModal: React.FC<ImportBackupModalProps> = ({
                         </div>
 
                         <button
-                          onClick={() => downloadJson(api.exportVehicleBackupUrl(v.id))}
+                          onClick={() => triggerExport('vehicle', v.id)}
                           className="flex items-center space-x-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-dark-700 dark:hover:bg-dark-600 text-slate-800 dark:text-slate-100 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95 flex-shrink-0"
                           title={`Скачать бэкап ${v.make} ${v.model}`}
                         >
