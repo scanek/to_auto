@@ -59,8 +59,7 @@ import {
   Signal,
   Navigation,
   Key,
-  Folder,
-  MoreHorizontal,
+  BookOpen,
   Settings,
 } from 'lucide-react';
 import {
@@ -119,9 +118,8 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   onOpenTyreModal,
 }) => {
   const [activeTab, setActiveTab] = useState<
-    'service' | 'repairs' | 'upgrades' | 'fuel' | 'reminders' | 'tyres' | 'analytics' | 'documents' | 'more'
+    'service' | 'repairs' | 'upgrades' | 'fuel' | 'reminders' | 'analytics' | 'specs' | 'tyres' | 'documents'
   >('service');
-  const [moreSubTab, setMoreSubTab] = useState<'specs' | 'tyres' | 'documents'>('specs');
   const [serviceFilter, setServiceFilter] = useState<'all' | 'service' | 'repair' | 'upgrade'>('all');
 
   const isOwner = isAuthenticated && vehicle.is_owner !== false;
@@ -497,11 +495,13 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   };
 
   const navTabs = [
-    { id: 'service', label: 'ТО и работы', icon: Wrench, count: Array.isArray(serviceRecords) ? serviceRecords.length : 0 },
-    { id: 'fuel', label: 'Топливо', icon: Fuel, count: Array.isArray(fuelLogs) ? fuelLogs.length : 0 },
-    { id: 'reminders', label: 'Регламент', icon: CalendarClock, count: Array.isArray(reminders) ? reminders.length : 0 },
-    { id: 'analytics', label: 'Аналитика', icon: BarChart3 },
-    { id: 'more', label: 'Ещё', icon: Folder, count: (Array.isArray(tyres) ? tyres.length : 0) + (Array.isArray(documents) ? documents.length : 0) },
+    { id: 'service', label: 'ТО и работы', shortLabel: 'ТО', icon: Wrench, count: Array.isArray(serviceRecords) ? serviceRecords.length : 0 },
+    { id: 'fuel', label: 'Топливо', shortLabel: 'Топливо', icon: Fuel, count: Array.isArray(fuelLogs) ? fuelLogs.length : 0 },
+    { id: 'reminders', label: 'Регламент', shortLabel: 'План', icon: CalendarClock, count: Array.isArray(reminders) ? reminders.length : 0 },
+    { id: 'analytics', label: 'Аналитика', shortLabel: 'Отчет', icon: BarChart3 },
+    { id: 'specs', label: 'Расходники', shortLabel: 'Детали', icon: BookOpen, count: Array.isArray(consumables) ? consumables.length : 0 },
+    { id: 'tyres', label: 'Шины', shortLabel: 'Шины', icon: Disc, count: Array.isArray(tyres) ? tyres.length : 0 },
+    { id: 'documents', label: 'Документы', shortLabel: 'Документы', icon: FileText, count: Array.isArray(documents) ? documents.length : 0 },
   ];
 
   return (
@@ -1085,26 +1085,35 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
         </div>
       </div>
 
-      {/* Modern 5-Column Segmented Tab Bar (Fits on 1 line on mobile and desktop) */}
-      <div className="grid grid-cols-5 gap-1 p-1 bg-slate-200/70 dark:bg-dark-800 border border-slate-200 dark:border-dark-750 rounded-2xl">
+      {/* Modern 7-Column Segmented Tab Bar (All tabs on 1 line without scroll) */}
+      <div className="grid grid-cols-7 gap-1 p-1 bg-slate-200/70 dark:bg-dark-800 border border-slate-200 dark:border-dark-750 rounded-2xl">
         {navTabs.map((tab) => {
           const Icon = tab.icon;
-          const isActive = activeTab === tab.id || (tab.id === 'more' && ['tyres', 'documents', 'more'].includes(activeTab)) || (tab.id === 'service' && ['service', 'repairs', 'upgrades'].includes(activeTab));
+          const isActive = activeTab === tab.id || (tab.id === 'service' && ['service', 'repairs', 'upgrades'].includes(activeTab));
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 py-2 sm:py-2.5 px-0.5 sm:px-1 rounded-xl text-[10px] sm:text-xs font-bold transition-all ${
+              className={`relative flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 py-1.5 sm:py-2 px-0.5 sm:px-1 rounded-xl font-bold transition-all ${
                 isActive
                   ? 'bg-brand-500 text-white shadow-md shadow-brand-500/25 scale-[1.02]'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-dark-750/50'
               }`}
+              title={tab.label}
             >
-              <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-              <span className="truncate">{tab.label}</span>
+              <div className="relative flex items-center justify-center">
+                <Icon className="w-4 h-4 sm:w-4 sm:h-4 flex-shrink-0" />
+                {tab.count !== undefined && tab.count > 0 && (
+                  <span className="sm:hidden absolute -top-1 -right-2 text-[8px] min-w-[12px] h-[12px] px-0.5 rounded-full font-mono font-extrabold flex items-center justify-center bg-brand-600 text-white border border-white dark:border-dark-800">
+                    {tab.count > 99 ? '99+' : tab.count}
+                  </span>
+                )}
+              </div>
+              <span className="hidden sm:inline text-xs truncate">{tab.label}</span>
+              <span className="sm:hidden text-[9px] leading-tight truncate max-w-full text-center mt-0.5">{tab.shortLabel}</span>
               {tab.count !== undefined && tab.count > 0 && (
                 <span
-                  className={`text-[8.5px] sm:text-[9px] px-1 py-0.1 rounded-full font-mono font-extrabold ${
+                  className={`hidden sm:inline-block text-[9px] px-1 py-0.2 rounded-full font-mono font-extrabold ${
                     isActive
                       ? 'bg-white/25 text-white'
                       : 'bg-slate-300 dark:bg-dark-700 text-slate-700 dark:text-slate-300'
@@ -1955,67 +1964,22 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
           </div>
         )}
 
-        {/* Unified "More / Ещё" Tab (Tyres, Documents/Insurance, Tools) */}
-        {['more', 'tyres', 'documents'].includes(activeTab) && (
-          <div className="space-y-4">
-            {/* Sub-tab Navigation */}
-            <div className="flex items-center space-x-1.5 p-1 bg-slate-200/70 dark:bg-dark-800 rounded-xl border border-slate-200 dark:border-dark-750 max-w-full overflow-x-auto scrollbar-none">
-              <button
-                onClick={() => { setActiveTab('more'); setMoreSubTab('specs'); }}
-                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
-                  (activeTab === 'more' && moreSubTab === 'specs')
-                    ? 'bg-brand-500 text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <Wrench className="w-3.5 h-3.5" />
-                <span>Паспорт расходников</span>
-                {consumables.length > 0 && <span className="text-[10px] opacity-80">({consumables.length})</span>}
-              </button>
+        {/* Consumables Tab */}
+        {activeTab === 'specs' && (
+          <ConsumablesTab
+            vehicle={vehicle}
+            consumables={consumables}
+            isOwner={isOwner}
+            onRefresh={loadData}
+            onOpenModal={(item) => {
+              setEditingConsumable(item || null);
+              setIsConsumableModalOpen(true);
+            }}
+          />
+        )}
 
-              <button
-                onClick={() => { setActiveTab('more'); setMoreSubTab('tyres'); }}
-                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
-                  (activeTab === 'tyres' || (activeTab === 'more' && moreSubTab === 'tyres'))
-                    ? 'bg-brand-500 text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <Disc className="w-3.5 h-3.5" />
-                <span>Шины и диски</span>
-                {tyres.length > 0 && <span className="text-[10px] opacity-80">({tyres.length})</span>}
-              </button>
-
-              <button
-                onClick={() => { setActiveTab('more'); setMoreSubTab('documents'); }}
-                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
-                  (activeTab === 'documents' || (activeTab === 'more' && moreSubTab === 'documents'))
-                    ? 'bg-brand-500 text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <FileText className="w-3.5 h-3.5" />
-                <span>Документы и полисы</span>
-                {documents.length > 0 && <span className="text-[10px] opacity-80">({documents.length})</span>}
-              </button>
-            </div>
-
-            {/* Sub-tab 0: Consumables & Specifications (Шпаргалка ТО) */}
-            {activeTab === 'more' && moreSubTab === 'specs' && (
-              <ConsumablesTab
-                vehicle={vehicle}
-                consumables={consumables}
-                isOwner={isOwner}
-                onRefresh={loadData}
-                onOpenModal={(item) => {
-                  setEditingConsumable(item || null);
-                  setIsConsumableModalOpen(true);
-                }}
-              />
-            )}
-
-            {/* Sub-tab 1: Tyres */}
-            {(activeTab === 'tyres' || (activeTab === 'more' && moreSubTab === 'tyres')) && (
+        {/* Tyres Tab */}
+        {activeTab === 'tyres' && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
@@ -2327,8 +2291,8 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               </div>
             )}
 
-            {/* Sub-tab 2: Documents */}
-            {(activeTab === 'documents' || (activeTab === 'more' && moreSubTab === 'documents')) && (
+        {/* Documents Tab */}
+        {activeTab === 'documents' && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
@@ -2451,9 +2415,6 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 )}
               </div>
             )}
-
-          </div>
-        )}
       </div>
 
       {/* Quick Mileage Update Modal */}
