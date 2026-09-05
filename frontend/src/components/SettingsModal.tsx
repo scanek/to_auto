@@ -377,19 +377,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <span>Инструменты & Экспорт</span>
           </button>
 
-          <button
-            onClick={() => setActiveTab('profile')}
-            className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 whitespace-nowrap ${
-              activeTab === 'profile'
-                ? 'bg-brand-500 text-white shadow-md shadow-brand-500/20'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-dark-800'
-            }`}
-          >
-            <UserIcon className="w-3.5 h-3.5" />
-            <span>Мой профиль</span>
-          </button>
+          {!isStandalone && (
+            <button
+              onClick={() => setActiveTab('profile')}
+              className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 whitespace-nowrap ${
+                activeTab === 'profile'
+                  ? 'bg-brand-500 text-white shadow-md shadow-brand-500/20'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-dark-800'
+              }`}
+            >
+              <UserIcon className="w-3.5 h-3.5" />
+              <span>Мой профиль</span>
+            </button>
+          )}
 
-          {isAdmin && (
+          {isAdmin && !isStandalone && (
             <button
               onClick={() => setActiveTab('admin')}
               className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 whitespace-nowrap ${

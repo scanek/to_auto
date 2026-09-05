@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Vehicle, ServiceRecord, FuelLog, MaintenancePlan, DocumentNote, TyreSet, User, SystemAnnouncement } from './types';
 import { api, removeAuthToken } from './services/api';
+import { localDB } from './services/localDatabase';
 import { offlineStorage } from './services/offlineStorage';
 import { notificationService } from './services/notificationService';
 import { Navbar } from './components/Navbar';
@@ -81,6 +82,21 @@ export function App() {
   };
 
   const checkAuthStatus = useCallback(async () => {
+    // In standalone mobile mode, the user is always the owner of their device
+    if (localDB.isStandalone()) {
+      try {
+        const user = await api.getMe();
+        setCurrentUser(user);
+        setIsAuthenticated(true);
+        await Promise.all([loadVehicles(), loadAnnouncement()]);
+      } catch (err) {
+        console.error('Failed to init local user', err);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     const token = localStorage.getItem('autotracker_admin_token');
     if (token) {
       try {
@@ -280,6 +296,9 @@ export function App() {
   };
 
   const handleLogout = () => {
+    if (localDB.isStandalone()) {
+      return; // No-op in standalone mode
+    }
     removeAuthToken();
     setCurrentUser(null);
     setIsAuthenticated(false);
@@ -290,7 +309,7 @@ export function App() {
 
   // Handlers for Vehicle Modal
   const handleOpenAddVehicle = () => {
-    if (!currentUser) {
+    if (!currentUser && !localDB.isStandalone()) {
       setIsAuthModalOpen(true);
       return;
     }
@@ -329,7 +348,7 @@ export function App() {
 
   // Handlers for Service Modal
   const handleOpenServiceModal = (type: 'service' | 'repair' | 'upgrade' = 'service', record?: ServiceRecord) => {
-    if (!currentUser) {
+    if (!currentUser && !localDB.isStandalone()) {
       setIsAuthModalOpen(true);
       return;
     }
@@ -350,7 +369,7 @@ export function App() {
 
   // Handlers for Fuel Modal
   const handleOpenFuelModal = (log?: FuelLog) => {
-    if (!currentUser) {
+    if (!currentUser && !localDB.isStandalone()) {
       setIsAuthModalOpen(true);
       return;
     }
@@ -370,7 +389,7 @@ export function App() {
 
   // Handlers for Reminder Modal
   const handleOpenReminderModal = (plan?: MaintenancePlan) => {
-    if (!currentUser) {
+    if (!currentUser && !localDB.isStandalone()) {
       setIsAuthModalOpen(true);
       return;
     }
@@ -390,7 +409,7 @@ export function App() {
 
   // Handlers for Tyre Modal
   const handleOpenTyreModal = (tyre?: TyreSet) => {
-    if (!currentUser) {
+    if (!currentUser && !localDB.isStandalone()) {
       setIsAuthModalOpen(true);
       return;
     }
@@ -410,7 +429,7 @@ export function App() {
 
   // Handlers for Document Modal
   const handleOpenDocModal = (doc?: DocumentNote) => {
-    if (!currentUser) {
+    if (!currentUser && !localDB.isStandalone()) {
       setIsAuthModalOpen(true);
       return;
     }

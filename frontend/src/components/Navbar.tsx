@@ -124,8 +124,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
-                    {/* Install PWA Button */}
-          {onOpenInstallModal && (
+                    {/* Install PWA Button (only on web, not native) */}
+          {onOpenInstallModal && !localDB.isNative() && (
             <button
               onClick={onOpenInstallModal}
               className="flex items-center space-x-1.5 bg-brand-500/10 hover:bg-brand-500/20 text-brand-600 dark:text-brand-400 border border-brand-500/20 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95"
@@ -216,21 +216,23 @@ export const Navbar: React.FC<NavbarProps> = ({
                       <span>Панель настроек</span>
                     </button>
 
-                    <button
-                      onClick={() => {
-                        setIsUserMenuOpen(false);
-                        onLogout();
-                      }}
-                      className="w-full flex items-center space-x-2 p-2 rounded-xl text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 font-bold transition-colors text-left"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      <span>Выйти из аккаунта</span>
-                    </button>
+                    {!localDB.isStandalone() && (
+                      <button
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          onLogout();
+                        }}
+                        className="w-full flex items-center space-x-2 p-2 rounded-xl text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 font-bold transition-colors text-left"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        <span>Выйти из аккаунта</span>
+                      </button>
+                    )}
                   </div>
                 </>
               )}
             </div>
-          ) : (
+          ) : !localDB.isStandalone() ? (
             <button
               onClick={onOpenAuthModal}
               className="flex items-center space-x-1 bg-brand-500 hover:bg-brand-600 active:scale-95 text-white px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl text-xs font-bold transition-all shadow-md shadow-brand-500/20"
@@ -239,7 +241,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <LogIn className="w-3.5 h-3.5 flex-shrink-0" />
               <span>Войти</span>
             </button>
-          )}
+          ) : null}
         </div>
       </div>
     </header>
