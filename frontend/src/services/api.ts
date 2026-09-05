@@ -851,6 +851,10 @@ export const api = {
     const token = getAuthToken();
     return `${API_BASE}/backup/export/${vehicleId}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
   },
+  exportMyGarageBackupUrl: () => {
+    const token = getAuthToken();
+    return `${API_BASE}/backup/export-all?scope=mine${token ? `&token=${encodeURIComponent(token)}` : ''}`;
+  },
   exportAllBackupUrl: () => {
     const token = getAuthToken();
     return `${API_BASE}/backup/export-all${token ? `?token=${encodeURIComponent(token)}` : ''}`;

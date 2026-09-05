@@ -97,14 +97,14 @@ export const ImportBackupModal: React.FC<ImportBackupModalProps> = ({
     document.body.removeChild(link);
   };
 
-  const triggerExport = async (type: 'all' | 'vehicle' | 'db', vehicleId?: number) => {
+  const triggerExport = async (type: 'all' | 'garage' | 'vehicle' | 'db', vehicleId?: number) => {
     if (localDB.isStandalone()) {
       let jsonStr = '';
       let filename = 'autotracker_backup.json';
       const dateStr = new Date().toISOString().split('T')[0];
-      if (type === 'all' || type === 'db') {
+      if (type === 'all' || type === 'garage' || type === 'db') {
         jsonStr = await localDB.exportAllBackup();
-        filename = `autotracker_full_backup_${dateStr}.json`;
+        filename = `autotracker_garage_backup_${dateStr}.json`;
       } else if (vehicleId) {
         jsonStr = await localDB.exportVehicleBackup(vehicleId);
         const v = vehicles.find((item) => item.id === vehicleId);
@@ -123,6 +123,8 @@ export const ImportBackupModal: React.FC<ImportBackupModalProps> = ({
     } else {
       if (type === 'all') {
         downloadJson(api.exportAllBackupUrl());
+      } else if (type === 'garage') {
+        downloadJson(api.exportMyGarageBackupUrl());
       } else if (type === 'db') {
         downloadJson(api.exportDatabaseUrl());
       } else if (vehicleId) {
@@ -311,51 +313,52 @@ export const ImportBackupModal: React.FC<ImportBackupModalProps> = ({
                   : 'Выгрузите резервную копию вашего гаража в формате JSON для надежного сохранения или переноса данных.'}
               </div>
 
-              {/* Full Admin Backup vs User Garage Backup */}
-              {isAdmin ? (
-                <div className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-500/10 space-y-3">
-                  <div className="flex items-center space-x-2 text-emerald-700 dark:text-emerald-300 font-bold text-xs">
-                    <ShieldCheck className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    <span>Полный бэкап всей базы данных (Администратор)</span>
+              {/* My Garage Backup (for everyone, including Admin) */}
+              <div className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-500/10 space-y-2.5">
+                <div className="flex items-center space-x-2 text-emerald-700 dark:text-emerald-300 font-bold text-xs">
+                  <Database className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                  <span>Резервная копия моего гаража (только мои авто)</span>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Включает только ваши автомобили, полную историю ТО, все заправки, регламенты, комплекты шин и документы (без данных других пользователей). Идеально для переноса на телефон.
+                </p>
+                <button
+                  onClick={() => triggerExport('garage')}
+                  className="w-full flex items-center justify-center space-x-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-all shadow-md shadow-emerald-500/20 active:scale-95"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Скачать архив моего гаража (.json)</span>
+                </button>
+              </div>
+
+              {/* Full Admin Backup (only shown for Admin in server mode) */}
+              {isAdmin && !localDB.isStandalone() && (
+                <div className="p-4 rounded-xl border border-slate-300 dark:border-dark-700 bg-slate-50 dark:bg-dark-800/80 space-y-3">
+                  <div className="flex items-center space-x-2 text-slate-800 dark:text-slate-200 font-bold text-xs">
+                    <ShieldCheck className="w-4 h-4 text-brand-500 flex-shrink-0" />
+                    <span>Полный бэкап всей базы данных сервера (Администратор)</span>
                   </div>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Содержит всех пользователей, системные настройки, все автомобили, полную историю ТО, заправок, регламентов, шин и страховок.
+                    Содержит всех зарегистрированных пользователей, все их автомобили, историю и глобальные настройки сервиса.
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
                     <button
                       onClick={() => triggerExport('all')}
-                      className="flex items-center justify-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-3 rounded-xl text-xs transition-all shadow-md shadow-emerald-500/20 active:scale-95"
+                      className="flex items-center justify-center space-x-2 bg-slate-800 hover:bg-slate-900 dark:bg-dark-700 dark:hover:bg-dark-600 text-white font-bold py-2.5 px-3 rounded-xl text-xs transition-all shadow-md active:scale-95"
                       title="Выгрузить всех пользователей и автомобили в JSON"
                     >
                       <Download className="w-4 h-4" />
-                      <span>Полный JSON базы</span>
+                      <span>Полный JSON всей базы</span>
                     </button>
                     <button
                       onClick={() => triggerExport('db')}
-                      className="flex items-center justify-center space-x-2 bg-slate-800 hover:bg-slate-900 dark:bg-dark-700 dark:hover:bg-dark-600 text-white font-bold py-2.5 px-3 rounded-xl text-xs transition-all shadow-md active:scale-95 border border-slate-700"
+                      className="flex items-center justify-center space-x-2 bg-slate-700 hover:bg-slate-800 dark:bg-dark-650 dark:hover:bg-dark-550 text-white font-bold py-2.5 px-3 rounded-xl text-xs transition-all shadow-md active:scale-95"
                       title="Скачать горячий ACID-снимок файла autotracker.db"
                     >
                       <Database className="w-4 h-4 text-emerald-400" />
                       <span>Файл SQLite (.db)</span>
                     </button>
                   </div>
-                </div>
-              ) : (
-                <div className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-500/10 space-y-2.5">
-                  <div className="flex items-center space-x-2 text-emerald-700 dark:text-emerald-300 font-bold text-xs">
-                    <Database className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    <span>Резервная копия моего гаража</span>
-                  </div>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Включает все ваши автомобили, полную историю ТО, все заправки, регламенты, комплекты шин и документы.
-                  </p>
-                  <button
-                    onClick={() => triggerExport('all')}
-                    className="w-full flex items-center justify-center space-x-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-all shadow-md shadow-emerald-500/20 active:scale-95"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>Скачать архив моего гаража (.json)</span>
-                  </button>
                 </div>
               )}
 

@@ -273,7 +273,7 @@ async def delete_vehicle(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    vehicle = await verify_vehicle_access(db, vehicle_id, current_user, require_owner=True)
+    vehicle = await verify_vehicle_access(db, vehicle_id, current_user, require_owner=True, allow_admin_override=True)
     await db.delete(vehicle)
     await db.commit()
     return None

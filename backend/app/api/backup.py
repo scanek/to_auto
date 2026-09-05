@@ -270,11 +270,13 @@ async def export_vehicle_backup(
 async def export_all_backup(
     token: Optional[str] = Query(None),
     authorization: Optional[str] = Header(None),
+    scope: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
 ):
     """
     Exports a complete JSON backup.
-    Admin: exports ALL users, settings, and vehicles across the entire database.
+    Admin (default): exports ALL users, settings, and vehicles across the entire database.
+    Admin (scope='mine' or 'garage'): exports ONLY vehicles owned by this admin.
     Regular user: exports ONLY vehicles owned by this user.
     """
     user = await resolve_user_from_header_or_query(authorization, token, db)
@@ -285,8 +287,9 @@ async def export_all_backup(
 
     all_users = []
     all_settings = []
+    is_full_admin_backup = bool(user.role == UserRole.ADMIN and scope not in ("mine", "garage"))
 
-    if user.role == UserRole.ADMIN:
+    if is_full_admin_backup:
         query = select(Vehicle).order_by(Vehicle.id.asc())
         filename = f"bortovoi_full_db_backup_{date_str}.json"
 
@@ -367,15 +370,15 @@ async def export_all_backup(
 
     payload = {
         "version": "1.0",
-        "type": "full_system_backup" if user.role == UserRole.ADMIN else "user_garage_backup",
+        "type": "full_system_backup" if is_full_admin_backup else "user_garage_backup",
         "exported_at": datetime.datetime.utcnow().isoformat(),
         "app": "Бортовой Журнал",
-        "is_admin_full_backup": bool(user.role == UserRole.ADMIN),
+        "is_admin_full_backup": is_full_admin_backup,
         "vehicles_count": len(all_data),
         "data": all_data,
     }
 
-    if user.role == UserRole.ADMIN:
+    if is_full_admin_backup:
         payload["users_count"] = len(all_users)
         payload["users"] = all_users
         payload["settings"] = all_settings
@@ -568,9 +571,10 @@ async def import_backup(
             if not v_raw or not isinstance(v_raw, dict):
                 continue
 
-            # Determine owner
+            # Determine owner: by default, all imported vehicles become the importer's vehicles (Option 1)
+            assign_to_me = data.get("assign_to_me", True)
             owner_id = current_user.id
-            if current_user.role == UserRole.ADMIN and v_raw.get("user_id"):
+            if not assign_to_me and current_user.role == UserRole.ADMIN and v_raw.get("user_id"):
                 orig_uid = v_raw.get("user_id")
                 if orig_uid in user_id_map:
                     owner_id = user_id_map[orig_uid]
