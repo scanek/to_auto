@@ -1,3 +1,20 @@
+export interface VinDecodeResult {
+  vin: string;
+  make: string;
+  model: string;
+  year?: number | null;
+  engine?: string | null;
+  displacement?: string | null;
+  horsepower?: number | null;
+  transmission?: string | null;
+  fuel_tank_capacity?: number | null;
+  drive_type?: 'fwd' | 'awd' | 'rwd' | string | null;
+  fuel_type?: string | null;
+  country?: string | null;
+  oil_spec?: string | null;
+  source: string;
+}
+
 export interface Vehicle {
   id: number;
   name?: string;

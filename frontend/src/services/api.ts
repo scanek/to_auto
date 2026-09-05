@@ -11,6 +11,7 @@ import {
   VehicleConsumable,
   User,
   AdminUser,
+  VinDecodeResult,
   AuthResponse,
   SetupStatus,
 } from '../types';
@@ -285,6 +286,8 @@ export const api = {
   // -------------------------------------------------------------
   // Vehicles
   // -------------------------------------------------------------
+  decodeVin: (vin: string) =>
+    request<VinDecodeResult>(`${API_BASE}/vehicles/decode-vin/${encodeURIComponent(vin)}`),
   getVehicles: async () => {
     if (localDB.isStandalone()) {
       return localDB.getVehicles();

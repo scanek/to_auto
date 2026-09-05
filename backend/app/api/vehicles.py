@@ -209,6 +209,30 @@ async def delete_vehicle_admin(
     await db.commit()
     return None
 
+@router.get("/decode-vin/{vin}")
+async def decode_vin(
+    vin: str,
+    current_user: Optional[User] = Depends(get_optional_current_user),
+):
+    """
+    Decodes a 17-character VIN code into vehicle specifications:
+    Make, Model, Year, Engine, Transmission, Fuel tank capacity, Drive type.
+    """
+    from app.services.vin_service import VinService
+    try:
+        res = await VinService.decode(vin)
+        return res
+    except ValueError as ve:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(ve),
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Ошибка расшифровки VIN: {e}",
+        )
+
 @router.get("/{vehicle_id}", response_model=VehicleResponse)
 async def get_vehicle(
     vehicle_id: int,
