@@ -1,4 +1,4 @@
-import{r as F,c as bu,g as de,R as A}from"./vendor-icons-DXYAZE3-.js";var r1={exports:{}},Et={},n1={exports:{}},i1={};/**
+import{r as F,c as bu,g as de,R as A}from"./vendor-icons-DF_Rys19.js";var r1={exports:{}},Et={},n1={exports:{}},i1={};/**
  * @license React
  * scheduler.production.min.js
  *
