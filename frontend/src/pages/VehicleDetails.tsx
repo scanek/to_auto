@@ -508,7 +508,10 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   return (
     <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6 animate-fadeIn">
       {/* Top Navigation & Vehicle Header */}
-      <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-4 sm:p-6 shadow-md dark:shadow-xl space-y-4 sm:space-y-6 transition-colors">
+      <div className="relative overflow-hidden bg-white dark:bg-dark-850/95 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] rounded-3xl p-4 sm:p-6 shadow-sm dark:shadow-2xl shadow-slate-900/5 space-y-4 sm:space-y-6 transition-all">
+        {/* Subtle Ambient Decorative Glows */}
+        <div className="absolute -top-24 -right-24 w-80 h-80 bg-brand-500/10 dark:bg-brand-500/[0.07] rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-sky-500/10 dark:bg-sky-500/[0.05] rounded-full blur-3xl pointer-events-none" />
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
           {/* Left: Car Title & Clean Passport Info */}
           <div className="flex items-center space-x-3 min-w-0">
@@ -525,8 +528,9 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                   {vehicle.name || `${vehicle.make} ${vehicle.model}`}
                 </h1>
                 {vehicle.license_plate && (
-                  <span className="text-[11px] sm:text-xs font-mono font-black px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30 tracking-wider flex-shrink-0">
-                    {vehicle.license_plate}
+                  <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-gradient-to-b from-white to-slate-100 dark:from-dark-800 dark:to-dark-900 text-slate-900 dark:text-white font-mono font-black text-xs tracking-wider shadow-sm select-none flex-shrink-0">
+                    <span className="text-[9px] text-slate-400 font-extrabold mr-0.5 tracking-tighter">RUS</span>
+                    <span>{vehicle.license_plate}</span>
                   </span>
                 )}
               </div>
@@ -548,7 +552,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               <>
                 <button
                   onClick={() => onOpenServiceModal('service')}
-                  className="px-3 sm:px-3.5 py-2 bg-brand-500 hover:bg-brand-600 active:scale-95 text-white font-bold rounded-xl text-xs flex items-center space-x-1.5 shadow-md shadow-brand-500/20 transition"
+                  className="px-3 sm:px-3.5 py-2 bg-gradient-to-r from-brand-500 to-sky-600 hover:from-brand-600 hover:to-sky-700 active:scale-95 text-white font-bold rounded-xl text-xs flex items-center space-x-1.5 shadow-md shadow-brand-500/20 transition-all"
                   title="Добавить выполненное ТО или ремонт"
                 >
                   <Plus className="w-3.5 h-3.5 flex-shrink-0" />
@@ -557,7 +561,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
 
                 <button
                   onClick={() => onOpenFuelModal()}
-                  className="px-3 sm:px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold rounded-xl text-xs flex items-center space-x-1.5 shadow-md shadow-emerald-600/20 transition"
+                  className="px-3 sm:px-3.5 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 text-white font-bold rounded-xl text-xs flex items-center space-x-1.5 shadow-md shadow-emerald-500/20 transition-all"
                   title="Добавить новую заправку"
                 >
                   <Fuel className="w-3.5 h-3.5 flex-shrink-0" />
@@ -569,7 +573,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
             {/* Tools and Settings Button (⚙️ Инструменты) */}
             <button
               onClick={() => setIsToolsModalOpen(true)}
-              className="px-3 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition border shadow-sm bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-dark-700 active:scale-95"
+              className="px-3 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all border shadow-sm bg-slate-100 hover:bg-slate-200 dark:bg-dark-800 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-300 border-slate-200/80 dark:border-white/[0.08] active:scale-95"
               title="Инструменты, экспорт, бирка под капот и управление авто"
               aria-label="Инструменты автомобиля"
             >
@@ -603,7 +607,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
 
         {/* StarLine S96 Live Telematics Dashboard */}
         {vehicle.telematics_provider === 'starline' ? (
-          <div className="p-3 sm:p-5 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-sky-500/10 via-brand-500/5 to-slate-900/5 dark:to-dark-900/40 border border-sky-500/30 dark:border-sky-500/20 shadow-lg shadow-sky-500/5 space-y-2.5 sm:space-y-3.5 transition-all">
+          <div className="relative overflow-hidden p-4 sm:p-5 rounded-3xl bg-gradient-to-br from-sky-500/[0.08] via-slate-900/[0.02] to-brand-500/[0.04] dark:from-sky-950/25 dark:via-dark-900/50 dark:to-brand-950/25 border border-sky-500/25 dark:border-sky-500/20 shadow-sm dark:shadow-xl space-y-3 sm:space-y-4 transition-all">
             {/* Header: Device Info & Sync Actions */}
             <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 pb-2 border-b border-sky-500/15 dark:border-dark-750">
               <div className="flex items-center space-x-2.5 sm:space-x-3 min-w-0">
@@ -981,24 +985,25 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
           </div>
         ) : null}
 
-        {/* Vehicle Stats Bar (5 cards cleanly distributed) */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 pt-3 sm:pt-4 border-t border-slate-200 dark:border-dark-750">
-          {/* Odometer Quick Editor */}
-          <div className="bg-slate-50 dark:bg-dark-900/80 p-2.5 sm:p-3 rounded-xl border border-slate-200 dark:border-dark-750">
-            <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block mb-0.5">
-              Пробег
-            </span>
+        {/* Vehicle Stats Bar (5 modern glassmorphic cards with icons) */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 pt-3 sm:pt-4 border-t border-slate-200/80 dark:border-white/[0.08]">
+          {/* 1. Odometer */}
+          <div className="bg-slate-50/80 dark:bg-dark-900/60 backdrop-blur-md p-3 sm:p-3.5 rounded-2xl border border-slate-200/70 dark:border-white/[0.05] hover:border-sky-500/30 dark:hover:border-sky-500/30 transition-all group flex flex-col justify-between shadow-sm">
+            <div className="flex items-center justify-between text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider">
+              <span>Пробег</span>
+              <Disc className="w-3.5 h-3.5 text-sky-500/70 group-hover:text-sky-500 transition-colors" />
+            </div>
             {editingOdometer && isOwner ? (
-              <div className="flex items-center space-x-1 mt-1">
+              <div className="flex items-center space-x-1 mt-1.5">
                 <input
                   type="number"
                   value={newOdometerVal}
                   onChange={(e) => setNewOdometerVal(parseFloat(e.target.value) || 0)}
-                  className="w-full bg-white dark:bg-dark-800 border border-brand-500 rounded px-1.5 py-0.5 text-xs text-slate-900 dark:text-white font-mono"
+                  className="w-full bg-white dark:bg-dark-800 border border-brand-500 rounded-lg px-2 py-1 text-xs text-slate-900 dark:text-white font-mono focus:outline-none"
                 />
                 <button
                   onClick={handleUpdateOdometer}
-                  className="p-1 bg-brand-500 text-white rounded hover:bg-brand-600 text-xs flex-shrink-0"
+                  className="p-1.5 bg-brand-500 text-white rounded-lg hover:bg-brand-600 text-xs flex-shrink-0 transition"
                 >
                   <Check className="w-3.5 h-3.5" />
                 </button>
@@ -1006,88 +1011,110 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
             ) : (
               <div
                 onClick={() => isOwner && setEditingOdometer(true)}
-                className={`flex items-center space-x-1.5 ${isOwner ? 'cursor-pointer group' : ''}`}
+                className={`flex items-baseline space-x-1 mt-1.5 ${isOwner ? 'cursor-pointer' : ''}`}
               >
-                <span className={`text-sm sm:text-base font-extrabold text-slate-900 dark:text-white font-mono ${isOwner ? 'group-hover:text-brand-500 transition-colors' : ''}`}>
-                  {Math.round(vehicle.current_odometer).toLocaleString('ru-RU')} {vehicle.distance_unit || 'км'}
+                <span className="text-sm sm:text-base font-black text-slate-900 dark:text-white font-mono tracking-tight group-hover:text-sky-500 transition-colors">
+                  {Math.round(vehicle.current_odometer).toLocaleString('ru-RU')}
                 </span>
+                <span className="text-[11px] font-semibold text-slate-400">{vehicle.distance_unit || 'км'}</span>
                 {isOwner && (
-                  <Edit2 className="w-3 h-3 text-slate-400 group-hover:text-brand-500 flex-shrink-0" />
+                  <Edit2 className="w-3 h-3 text-slate-300 dark:text-slate-600 group-hover:text-sky-500 transition-colors ml-auto" />
                 )}
               </div>
             )}
           </div>
 
-          {/* Engine Hours / Ownership Stat */}
+          {/* 2. Engine Hours / Ownership Stat */}
           {vehicle.track_engine_hours !== false ? (
-            <div className="bg-slate-50 dark:bg-dark-900/80 p-2.5 sm:p-3 rounded-xl border border-slate-200 dark:border-dark-750">
-              <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block mb-0.5">
-                Моточасы
-              </span>
+            <div className="bg-slate-50/80 dark:bg-dark-900/60 backdrop-blur-md p-3 sm:p-3.5 rounded-2xl border border-slate-200/70 dark:border-white/[0.05] hover:border-amber-500/30 dark:hover:border-amber-500/30 transition-all group flex flex-col justify-between shadow-sm">
+              <div className="flex items-center justify-between text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider">
+                <span>Моточасы</span>
+                <CalendarClock className="w-3.5 h-3.5 text-amber-500/70 group-hover:text-amber-500 transition-colors" />
+              </div>
               <div
                 onClick={() => isOwner && setIsQuickMileageOpen(true)}
-                className={`flex items-center space-x-1.5 mt-1 ${isOwner ? 'cursor-pointer group' : ''}`}
+                className={`flex items-baseline space-x-1 mt-1.5 ${isOwner ? 'cursor-pointer' : ''}`}
               >
-                <span className={`text-sm sm:text-base font-extrabold text-slate-900 dark:text-white font-mono ${isOwner ? 'group-hover:text-brand-500 transition-colors' : ''}`}>
-                  {vehicle.current_engine_hours ? `${Math.round(vehicle.current_engine_hours)} м/ч` : '0 м/ч'}
+                <span className="text-sm sm:text-base font-black text-amber-600 dark:text-amber-400 font-mono tracking-tight">
+                  {vehicle.current_engine_hours ? Math.round(vehicle.current_engine_hours) : '0'}
                 </span>
+                <span className="text-[11px] font-semibold text-slate-400">м/ч</span>
                 {isOwner && (
-                  <Edit2 className="w-3 h-3 text-slate-400 group-hover:text-brand-500 flex-shrink-0" />
+                  <Edit2 className="w-3 h-3 text-slate-300 dark:text-slate-600 group-hover:text-amber-500 transition-colors ml-auto" />
                 )}
               </div>
             </div>
           ) : (
-            <div className="bg-slate-50 dark:bg-dark-900/80 p-2.5 sm:p-3 rounded-xl border border-slate-200 dark:border-dark-750">
-              <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block mb-0.5">
+            <div className="bg-slate-50/80 dark:bg-dark-900/60 backdrop-blur-md p-3 sm:p-3.5 rounded-2xl border border-slate-200/70 dark:border-white/[0.05] flex flex-col justify-between shadow-sm">
+              <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider">
                 Записей в истории
-              </span>
-              <span className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white font-mono">
+              </div>
+              <span className="text-sm sm:text-base font-black text-slate-900 dark:text-white font-mono mt-1.5">
                 {serviceRecords.length} ТО / работ
               </span>
             </div>
           )}
 
-          <div className="bg-slate-50 dark:bg-dark-900/80 p-2.5 sm:p-3 rounded-xl border border-slate-200 dark:border-dark-750">
-            <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block mb-0.5">
-              Средний расход
-            </span>
-            <span className="text-sm sm:text-base font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
-              {analytics?.avg_fuel_consumption ? (
-                `${analytics.avg_fuel_consumption} л/100км`
-              ) : fuelLogs.length === 1 ? (
-                <span className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold" title="Первая заправка служит базовой точкой отсчета. При следующей заправке будет рассчитан расход">
-                  Точка отсчета 📍
-                </span>
-              ) : (
-                '—'
+          {/* 3. Fuel Consumption */}
+          <div className="bg-slate-50/80 dark:bg-dark-900/60 backdrop-blur-md p-3 sm:p-3.5 rounded-2xl border border-slate-200/70 dark:border-white/[0.05] hover:border-emerald-500/30 dark:hover:border-emerald-500/30 transition-all group flex flex-col justify-between shadow-sm">
+            <div className="flex items-center justify-between text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider">
+              <span>Ср. расход</span>
+              <Fuel className="w-3.5 h-3.5 text-emerald-500/70 group-hover:text-emerald-500 transition-colors" />
+            </div>
+            <div className="mt-1.5">
+              <span className="text-sm sm:text-base font-black text-emerald-600 dark:text-emerald-400 font-mono tracking-tight">
+                {analytics?.avg_fuel_consumption ? (
+                  `${analytics.avg_fuel_consumption} л`
+                ) : fuelLogs.length === 1 ? (
+                  <span className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold" title="Первая заправка служит базовой точкой отсчета. При следующей заправке будет рассчитан расход">
+                    Точка отсчета 📍
+                  </span>
+                ) : (
+                  '—'
+                )}
+              </span>
+              {analytics?.avg_fuel_consumption && (
+                <span className="text-[10px] font-semibold text-slate-400 ml-1">/ 100 км</span>
               )}
-            </span>
+            </div>
           </div>
 
-          <div className="bg-slate-50 dark:bg-dark-900/80 p-2.5 sm:p-3 rounded-xl border border-slate-200 dark:border-dark-750">
-            <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block mb-0.5">
-              Все расходы
-            </span>
-            <span className="text-sm sm:text-base font-extrabold text-brand-600 dark:text-brand-400 font-mono">
-              {Math.round(analytics?.total_spend || 0).toLocaleString('ru-RU')} {vehicle.currency || '₽'}
-            </span>
+          {/* 4. Total Spent */}
+          <div className="bg-slate-50/80 dark:bg-dark-900/60 backdrop-blur-md p-3 sm:p-3.5 rounded-2xl border border-slate-200/70 dark:border-white/[0.05] hover:border-brand-500/30 dark:hover:border-brand-500/30 transition-all group flex flex-col justify-between shadow-sm">
+            <div className="flex items-center justify-between text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider">
+              <span>Все расходы</span>
+              <CreditCard className="w-3.5 h-3.5 text-brand-500/70 group-hover:text-brand-500 transition-colors" />
+            </div>
+            <div className="mt-1.5 flex items-baseline space-x-1">
+              <span className="text-sm sm:text-base font-black text-brand-600 dark:text-brand-400 font-mono tracking-tight">
+                {Math.round(analytics?.total_spend || 0).toLocaleString('ru-RU')}
+              </span>
+              <span className="text-[11px] font-semibold text-slate-400">{vehicle.currency || '₽'}</span>
+            </div>
           </div>
 
-          <div className="bg-slate-50 dark:bg-dark-900/80 p-2.5 sm:p-3 rounded-xl border border-slate-200 dark:border-dark-750 col-span-2 sm:col-span-1">
-            <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block mb-0.5">
-              Стоимость 1 км
-            </span>
-            <span className="text-sm sm:text-base font-extrabold text-amber-600 dark:text-amber-400 font-mono">
-              {analytics?.cost_per_distance_unit
-                ? `${analytics.cost_per_distance_unit} ${vehicle.currency || '₽'}/${vehicle.distance_unit || 'км'}`
-                : '—'}
-            </span>
+          {/* 5. Cost Per Distance */}
+          <div className="bg-slate-50/80 dark:bg-dark-900/60 backdrop-blur-md p-3 sm:p-3.5 rounded-2xl border border-slate-200/70 dark:border-white/[0.05] hover:border-amber-500/30 dark:hover:border-amber-500/30 transition-all group flex flex-col justify-between shadow-sm col-span-2 sm:col-span-1">
+            <div className="flex items-center justify-between text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider">
+              <span>Стоимость 1 км</span>
+              <BarChart3 className="w-3.5 h-3.5 text-amber-500/70 group-hover:text-amber-500 transition-colors" />
+            </div>
+            <div className="mt-1.5 flex items-baseline space-x-1">
+              <span className="text-sm sm:text-base font-black text-amber-600 dark:text-amber-400 font-mono tracking-tight">
+                {analytics?.cost_per_distance_unit
+                  ? `${analytics.cost_per_distance_unit}`
+                  : '—'}
+              </span>
+              {analytics?.cost_per_distance_unit && (
+                <span className="text-[10px] font-semibold text-slate-400">{vehicle.currency || '₽'}/{vehicle.distance_unit || 'км'}</span>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Modern 7-Column Segmented Tab Bar (Clean & Minimal without counter bubbles) */}
-      <div className="grid grid-cols-7 gap-1 p-1 bg-slate-200/70 dark:bg-dark-800 border border-slate-200 dark:border-dark-750 rounded-2xl">
+      {/* Modern 7-Column Segmented Tab Bar (iOS / macOS Floating Capsule Design) */}
+      <div className="grid grid-cols-7 gap-1 sm:gap-1.5 p-1.5 bg-slate-100/90 dark:bg-dark-900/90 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.06] rounded-2xl shadow-inner">
         {navTabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id || (tab.id === 'service' && ['service', 'repairs', 'upgrades'].includes(activeTab));
@@ -1095,16 +1122,16 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 py-1.5 sm:py-2.5 px-0.5 sm:px-1 rounded-xl font-bold transition-all ${
+              className={`relative flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 py-1.5 sm:py-2.5 px-0.5 sm:px-2 rounded-xl font-bold transition-all duration-200 ${
                 isActive
-                  ? 'bg-brand-500 text-white shadow-md shadow-brand-500/25 scale-[1.02]'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-dark-750/50'
+                  ? 'bg-gradient-to-b from-brand-500 to-brand-600 text-white shadow-md shadow-brand-500/25 scale-[1.01]'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/70 dark:hover:bg-white/[0.04]'
               }`}
               title={tab.label}
             >
               <Icon className="w-4 h-4 sm:w-4 sm:h-4 flex-shrink-0" />
-              <span className="hidden sm:inline text-xs truncate">{tab.label}</span>
-              <span className="sm:hidden text-[9px] leading-tight truncate max-w-full text-center mt-0.5">{tab.shortLabel}</span>
+              <span className="hidden sm:inline text-xs truncate font-bold">{tab.label}</span>
+              <span className="sm:hidden text-[9.5px] leading-tight truncate max-w-full text-center mt-0.5 font-bold">{tab.shortLabel}</span>
             </button>
           );
         })}
@@ -1243,7 +1270,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                   return (
                     <div
                       key={rec.id}
-                      className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 hover:border-slate-300 dark:hover:border-dark-700 rounded-2xl p-3.5 sm:p-4 shadow-sm transition-all space-y-2.5"
+                      className="bg-white dark:bg-dark-850/90 backdrop-blur-md border border-slate-200/80 dark:border-white/[0.07] hover:border-brand-500/30 dark:hover:border-white/15 rounded-2xl p-3.5 sm:p-4 shadow-sm hover:shadow-md transition-all space-y-2.5 group"
                     >
                       {/* Compact Header: Date, Mileage, Title, Tags, Price, Actions */}
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
