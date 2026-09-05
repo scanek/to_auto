@@ -6,6 +6,8 @@ import {
   DocumentNote,
   VehicleAnalytics,
   TyreSet,
+  TyreRotatePayload,
+  PublicBookletData,
   VehicleConsumable,
   User,
   AdminUser,
@@ -533,6 +535,18 @@ export const api = {
       }
     );
   },
+  rotateTyreSet: (id: number, payload: TyreRotatePayload) =>
+    request<TyreSet>(
+      `${API_BASE}/tyres/${id}/rotate`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      },
+      {
+        description: `Ротация шин #${id}`,
+        entityType: 'tyre',
+      }
+    ),
 
   // -------------------------------------------------------------
   // Consumables & Specifications (Шпаргалка ТО)
@@ -704,6 +718,23 @@ export const api = {
       window.location.href = `${API_BASE}/export/excel/${vehicleId}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
     }
   },
+
+  // -------------------------------------------------------------
+  // Public Digital Service Booklet
+  // -------------------------------------------------------------
+  getPublicBooklet: (token: string) =>
+    request<PublicBookletData>(`${API_BASE}/public/booklet/${token}`),
+  updatePublicBookletSettings: (
+    vehicleId: number,
+    settings: { enabled: boolean; show_costs: boolean; regenerate_token?: boolean }
+  ) =>
+    request<{ enabled: boolean; show_costs: boolean; public_token: string }>(
+      `${API_BASE}/vehicles/${vehicleId}/public-booklet`,
+      {
+        method: 'POST',
+        body: JSON.stringify(settings),
+      }
+    ),
 
   // -------------------------------------------------------------
   // Synchronize Offline Queue

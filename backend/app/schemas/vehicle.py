@@ -22,6 +22,10 @@ class VehicleBase(BaseModel):
     fuel_tank_capacity: Optional[float] = 55.0
     photo_url: Optional[str] = None
     notes: Optional[str] = None
+    drive_type: Optional[str] = "fwd" # "fwd", "awd", "rwd"
+    public_booklet_token: Optional[str] = None
+    public_booklet_enabled: bool = False
+    public_show_costs: bool = False
 
     # Telematics fields
     telematics_provider: Optional[str] = "none"
@@ -71,6 +75,10 @@ class VehicleUpdate(BaseModel):
     currency: Optional[str] = None
     photo_url: Optional[str] = None
     notes: Optional[str] = None
+    drive_type: Optional[str] = None
+    public_booklet_token: Optional[str] = None
+    public_booklet_enabled: Optional[bool] = None
+    public_show_costs: Optional[bool] = None
     starline_auto_sync_interval_minutes: Optional[int] = None
     telematics_auto_sync: Optional[bool] = None
 

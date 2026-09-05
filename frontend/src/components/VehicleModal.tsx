@@ -22,6 +22,7 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
     model: '',
     year: new Date().getFullYear(),
     engine: '',
+    drive_type: 'fwd',
     oil_spec: '',
     license_plate: '',
     vin: '',
@@ -50,6 +51,7 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
         model: vehicle.model || '',
         year: vehicle.year || new Date().getFullYear(),
         engine: vehicle.engine || '',
+        drive_type: (vehicle as any).drive_type || 'fwd',
         oil_spec: vehicle.oil_spec || '',
         license_plate: vehicle.license_plate || '',
         vin: vehicle.vin || '',
@@ -74,6 +76,7 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
         model: '',
         year: new Date().getFullYear(),
         engine: '',
+        drive_type: 'fwd',
         oil_spec: '',
         license_plate: '',
         vin: '',
@@ -258,6 +261,21 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
                 onChange={(e) => setFormData({ ...formData, engine: e.target.value })}
                 className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-300 dark:border-dark-750 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
               />
+            </div>
+            <div>
+              <label htmlFor="modal-drive-type" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Тип привода (для ротации колес)
+              </label>
+              <select
+                id="modal-drive-type"
+                value={formData.drive_type}
+                onChange={(e) => setFormData({ ...formData, drive_type: e.target.value })}
+                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-300 dark:border-dark-750 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-medium"
+              >
+                <option value="fwd">Передний привод (FWD)</option>
+                <option value="awd">Полный привод (AWD / 4WD)</option>
+                <option value="rwd">Задний привод (RWD)</option>
+              </select>
             </div>
           </div>
 

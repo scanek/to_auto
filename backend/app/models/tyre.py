@@ -37,6 +37,9 @@ class TyreSet(Base):
     quantity = Column(Float, default=4.0)
     price_per_unit = Column(Float, default=0.0)
     total_price = Column(Float, default=0.0)
+    last_rotation_km = Column(Float, nullable=True) # Пробег последней ротации/перестановки
+    rotation_interval_km = Column(Float, default=10000.0) # Рекомендуемый интервал перестановки
+    is_directional = Column(Boolean, default=False) # Направленный рисунок протектора
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     vehicle = relationship("Vehicle", back_populates="tyre_sets")

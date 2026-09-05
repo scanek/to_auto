@@ -17,9 +17,15 @@ import { InstallAppModal } from './components/InstallAppModal';
 import { AuthModal } from './components/AuthModal';
 import { NotificationSettingsModal } from './components/NotificationSettingsModal';
 import { SettingsModal } from './components/SettingsModal';
+import { PublicServiceBooklet } from './pages/PublicServiceBooklet';
 import { Github, ZapOff, RefreshCw, CheckCircle2, AlertTriangle, ShieldAlert, Info, X } from 'lucide-react';
 
 export function App() {
+  // Public service booklet route (Avito / Auto.ru sharing)
+  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/booklet/')) {
+    return <PublicServiceBooklet />;
+  }
+
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [loading, setLoading] = useState(true);

@@ -7,7 +7,7 @@ from app.db.session import get_db
 from app.models.user import User
 from app.models.vehicle import Vehicle
 from app.models.tyre import TyreSet
-from app.schemas.tyre import TyreSetCreate, TyreSetUpdate, TyreSetResponse
+from app.schemas.tyre import TyreSetCreate, TyreSetUpdate, TyreSetResponse, TyreRotatePayload
 from app.core.security import get_current_user, get_optional_current_user
 from app.services.auth_helper import verify_vehicle_access
 
@@ -120,3 +120,49 @@ async def delete_tyre_set(
     await db.delete(tyre)
     await db.commit()
     return None
+
+@router.post("/{tyre_id}/rotate", response_model=TyreSetResponse)
+async def rotate_tyre_set(
+    tyre_id: int,
+    payload: TyreRotatePayload,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(TyreSet).where(TyreSet.id == tyre_id))
+    tyre = result.scalar_one_or_none()
+    if not tyre:
+        raise HTTPException(status_code=404, detail="Комплект шин не найден")
+
+    await verify_vehicle_access(db, tyre.vehicle_id, current_user, require_owner=True)
+
+    tyre.last_rotation_km = payload.current_odometer
+
+    if payload.swap_tpms and (tyre.tpms_fl_id or tyre.tpms_fr_id or tyre.tpms_rl_id or tyre.tpms_rr_id):
+        old_fl = tyre.tpms_fl_id
+        old_fr = tyre.tpms_fr_id
+        old_rl = tyre.tpms_rl_id
+        old_rr = tyre.tpms_rr_id
+
+        pattern = payload.drive_type.lower()
+        if pattern == "fwd":
+            # Forward cross: Front to same rear, rear cross to opposite front
+            tyre.tpms_rl_id = old_fl
+            tyre.tpms_rr_id = old_fr
+            tyre.tpms_fl_id = old_rr
+            tyre.tpms_fr_id = old_rl
+        elif pattern in ("awd", "4wd", "rwd"):
+            # Rearward cross: Rear to same front, front cross to opposite rear
+            tyre.tpms_fl_id = old_rl
+            tyre.tpms_fr_id = old_rr
+            tyre.tpms_rl_id = old_fr
+            tyre.tpms_rr_id = old_fl
+        else:
+            # Directional: front and rear swap on same side
+            tyre.tpms_fl_id = old_rl
+            tyre.tpms_rl_id = old_fl
+            tyre.tpms_fr_id = old_rr
+            tyre.tpms_rr_id = old_fr
+
+    await db.commit()
+    await db.refresh(tyre)
+    return TyreSetResponse.model_validate(tyre)

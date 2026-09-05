@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from app.db.session import get_db
-from app.models import Vehicle, ServiceRecord, FuelLog, MaintenancePlan, TyreSet, DocumentNote, User
+from app.models import Vehicle, ServiceRecord, FuelLog, MaintenancePlan, TyreSet, DocumentNote, User, VehicleConsumable
 from app.services.pdf_service import generate_service_booklet_html
 from app.services.excel_service import generate_vehicle_excel
 from app.services.analytics_service import compute_vehicle_analytics
@@ -90,7 +90,14 @@ async def export_service_booklet(
     )
     tyres = ty_res.scalars().all()
 
-    html_content = generate_service_booklet_html(vehicle, service_records, tyres=tyres)
+    cons_res = await db.execute(
+        select(VehicleConsumable)
+        .where(VehicleConsumable.vehicle_id == vehicle_id)
+        .order_by(VehicleConsumable.order_index.asc())
+    )
+    consumables = cons_res.scalars().all()
+
+    html_content = generate_service_booklet_html(vehicle, service_records, tyres=tyres, consumables=consumables)
     
     return Response(
         content=html_content,

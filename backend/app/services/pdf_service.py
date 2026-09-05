@@ -3,17 +3,64 @@ from app.models.vehicle import Vehicle
 from app.models.service import ServiceRecord
 from app.models.tyre import TyreSet
 
+def parse_dot_age(dot_code: str):
+    if not dot_code:
+        return None
+    # Strip any non-digits
+    digits = ''.join(c for c in dot_code if c.isdigit())
+    if len(digits) == 4:
+        try:
+            week = int(digits[:2])
+            year_suffix = int(digits[2:])
+            full_year = 2000 + year_suffix if year_suffix < 80 else 1900 + year_suffix
+            now = datetime.datetime.utcnow()
+            approx_date = datetime.datetime(full_year, 1, 1) + datetime.timedelta(weeks=max(1, min(week, 52)) - 1)
+            age_years = (now - approx_date).days / 365.25
+            if age_years < 3.0:
+                status = "fresh"
+                label = f"{week:02d}/{year_suffix:02d} (Свежая, {age_years:.1f} г.)"
+                color = "#166534"
+                bg = "#dcfce7"
+            elif age_years < 5.0:
+                status = "normal"
+                label = f"{week:02d}/{year_suffix:02d} (Норма, {age_years:.1f} г.)"
+                color = "#854d0e"
+                bg = "#fef9c3"
+            elif age_years < 7.0:
+                status = "attention"
+                label = f"{week:02d}/{year_suffix:02d} (Внимание, {age_years:.1f} г.)"
+                color = "#c2410c"
+                bg = "#ffedd5"
+            else:
+                status = "critical"
+                label = f"{week:02d}/{year_suffix:02d} (Старая > 7 лет!)"
+                color = "#991b1b"
+                bg = "#fee2e2"
+            return {"week": week, "year": full_year, "age_years": age_years, "status": status, "label": label, "color": color, "bg": bg}
+        except Exception:
+            return None
+    return None
+
 def generate_service_booklet_html(
     vehicle: Vehicle,
     records: list[ServiceRecord],
-    tyres: list[TyreSet] = None
+    tyres: list[TyreSet] = None,
+    consumables: list = None,
+    hide_costs: bool = False
 ) -> str:
     """
     Generates a print-ready, professional HTML Service Booklet (Сервисная книжка).
-    Includes vehicle specifications, seasonal tyre sets, and chronological maintenance history.
+    Includes vehicle specifications, seasonal tyre sets, consumables passport, and chronological maintenance history.
     """
     date_str = datetime.datetime.utcnow().strftime("%d.%m.%Y")
     
+    drive_names = {
+        "fwd": "Передний (FWD)",
+        "awd": "Полный (AWD / 4WD)",
+        "rwd": "Задний (RWD)",
+    }
+    drive_type_display = drive_names.get((vehicle.drive_type or "fwd").lower(), vehicle.drive_type or "Передний (FWD)")
+
     # -------------------------------------------------------------
     # 1. Service Records Table
     # -------------------------------------------------------------
@@ -22,7 +69,7 @@ def generate_service_booklet_html(
 
     for idx, r in enumerate(records, 1):
         r_date = r.date.strftime("%d.%m.%Y") if r.date else "-"
-        r_cost = f"{r.total_cost:,.2f} {vehicle.currency}".replace(",", " ")
+        r_cost = f"{r.total_cost:,.2f} {vehicle.currency}".replace(",", " ") if r.total_cost else f"0.00 {vehicle.currency}"
         total_cost_all += r.total_cost or 0.0
 
         type_badge = {
@@ -41,13 +88,19 @@ def generate_service_booklet_html(
                 art_info = f" [арт: {it.part_number}]" if it.part_number else ""
                 brand_info = f" ({it.brand})" if it.brand else ""
                 unit_str = it.unit or "шт"
-                price_str = f"{it.quantity} {unit_str} × {it.unit_price:,.0f} {vehicle.currency}".replace(",", " ") if (it.quantity and it.quantity > 1 and it.unit_price) else f"{it.total_price:,.0f} {vehicle.currency}".replace(",", " ")
+                if not hide_costs:
+                    price_str = f" — {it.quantity} {unit_str} × {it.unit_price:,.0f} {vehicle.currency}".replace(",", " ") if (it.quantity and it.quantity > 1 and it.unit_price) else f" — {it.total_price:,.0f} {vehicle.currency}".replace(",", " ") if it.total_price else ""
+                else:
+                    qty_str = f" ({it.quantity} {unit_str})" if it.quantity and it.quantity > 1 else ""
+                    price_str = qty_str
                 items_list.append(
-                    f"• <strong>{it.name}</strong>{brand_info}{art_info}{store_info} — {price_str}"
+                    f"• <strong>{it.name}</strong>{brand_info}{art_info}{store_info}{price_str}"
                 )
             items_html = f'<div class="items-list">{"<br>".join(items_list)}</div>'
 
         notes_html = f'<div class="record-notes">{r.notes or r.description}</div>' if (r.notes or r.description) else ''
+
+        cost_td = f'<td class="text-right font-bold">{r_cost}</td>' if not hide_costs else ''
 
         table_rows += f"""
         <tr>
@@ -63,7 +116,7 @@ def generate_service_booklet_html(
                 {items_html}
                 {notes_html}
             </td>
-            <td class="text-right font-bold">{r_cost}</td>
+            {cost_td}
         </tr>
         """
 
@@ -94,31 +147,48 @@ def generate_service_booklet_html(
                 t_pdate = t.purchase_date.strftime("%d.%m.%Y") if hasattr(t.purchase_date, "strftime") else str(t.purchase_date)[:10]
                 t_purchase_parts.append(f"Куплены: <strong>{t_pdate}</strong>")
             if t.dot_code:
-                t_purchase_parts.append(f"DOT: <strong>{t.dot_code}</strong>")
+                dot_info = parse_dot_age(t.dot_code)
+                if dot_info:
+                    t_purchase_parts.append(f'DOT: <strong style="background:{dot_info["bg"]}; color:{dot_info["color"]}; padding:1px 4px; border-radius:3px;">{dot_info["label"]}</strong>')
+                else:
+                    t_purchase_parts.append(f"DOT: <strong>{t.dot_code}</strong>")
             t_purchase_line = f"<div>{' • '.join(t_purchase_parts)}</div>" if t_purchase_parts else ""
 
             # Tyre pricing
             tyre_price_str = ""
-            if t.total_price and t.total_price > 0:
+            if not hide_costs and t.total_price and t.total_price > 0:
                 qty_txt = f"{int(t.quantity)} шт." if t.quantity else "4 шт."
                 tyre_price_str = f"<div>Стоимость шин: <strong>{t.total_price:,.0f} {vehicle.currency}</strong> ({qty_txt})</div>".replace(",", " ")
+
+            # TPMS sensor detail
+            tpms_details = []
+            if t.tpms_sensors:
+                tpms_details.append(f"Датчики: {t.tpms_sensors}")
+            if t.tpms_frequency:
+                tpms_details.append(f"Частота: {t.tpms_frequency}")
+            if t.tpms_pressure_bar:
+                tpms_details.append(f"Давление: {t.tpms_pressure_bar} bar")
+            tpms_info_str = f"<div>🎛️ <strong>TPMS:</strong> {' • '.join(tpms_details)}</div>" if tpms_details else ""
+
+            # Wheel rotation info
+            rot_info_str = ""
+            if t.last_rotation_km:
+                rot_info_str = f"<div>🔄 <strong>Ротация колес:</strong> на пробеге {int(t.last_rotation_km):,} {vehicle.distance_unit} (интервал {int(t.rotation_interval_km or 10000):,} км)</div>".replace(",", " ")
 
             # Rims info
             if t.has_separate_rims:
                 r_model = t.rims_brand_model or "Отдельные диски"
                 r_size = f" ({t.rims_size})" if t.rims_size else ""
                 r_date = f", куплены {t.rims_purchase_date.strftime('%d.%m.%Y')}" if (t.rims_purchase_date and hasattr(t.rims_purchase_date, "strftime")) else ""
-                r_tpms = f", TPMS: {t.tpms_sensors}" if t.tpms_sensors else ""
-                r_price = f" — {t.rims_price:,.0f} {vehicle.currency}".replace(",", " ") if (t.rims_price and t.rims_price > 0) else ""
-                rims_line = f'<div style="grid-column: span 2; margin-top: 4px; padding-top: 4px; border-top: 1px dashed #cbd5e1; color: #92400e;">🔘 <strong>Диски:</strong> {r_model}{r_size}{r_date}{r_tpms}{r_price}</div>'
+                r_price = f" — {t.rims_price:,.0f} {vehicle.currency}".replace(",", " ") if (not hide_costs and t.rims_price and t.rims_price > 0) else ""
+                rims_line = f'<div style="grid-column: span 2; margin-top: 4px; padding-top: 4px; border-top: 1px dashed #cbd5e1; color: #92400e;">🔘 <strong>Диски:</strong> {r_model}{r_size}{r_date}{r_price}</div>'
             else:
                 rims_model = t.rims_brand_model if t.rims_brand_model else "Штатные / заводские диски"
                 rims_size = f" ({t.rims_size})" if t.rims_size else ""
-                rims_tpms = f", TPMS: {t.tpms_sensors}" if t.tpms_sensors else ""
-                rims_line = f'<div style="grid-column: span 2; margin-top: 4px; padding-top: 4px; border-top: 1px dashed #e2e8f0; color: #475569;">🔘 <strong>Диски:</strong> {rims_model}{rims_size}{rims_tpms}</div>'
+                rims_line = f'<div style="grid-column: span 2; margin-top: 4px; padding-top: 4px; border-top: 1px dashed #e2e8f0; color: #475569;">🔘 <strong>Диски:</strong> {rims_model}{rims_size}</div>'
 
             total_set_cost = (t.total_price or 0.0) + (t.rims_price or 0.0 if t.has_separate_rims else 0.0)
-            total_cost_line = f'<div style="grid-column: span 2; font-weight: 700; color: #0284c7; margin-top: 2px;">💰 Итого за комплект: {total_set_cost:,.0f} {vehicle.currency}</div>'.replace(",", " ") if total_set_cost > 0 else ""
+            total_cost_line = f'<div style="grid-column: span 2; font-weight: 700; color: #0284c7; margin-top: 2px;">💰 Итого за комплект: {total_set_cost:,.0f} {vehicle.currency}</div>'.replace(",", " ") if (not hide_costs and total_set_cost > 0) else ""
 
             tyre_brand_display = t.brand_model if t.brand_model else "Шины"
             tyre_size_display = f" ({t.size})" if t.size else ""
@@ -136,6 +206,8 @@ def generate_service_booklet_html(
                     <div>Пробег на резине: <strong>{int(t.current_km or 0):,} км</strong></div>
                     <div>Остаток протектора: <strong>{t.tread_depth_mm or 0} мм</strong></div>
                     {t_purchase_line}
+                    {rot_info_str}
+                    {tpms_info_str}
                     {tyre_price_str}
                     {f'<div>Хранение: <em>{t.storage_location}</em></div>' if t.storage_location else ''}
                     {rims_line}
@@ -151,6 +223,56 @@ def generate_service_booklet_html(
         </div>
         """
 
+    # -------------------------------------------------------------
+    # 3. Consumables Passport Section
+    # -------------------------------------------------------------
+    consumables_html = ""
+    if consumables and len(consumables) > 0:
+        cat_names = {
+            "engine": "Двигатель и масло",
+            "filters": "Фильтры",
+            "transmission": "Трансмиссия и КПП",
+            "brakes": "Тормозная система",
+            "cooling": "Охлаждение",
+            "electrical": "Электрика и свечи",
+            "wipers": "Стеклоочистители",
+            "other": "Прочее",
+        }
+        cons_rows = ""
+        for c in consumables:
+            cat_label = cat_names.get(c.category, c.category)
+            oem_str = f"<code>{c.oem_part_number}</code>" if c.oem_part_number else "—"
+            after_str = f"<small>{c.aftermarket_parts}</small>" if c.aftermarket_parts else "—"
+            cons_rows += f"""
+            <tr>
+                <td><span class="badge badge-tag">{cat_label}</span></td>
+                <td><strong>{c.name}</strong></td>
+                <td>{c.specification or '—'}</td>
+                <td>{oem_str}</td>
+                <td>{after_str}</td>
+                <td><small>{c.replacement_interval or '—'}</small></td>
+            </tr>
+            """
+
+        consumables_html = f"""
+        <div class="section-title">Паспорт расходных материалов и спецификаций</div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 110px;">Категория</th>
+                    <th>Наименование</th>
+                    <th>Спецификация / Объем</th>
+                    <th style="width: 110px;">OEM Артикул</th>
+                    <th>Аналоги / Заменители</th>
+                    <th style="width: 140px;">Регламент замены</th>
+                </tr>
+            </thead>
+            <tbody>
+                {cons_rows}
+            </tbody>
+        </table>
+        """
+
     purchase_info = "—"
     if vehicle.purchase_date:
         p_date = vehicle.purchase_date.strftime("%d.%m.%Y") if hasattr(vehicle.purchase_date, "strftime") else str(vehicle.purchase_date)[:10]
@@ -158,6 +280,18 @@ def generate_service_booklet_html(
         purchase_info = f"{p_date}{p_odo}".replace(",", " ")
     elif vehicle.starting_odometer:
         purchase_info = f"С {int(vehicle.starting_odometer):,} {vehicle.distance_unit}".replace(",", " ")
+
+    telematics_badge = ""
+    if vehicle.telematics_provider in ("starline", "can_obd", "webhook") and vehicle.starline_last_sync:
+        sync_txt = vehicle.starline_last_sync.strftime("%d.%m.%Y %H:%M")
+        telematics_badge = f'<div style="grid-column: span 3; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 6px 12px; font-size: 11px; color: #065f46; font-weight: 600; display: flex; align-items: center; gap: 8px;">🛡️ <strong>Пробег верифицирован телематикой CAN / OBD StarLine</strong> • Последняя синхронизация: {sync_txt}</div>'
+
+    cost_th = '<th style="width: 105px;" class="text-right">Стоимость</th>' if not hide_costs else ''
+    total_summary_html = (
+        f'<span>Итого затраты на обслуживание: {formatted_total_cost}</span>'
+        if not hide_costs
+        else '<span>Финансовые затраты: скрыты владельцем автомобиля</span>'
+    )
 
     html = f"""<!DOCTYPE html>
 <html lang="ru">
@@ -275,7 +409,7 @@ def generate_service_booklet_html(
             width: 100%;
             border-collapse: collapse;
             font-size: 11px;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }}
         th {{
             background: #0284c7;
@@ -341,6 +475,13 @@ def generate_service_booklet_html(
             cursor: pointer;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }}
+        code {{
+            background: #f1f5f9;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: monospace;
+            color: #0369a1;
+        }}
         @media print {{
             .no-print {{ display: none; }}
             body {{ padding: 0; }}
@@ -355,7 +496,7 @@ def generate_service_booklet_html(
     <div class="header">
         <div>
             <div class="logo-title">Электронная сервисная книжка</div>
-            <div style="font-size: 12px; color: #64748b;">Журнал технического обслуживания, ремонтов и оснащения</div>
+            <div style="font-size: 12px; color: #64748b;">Журнал технического обслуживания, спецификаций и оснащения</div>
         </div>
         <div class="header-meta">
             Сформировано: {date_str}<br>
@@ -377,8 +518,8 @@ def generate_service_booklet_html(
             <span class="value">{vehicle.vin or 'Не указан'}</span>
         </div>
         <div class="item">
-            <span class="label">Момент покупки / ввода</span>
-            <span class="value">{purchase_info}</span>
+            <span class="label">Привод</span>
+            <span class="value">{drive_type_display}</span>
         </div>
         <div class="item">
             <span class="label">Текущий пробег</span>
@@ -388,11 +529,18 @@ def generate_service_booklet_html(
             <span class="label">Двигатель / Моточасы</span>
             <span class="value">{vehicle.engine or '—'}{f' • {int(vehicle.current_engine_hours)} м/ч' if vehicle.current_engine_hours else ''}</span>
         </div>
-        <div class="item" style="grid-column: span 3;">
+        <div class="item">
+            <span class="label">Ввод в эксплуатацию</span>
+            <span class="value">{purchase_info}</span>
+        </div>
+        <div class="item" style="grid-column: span 2;">
             <span class="label">Спецификация масла</span>
             <span class="value">{vehicle.oil_spec or '—'}</span>
         </div>
+        {telematics_badge}
     </div>
+
+    {consumables_html}
 
     {tyres_html}
 
@@ -405,7 +553,7 @@ def generate_service_booklet_html(
                 <th style="width: 100px;" class="text-center">Пробег</th>
                 <th style="width: 65px;">Тип</th>
                 <th>Выполненные работы, детали и артикулы</th>
-                <th style="width: 105px;" class="text-right">Стоимость</th>
+                {cost_th}
             </tr>
         </thead>
         <tbody>
@@ -415,7 +563,7 @@ def generate_service_booklet_html(
 
     <div class="total-summary">
         <span>Всего записей ТО: {len(records)}</span>
-        <span>Итого затраты на обслуживание: {formatted_total_cost}</span>
+        {total_summary_html}
     </div>
 </body>
 </html>

@@ -4,11 +4,16 @@ import { QrBookletModal } from '../components/QrBookletModal';
 import { StarLineModal } from '../components/StarLineModal';
 import { ConsumablesTab } from '../components/ConsumablesTab';
 import { ConsumableModal } from '../components/ConsumableModal';
+import { TyreRotationWidget } from '../components/TyreRotationWidget';
+import { PublicShareModal } from '../components/PublicShareModal';
+import { parseDotCode } from '../utils/tyreAnalytics';
 import { downloadIcsReminder } from '../utils/qrcodeHelper';
 import {
   Wrench,
   Fuel,
   CalendarClock,
+  RotateCcw,
+  Share2,
   BarChart3,
   FileText,
   Plus,
@@ -133,6 +138,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
 
   const [isQuickMileageOpen, setIsQuickMileageOpen] = useState(false);
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+  const [isPublicShareModalOpen, setIsPublicShareModalOpen] = useState(false);
   const [isStarLineModalOpen, setIsStarLineModalOpen] = useState(false);
   const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
   const [isSyncingStarLine, setIsSyncingStarLine] = useState(false);
@@ -584,6 +590,19 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                       >
                         <CalendarClock className="w-4 h-4 text-amber-500 flex-shrink-0" />
                         <span className="font-semibold">Добавить регламент ТО</span>
+                      </button>
+                    )}
+
+                    {isOwner && (
+                      <button
+                        onClick={() => {
+                          setIsActionMenuOpen(false);
+                          setIsPublicShareModalOpen(true);
+                        }}
+                        className="w-full px-3.5 py-2.5 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-dark-800 flex items-center space-x-2.5 transition"
+                      >
+                        <Share2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                        <span className="font-semibold">Поделиться сервисной книжкой (QR / Авито)</span>
                       </button>
                     )}
 
@@ -2190,9 +2209,20 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                                 {t.purchase_date && (
                                   <span>📅 Куплены: {new Date(t.purchase_date).toLocaleDateString('ru-RU')}</span>
                                 )}
-                                {t.dot_code && (
-                                  <span className="font-mono text-slate-400">• DOT {t.dot_code}</span>
-                                )}
+                                {t.dot_code && (() => {
+                                  const dotInfo = parseDotCode(t.dot_code);
+                                  if (!dotInfo) {
+                                    return <span className="font-mono text-slate-400">• DOT {t.dot_code}</span>;
+                                  }
+                                  return (
+                                    <span
+                                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${dotInfo.badgeBg} ${dotInfo.badgeColor} ${dotInfo.badgeBorder}`}
+                                      title={dotInfo.recommendation}
+                                    >
+                                      DOT {dotInfo.raw} ({dotInfo.statusLabel})
+                                    </span>
+                                  );
+                                })()}
                               </div>
                             )}
                           </div>
@@ -2367,6 +2397,29 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                     ))}
                   </div>
                 )}
+
+                {/* Intelligent Tyre Rotation Widget for active tyre set */}
+                {(() => {
+                  const activeTyre = tyres.find((t) => t.is_active) || tyres[0];
+                  if (!activeTyre) return null;
+                  return (
+                    <div className="pt-2">
+                      <TyreRotationWidget
+                        tyre={activeTyre}
+                        vehicle={vehicle}
+                        onRotated={async () => {
+                          await loadData();
+                          await onRefreshVehicle();
+                        }}
+                        onUpdateTyre={(updated) => {
+                          setTyres((prev) =>
+                            prev.map((item) => (item.id === activeTyre.id ? { ...item, ...updated } : item))
+                          );
+                        }}
+                      />
+                    </div>
+                  );
+                })()}
               </div>
             )}
 
@@ -2547,6 +2600,20 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
           vehicle={vehicle}
           reminders={reminders}
           records={serviceRecords}
+        />
+      )}
+
+      {/* Public Digital Booklet Share Modal */}
+      {isPublicShareModalOpen && (
+        <PublicShareModal
+          vehicle={vehicle}
+          isOpen={isPublicShareModalOpen}
+          onClose={() => setIsPublicShareModalOpen(false)}
+          onUpdateVehicle={async (updated) => {
+            await api.updateVehicle(vehicle.id, updated as any);
+            await onRefreshVehicle();
+            await loadData();
+          }}
         />
       )}
 

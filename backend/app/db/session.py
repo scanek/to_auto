@@ -78,6 +78,10 @@ async def auto_migrate_sqlite(conn):
             ("starline_last_error", "VARCHAR(500)"),
             ("starline_consecutive_errors", "INTEGER DEFAULT 0"),
             ("telematics_webhook_key", "VARCHAR(100)"),
+            ("drive_type", "VARCHAR(20) DEFAULT 'fwd'"),
+            ("public_booklet_token", "VARCHAR(64)"),
+            ("public_booklet_enabled", "BOOLEAN DEFAULT 0"),
+            ("public_show_costs", "BOOLEAN DEFAULT 0"),
         ],
         "service_records": [
             ("to_tag", "VARCHAR(50)"),
@@ -128,6 +132,9 @@ async def auto_migrate_sqlite(conn):
             ("tpms_fr_id", "VARCHAR(50)"),
             ("tpms_rl_id", "VARCHAR(50)"),
             ("tpms_rr_id", "VARCHAR(50)"),
+            ("last_rotation_km", "FLOAT"),
+            ("rotation_interval_km", "FLOAT DEFAULT 10000.0"),
+            ("is_directional", "BOOLEAN DEFAULT 0"),
         ],
         "vehicle_consumables": [
             ("specification", "VARCHAR(255)"),

@@ -51,7 +51,10 @@ export interface Vehicle {
   telematics_auto_sync?: boolean;
   starline_auto_sync_interval_minutes?: number;
   telematics_webhook_key?: string;
-
+  drive_type?: 'fwd' | 'awd' | 'rwd';
+  public_booklet_token?: string | null;
+  public_booklet_enabled?: boolean;
+  public_show_costs?: boolean;
 }
 
 export interface User {
@@ -203,6 +206,9 @@ export interface TyreSet {
   quantity: number;
   price_per_unit: number;
   total_price: number;
+  last_rotation_km?: number | null;
+  rotation_interval_km?: number;
+  is_directional?: boolean;
   created_at: string;
 }
 
@@ -315,4 +321,83 @@ export interface VehicleConsumable {
   order_index: number;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface TyreRotatePayload {
+  current_odometer: number;
+  swap_tpms: boolean;
+  drive_type: 'fwd' | 'awd' | 'rwd' | 'directional';
+}
+
+export interface PublicBookletData {
+  vehicle: {
+    make: string;
+    model: string;
+    year?: number;
+    license_plate?: string;
+    vin?: string;
+    body_type?: string;
+    fuel_type?: string;
+    transmission?: string;
+    drive_type?: string;
+    color?: string;
+    current_odometer: number;
+    distance_unit: string;
+    current_engine_hours?: number | null;
+    oil_spec?: string;
+    currency: string;
+    telematics_verified: boolean;
+    last_telematics_sync?: string | null;
+    public_show_costs: boolean;
+  };
+  service_records: Array<{
+    id: number;
+    date?: string | null;
+    odometer: number;
+    engine_hours?: number | null;
+    record_type: 'service' | 'repair' | 'upgrade';
+    to_tag?: string | null;
+    title: string;
+    description?: string | null;
+    parts_cost?: number | null;
+    labor_cost?: number | null;
+    total_cost?: number | null;
+    items?: Array<{
+      name: string;
+      brand?: string | null;
+      part_number?: string | null;
+      quantity: number;
+      unit: string;
+      unit_price?: number | null;
+      total_price?: number | null;
+    }>;
+  }>;
+  tyres: Array<{
+    id: number;
+    name: string;
+    season: 'summer' | 'winter';
+    brand_model?: string | null;
+    size?: string | null;
+    year?: number | null;
+    dot_code?: string | null;
+    is_active: boolean;
+    current_km?: number;
+    tread_depth_mm?: number;
+    has_separate_rims?: boolean;
+    rims_brand_model?: string | null;
+    rims_size?: string | null;
+    tpms_sensors?: string | null;
+    tpms_frequency?: string | null;
+    tpms_target_pressure_bar?: number | null;
+    tpms_fl_id?: string | null;
+    tpms_fr_id?: string | null;
+    tpms_rl_id?: string | null;
+    tpms_rr_id?: string | null;
+    last_rotation_km?: number | null;
+    rotation_interval_km?: number | null;
+    is_directional?: boolean;
+    total_price?: number | null;
+  }>;
+  consumables: VehicleConsumable[];
+  public_show_costs: boolean;
 }

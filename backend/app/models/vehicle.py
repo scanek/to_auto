@@ -29,6 +29,10 @@ class Vehicle(Base):
     currency = Column(String(10), default="RUB") # "RUB", "USD", "EUR", etc.
     photo_url = Column(String(500), nullable=True)
     notes = Column(Text, nullable=True)
+    drive_type = Column(String(20), default="fwd") # 'fwd', 'awd', 'rwd'
+    public_booklet_token = Column(String(64), nullable=True, unique=True, index=True)
+    public_booklet_enabled = Column(Boolean, default=False, nullable=False)
+    public_show_costs = Column(Boolean, default=False, nullable=False)
 
     # Telematics (StarLine S96 / CAN OBD / Webhooks)
     telematics_provider = Column(String(50), default="none")
