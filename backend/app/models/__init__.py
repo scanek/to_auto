@@ -8,6 +8,7 @@ from app.models.attachment import Attachment
 from app.models.tyre import TyreSet
 from app.models.setting import Setting
 from app.models.consumable import VehicleConsumable
+from app.models.password_reset import PasswordReset
 
 __all__ = [
     "User",
@@ -23,4 +24,5 @@ __all__ = [
     "TyreSet",
     "Setting",
     "VehicleConsumable",
+    "PasswordReset",
 ]

@@ -256,6 +256,27 @@ export const api = {
     request<{ message: string }>(`${API_BASE}/auth/users/${userId}`, {
       method: 'DELETE',
     }),
+  forgotPassword: (identifier: string) =>
+    request<{
+      status: string;
+      channel: 'telegram' | 'telegram_bot_link' | 'email' | 'admin_only';
+      message: string;
+      bot_url?: string;
+      masked_destination?: string;
+    }>(`${API_BASE}/auth/forgot-password`, {
+      method: 'POST',
+      body: JSON.stringify({ identifier }),
+    }),
+  resetPassword: (data: { identifier: string; code: string; new_password: string }) =>
+    request<AuthResponse>(`${API_BASE}/auth/reset-password`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  adminResetPassword: (userId: number, new_password: string) =>
+    request<{ status: string; message: string }>(`${API_BASE}/auth/admin/reset-password/${userId}`, {
+      method: 'POST',
+      body: JSON.stringify({ new_password }),
+    }),
 
   // -------------------------------------------------------------
   // Vehicles

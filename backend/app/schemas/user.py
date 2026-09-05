@@ -41,3 +41,22 @@ class SetupStatusResponse(BaseModel):
 
 class AdminUserResponse(UserResponse):
     vehicles_count: int = 0
+
+
+class ForgotPasswordRequest(BaseModel):
+    identifier: str
+
+class ForgotPasswordResponse(BaseModel):
+    status: str
+    channel: str  # "telegram" | "telegram_bot_link" | "email" | "admin_only"
+    message: str
+    bot_url: Optional[str] = None
+    masked_destination: Optional[str] = None
+
+class ResetPasswordRequest(BaseModel):
+    identifier: str
+    code: str
+    new_password: str = Field(..., min_length=4)
+
+class AdminResetPasswordRequest(BaseModel):
+    new_password: str = Field(..., min_length=4)

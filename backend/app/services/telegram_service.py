@@ -17,6 +17,8 @@ from app.models.service import ServiceRecord, RecordType
 from app.models.fuel import FuelLog
 from app.models.document import DocumentNote
 from app.models.setting import Setting
+from app.models.password_reset import PasswordReset
+from app.core.datetime_utils import utc_now_naive
 from app.services.reminder_service import compute_reminder_status, sync_reminder_baselines
 from app.services.starline_service import StarLineService
 
@@ -638,6 +640,38 @@ class TelegramService:
             return
 
         async with AsyncSessionLocal() as session:
+            if text.startswith("/start reset_"):
+                reset_token = text.replace("/start reset_", "").strip()
+                res = await session.execute(
+                    select(PasswordReset)
+                    .options(selectinload(PasswordReset.user))
+                    .where(PasswordReset.token == reset_token, PasswordReset.is_used == False)
+                )
+                reset_req = res.scalar_one_or_none()
+                if reset_req and reset_req.expires_at > utc_now_naive():
+                    user = reset_req.user
+                    if not user.telegram_chat_id:
+                        user.telegram_chat_id = chat_id
+                        user.telegram_username = username
+                    await session.commit()
+                    reset_msg = (
+                        f"🔐 <b>Сброс пароля в AutoTracker</b>\n\n"
+                        f"Вы запросили сброс пароля для аккаунта <b>{user.username}</b>.\n\n"
+                        f"Ваш проверочный код:\n"
+                        f"👉 <code>{reset_req.code}</code> 👈\n\n"
+                        f"Введите этот 6-значный код на сайте для установки нового пароля.\n"
+                        f"⏱ Код действителен 15 минут."
+                    )
+                    await TelegramService.send_message(chat_id, reset_msg)
+                    return
+                else:
+                    await TelegramService.send_message(
+                        chat_id,
+                        "⚠️ <b>Ссылка на сброс пароля устарела или недействительна.</b>\n"
+                        "Пожалуйста, запросите код заново на сайте в форме «Забыли пароль?»."
+                    )
+                    return
+
             if text.startswith("/start bind_"):
                 token = text.replace("/start bind_", "").strip()
                 res = await session.execute(select(User).where(User.telegram_auth_token == token))

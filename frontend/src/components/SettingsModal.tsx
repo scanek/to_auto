@@ -345,6 +345,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   };
 
+  const handleResetPasswordByAdmin = async (userId: number, username: string) => {
+    const newPassword = prompt(`Введите новый пароль для пользователя "${username}":`);
+    if (newPassword === null) return;
+    if (!newPassword.trim()) {
+      alert('Пароль не может быть пустым');
+      return;
+    }
+    if (newPassword.trim().length < 4) {
+      alert('Пароль должен содержать не менее 4 символов');
+      return;
+    }
+    try {
+      const res = await api.adminResetPassword(userId, newPassword.trim());
+      setAdminMsg({ text: res.message || `Пароль для @${username} успешно изменен`, type: 'success' });
+    } catch (err: any) {
+      setAdminMsg({ text: err.message || 'Ошибка сброса пароля', type: 'error' });
+    }
+  };
+
   const handleDeleteUserByAdmin = async (userId: number, username: string) => {
     if (!confirm(`Удалить пользователя "${username}" и ВСЕ его автомобили и данные?`)) {
       return;
@@ -946,17 +965,26 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                   </span>
                                 </td>
                                 <td className="p-3 text-right">
-                                  {!isCurrent ? (
+                                  <div className="flex items-center justify-end space-x-1">
                                     <button
-                                      onClick={() => handleDeleteUserByAdmin(u.id, u.username)}
-                                      className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition"
-                                      title="Удалить пользователя и все его данные"
+                                      onClick={() => handleResetPasswordByAdmin(u.id, u.username)}
+                                      className="p-1.5 text-slate-400 hover:text-amber-500 hover:bg-amber-500/10 rounded-lg transition"
+                                      title="Сменить / сбросить пароль пользователю"
                                     >
-                                      <Trash2 className="w-3.5 h-3.5" />
+                                      <KeyRound className="w-3.5 h-3.5" />
                                     </button>
-                                  ) : (
-                                    <span className="text-[10px] text-slate-400 italic">Вы</span>
-                                  )}
+                                    {!isCurrent ? (
+                                      <button
+                                        onClick={() => handleDeleteUserByAdmin(u.id, u.username)}
+                                        className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition"
+                                        title="Удалить пользователя и все его данные"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    ) : (
+                                      <span className="text-[10px] text-slate-400 italic px-1">Вы</span>
+                                    )}
+                                  </div>
                                 </td>
                               </tr>
                             );
