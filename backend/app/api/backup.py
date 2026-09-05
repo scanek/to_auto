@@ -141,6 +141,19 @@ def serialize_vehicle_dict(vehicle: Vehicle, service_records, fuel_logs, reminde
                 "is_active": t.is_active,
                 "install_date": t.install_date.isoformat() if t.install_date else None,
                 "install_mileage": t.install_mileage,
+                "has_separate_rims": t.has_separate_rims,
+                "rims_brand_model": t.rims_brand_model,
+                "rims_size": t.rims_size,
+                "rims_price": t.rims_price,
+                "tpms_sensors": t.tpms_sensors,
+                "tpms_has_sensors": t.tpms_has_sensors,
+                "tpms_frequency": t.tpms_frequency,
+                "tpms_brand": t.tpms_brand,
+                "tpms_pressure_bar": t.tpms_pressure_bar,
+                "tpms_fl_id": t.tpms_fl_id,
+                "tpms_fr_id": t.tpms_fr_id,
+                "tpms_rl_id": t.tpms_rl_id,
+                "tpms_rr_id": t.tpms_rr_id,
                 "quantity": t.quantity,
                 "price_per_unit": t.price_per_unit,
                 "total_price": t.total_price,
@@ -950,6 +963,15 @@ async def import_backup(
                 if matched_tyre:
                     if cur_km > (matched_tyre.current_km or 0):
                         matched_tyre.current_km = cur_km
+                    if t.get("tpms_has_sensors") or t.get("tpms_fl_id"):
+                        matched_tyre.tpms_has_sensors = bool(t.get("tpms_has_sensors", True))
+                        matched_tyre.tpms_frequency = str(t.get("tpms_frequency") or "433 МГц")
+                        matched_tyre.tpms_brand = str(t.get("tpms_brand") or "")
+                        matched_tyre.tpms_pressure_bar = safe_float(t.get("tpms_pressure_bar"))
+                        matched_tyre.tpms_fl_id = str(t.get("tpms_fl_id") or "")
+                        matched_tyre.tpms_fr_id = str(t.get("tpms_fr_id") or "")
+                        matched_tyre.tpms_rl_id = str(t.get("tpms_rl_id") or "")
+                        matched_tyre.tpms_rr_id = str(t.get("tpms_rr_id") or "")
                     updated_tyres_count += 1
                 else:
                     tyre = TyreSet(
@@ -964,6 +986,19 @@ async def import_backup(
                         is_active=bool(t.get("is_active", False)),
                         install_date=ins_date,
                         install_mileage=ins_odo if ins_odo > 0 else None,
+                        has_separate_rims=bool(t.get("has_separate_rims", False)),
+                        rims_brand_model=str(t.get("rims_brand_model") or ""),
+                        rims_size=str(t.get("rims_size") or ""),
+                        rims_price=safe_float(t.get("rims_price"), 0.0),
+                        tpms_sensors=str(t.get("tpms_sensors") or ""),
+                        tpms_has_sensors=bool(t.get("tpms_has_sensors") or t.get("tpms_fl_id")),
+                        tpms_frequency=str(t.get("tpms_frequency") or "433 МГц"),
+                        tpms_brand=str(t.get("tpms_brand") or ""),
+                        tpms_pressure_bar=safe_float(t.get("tpms_pressure_bar")),
+                        tpms_fl_id=str(t.get("tpms_fl_id") or ""),
+                        tpms_fr_id=str(t.get("tpms_fr_id") or ""),
+                        tpms_rl_id=str(t.get("tpms_rl_id") or ""),
+                        tpms_rr_id=str(t.get("tpms_rr_id") or ""),
                         quantity=q,
                         price_per_unit=up,
                         total_price=tp,

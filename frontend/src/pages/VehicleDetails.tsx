@@ -20,6 +20,7 @@ import {
   Satellite,
   BatteryCharging,
   Check,
+  Copy,
   Disc,
   ExternalLink,
   FileSpreadsheet,
@@ -137,6 +138,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   const [isTelematicsCollapsed, setIsTelematicsCollapsed] = useState<boolean>(() => {
     return localStorage.getItem(`collapse_telematics_${vehicle.id}`) === 'true';
   });
+  const [copiedTpmsId, setCopiedTpmsId] = useState<number | null>(null);
 
   const formatSyncTime = (timestamp?: string | null) => {
     if (!timestamp) return 'Только что';
@@ -2172,14 +2174,90 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                                 </span>
                               )}
                             </div>
-                            <div className="flex flex-wrap items-center gap-2 text-[10.5px] text-slate-500 dark:text-slate-400">
-                              {t.rims_purchase_date && (
-                                <span>📅 Покупка: {new Date(t.rims_purchase_date).toLocaleDateString('ru-RU')}</span>
-                              )}
-                              {t.tpms_sensors && (
-                                <span className="text-cyan-600 dark:text-cyan-400 font-medium">📡 {t.tpms_sensors}</span>
+                            {t.rims_purchase_date && (
+                              <div className="text-[10.5px] text-slate-500 dark:text-slate-400">
+                                📅 Покупка: {new Date(t.rims_purchase_date).toLocaleDateString('ru-RU')}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* TPMS Sensors Block (if configured) */}
+                        {(t.tpms_has_sensors || t.tpms_fl_id || t.tpms_fr_id || t.tpms_rl_id || t.tpms_rr_id || t.tpms_sensors) && (
+                          <div className="bg-cyan-500/5 dark:bg-cyan-950/20 p-2.5 rounded-xl border border-cyan-500/20 dark:border-cyan-500/30 text-xs space-y-2">
+                            <div className="flex items-center justify-between text-slate-800 dark:text-slate-200 font-semibold text-[11px]">
+                              <span className="flex items-center gap-1 text-cyan-700 dark:text-cyan-400 font-bold">
+                                <CircleDot className="w-3.5 h-3.5 text-cyan-500 flex-shrink-0" />
+                                <span>Датчики TPMS {t.tpms_frequency ? `(${t.tpms_frequency})` : ''}</span>
+                                {t.tpms_brand && <span className="font-normal text-slate-500 dark:text-slate-400">• {t.tpms_brand}</span>}
+                              </span>
+                              {t.tpms_pressure_bar && (
+                                <span className="font-mono text-[10.5px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 font-bold">
+                                  {t.tpms_pressure_bar} бар
+                                </span>
                               )}
                             </div>
+
+                            {/* 4 Wheels IDs */}
+                            {(t.tpms_fl_id || t.tpms_fr_id || t.tpms_rl_id || t.tpms_rr_id) ? (
+                              <div className="space-y-1.5">
+                                <div className="grid grid-cols-2 gap-1.5 text-[10.5px] font-mono">
+                                  <div className="bg-white/90 dark:bg-dark-900/90 px-2 py-1 rounded border border-slate-200 dark:border-dark-750 flex items-center justify-between">
+                                    <span className="text-slate-400 text-[10px]">FL (ПЛ):</span>
+                                    <span className="font-bold text-slate-800 dark:text-slate-200">{t.tpms_fl_id || '—'}</span>
+                                  </div>
+                                  <div className="bg-white/90 dark:bg-dark-900/90 px-2 py-1 rounded border border-slate-200 dark:border-dark-750 flex items-center justify-between">
+                                    <span className="text-slate-400 text-[10px]">FR (ПП):</span>
+                                    <span className="font-bold text-slate-800 dark:text-slate-200">{t.tpms_fr_id || '—'}</span>
+                                  </div>
+                                  <div className="bg-white/90 dark:bg-dark-900/90 px-2 py-1 rounded border border-slate-200 dark:border-dark-750 flex items-center justify-between">
+                                    <span className="text-slate-400 text-[10px]">RL (ЗЛ):</span>
+                                    <span className="font-bold text-slate-800 dark:text-slate-200">{t.tpms_rl_id || '—'}</span>
+                                  </div>
+                                  <div className="bg-white/90 dark:bg-dark-900/90 px-2 py-1 rounded border border-slate-200 dark:border-dark-750 flex items-center justify-between">
+                                    <span className="text-slate-400 text-[10px]">RR (ЗП):</span>
+                                    <span className="font-bold text-slate-800 dark:text-slate-200">{t.tpms_rr_id || '—'}</span>
+                                  </div>
+                                </div>
+                                <div className="flex justify-end">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const parts = [];
+                                      if (t.tpms_fl_id) parts.push(`FL: ${t.tpms_fl_id}`);
+                                      if (t.tpms_fr_id) parts.push(`FR: ${t.tpms_fr_id}`);
+                                      if (t.tpms_rl_id) parts.push(`RL: ${t.tpms_rl_id}`);
+                                      if (t.tpms_rr_id) parts.push(`RR: ${t.tpms_rr_id}`);
+                                      if (parts.length) {
+                                        navigator.clipboard.writeText(parts.join(' | '));
+                                        setCopiedTpmsId(t.id);
+                                        setTimeout(() => setCopiedTpmsId(null), 1500);
+                                      }
+                                    }}
+                                    className="text-[10px] text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 flex items-center gap-1 font-semibold transition"
+                                    title="Скопировать все 4 ID колес"
+                                  >
+                                    {copiedTpmsId === t.id ? (
+                                      <>
+                                        <Check className="w-3 h-3 text-emerald-500" />
+                                        <span className="text-emerald-500 font-bold">Скопировано!</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Copy className="w-3 h-3" />
+                                        <span>Скопировать все ID</span>
+                                      </>
+                                    )}
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              t.tpms_sensors && (
+                                <div className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">
+                                  📡 {t.tpms_sensors}
+                                </div>
+                              )
+                            )}
                           </div>
                         )}
 

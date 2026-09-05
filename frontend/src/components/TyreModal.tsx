@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Disc, Calendar, CircleDot, ShieldCheck, DollarSign } from 'lucide-react';
+import { X, Disc, Calendar, CircleDot, ShieldCheck, DollarSign, Copy, Check } from 'lucide-react';
 import { TyreSet, Vehicle } from '../types';
 
 interface TyreModalProps {
@@ -37,7 +37,17 @@ export const TyreModal: React.FC<TyreModalProps> = ({
     rims_purchase_date: '',
     rims_price: 0,
     tpms_sensors: '',
+    tpms_has_sensors: false,
+    tpms_frequency: '433 МГц',
+    tpms_brand: '',
+    tpms_pressure_bar: 2.3,
+    tpms_fl_id: '',
+    tpms_fr_id: '',
+    tpms_rl_id: '',
+    tpms_rr_id: '',
   });
+
+  const [copiedWheel, setCopiedWheel] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(false);
 
@@ -63,6 +73,14 @@ export const TyreModal: React.FC<TyreModalProps> = ({
         rims_purchase_date: tyre.rims_purchase_date ? tyre.rims_purchase_date.split('T')[0] : '',
         rims_price: tyre.rims_price || 0,
         tpms_sensors: tyre.tpms_sensors || '',
+        tpms_has_sensors: tyre.tpms_has_sensors ?? !!(tyre.tpms_fl_id || tyre.tpms_sensors),
+        tpms_frequency: tyre.tpms_frequency || '433 МГц',
+        tpms_brand: tyre.tpms_brand || '',
+        tpms_pressure_bar: tyre.tpms_pressure_bar ?? 2.3,
+        tpms_fl_id: tyre.tpms_fl_id || '',
+        tpms_fr_id: tyre.tpms_fr_id || '',
+        tpms_rl_id: tyre.tpms_rl_id || '',
+        tpms_rr_id: tyre.tpms_rr_id || '',
       });
     } else {
       const today = new Date().toISOString().split('T')[0];
@@ -86,11 +104,37 @@ export const TyreModal: React.FC<TyreModalProps> = ({
         rims_purchase_date: today,
         rims_price: 0,
         tpms_sensors: '',
+        tpms_has_sensors: false,
+        tpms_frequency: '433 МГц',
+        tpms_brand: '',
+        tpms_pressure_bar: 2.3,
+        tpms_fl_id: '',
+        tpms_fr_id: '',
+        tpms_rl_id: '',
+        tpms_rr_id: '',
       });
     }
   }, [tyre, isOpen, vehicle]);
 
   if (!isOpen) return null;
+
+  const copyToClipboard = (text?: string, label?: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedWheel(label || 'all');
+    setTimeout(() => setCopiedWheel(null), 1500);
+  };
+
+  const copyAllTpmsIds = () => {
+    const parts = [];
+    if (formData.tpms_fl_id) parts.push(`FL: ${formData.tpms_fl_id}`);
+    if (formData.tpms_fr_id) parts.push(`FR: ${formData.tpms_fr_id}`);
+    if (formData.tpms_rl_id) parts.push(`RL: ${formData.tpms_rl_id}`);
+    if (formData.tpms_rr_id) parts.push(`RR: ${formData.tpms_rr_id}`);
+    if (parts.length > 0) {
+      copyToClipboard(parts.join(' | '), 'all');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,6 +148,17 @@ export const TyreModal: React.FC<TyreModalProps> = ({
         tread_depth_mm: parseFloat(String(formData.tread_depth_mm)) || 8.0,
         total_price: parseFloat(String(formData.total_price)) || 0,
         rims_price: parseFloat(String(formData.rims_price)) || 0,
+        tpms_has_sensors: formData.tpms_has_sensors,
+        tpms_frequency: formData.tpms_frequency,
+        tpms_brand: formData.tpms_brand,
+        tpms_pressure_bar: formData.tpms_pressure_bar ? parseFloat(String(formData.tpms_pressure_bar)) : undefined,
+        tpms_fl_id: formData.tpms_fl_id ? formData.tpms_fl_id.trim().toUpperCase() : '',
+        tpms_fr_id: formData.tpms_fr_id ? formData.tpms_fr_id.trim().toUpperCase() : '',
+        tpms_rl_id: formData.tpms_rl_id ? formData.tpms_rl_id.trim().toUpperCase() : '',
+        tpms_rr_id: formData.tpms_rr_id ? formData.tpms_rr_id.trim().toUpperCase() : '',
+        tpms_sensors: formData.tpms_has_sensors
+          ? `${formData.tpms_frequency || '433 МГц'}${formData.tpms_brand ? ` (${formData.tpms_brand})` : ''}`
+          : '',
       });
       onClose();
     } catch (err) {
@@ -295,7 +350,7 @@ export const TyreModal: React.FC<TyreModalProps> = ({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                       Дата покупки дисков
@@ -322,18 +377,223 @@ export const TyreModal: React.FC<TyreModalProps> = ({
                       className="w-full bg-white dark:bg-dark-850 border border-slate-300 dark:border-dark-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white font-mono focus:outline-none focus:border-brand-500 font-semibold"
                     />
                   </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* TPMS Sensors Block */}
+          <div className="bg-slate-50 dark:bg-dark-900/60 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-dark-750 transition-all">
+            <div className="flex items-center justify-between">
+              <label className="flex items-center space-x-2.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={formData.tpms_has_sensors}
+                  onChange={(e) => setFormData({ ...formData, tpms_has_sensors: e.target.checked })}
+                  className="rounded text-brand-500 focus:ring-brand-500 w-4 h-4"
+                />
+                <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <CircleDot className="w-4 h-4 text-cyan-500" />
+                  Датчики давления в шинах (TPMS)
+                </span>
+              </label>
+              {formData.tpms_has_sensors && (formData.tpms_fl_id || formData.tpms_fr_id || formData.tpms_rl_id || formData.tpms_rr_id) && (
+                <button
+                  type="button"
+                  onClick={copyAllTpmsIds}
+                  className="flex items-center space-x-1 text-[11px] font-bold text-cyan-600 dark:text-cyan-400 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 px-2.5 py-1 rounded-lg transition"
+                  title="Скопировать все 4 ID для диагностического сканера"
+                >
+                  {copiedWheel === 'all' ? (
+                    <>
+                      <Check className="w-3 h-3 text-emerald-500" />
+                      <span className="text-emerald-500">Скопировано!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3 h-3" />
+                      <span>Скопировать все ID</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+
+            {formData.tpms_has_sensors && (
+              <div className="mt-3.5 pt-3.5 border-t border-slate-200 dark:border-dark-750 space-y-3.5">
+                {/* General TPMS Config */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Датчики TPMS
+                      Рабочая частота
+                    </label>
+                    <select
+                      value={formData.tpms_frequency}
+                      onChange={(e) => setFormData({ ...formData, tpms_frequency: e.target.value })}
+                      className="w-full bg-white dark:bg-dark-850 border border-slate-300 dark:border-dark-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-cyan-500 font-medium"
+                    >
+                      <option value="433 МГц">433 МГц (Европа / РФ / Азия)</option>
+                      <option value="315 МГц">315 МГц (США / Америка)</option>
+                      <option value="433 / 315 МГц">433 / 315 МГц (Универсальные)</option>
+                      <option value="Косвенный (ABS)">Косвенный (ABS / без датчиков)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Марка / Модель датчиков
                     </label>
                     <input
                       type="text"
-                      placeholder="Оригинальные 433 МГц..."
-                      value={formData.tpms_sensors}
-                      onChange={(e) => setFormData({ ...formData, tpms_sensors: e.target.value })}
-                      className="w-full bg-white dark:bg-dark-850 border border-slate-300 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
+                      placeholder="Оригинал OEM, Autel MX, Schrader..."
+                      value={formData.tpms_brand}
+                      onChange={(e) => setFormData({ ...formData, tpms_brand: e.target.value })}
+                      className="w-full bg-white dark:bg-dark-850 border border-slate-300 dark:border-dark-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-cyan-500"
                     />
                   </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Реком. давление (бар)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="1.0"
+                      max="4.5"
+                      placeholder="2.3"
+                      value={formData.tpms_pressure_bar ?? ''}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          tpms_pressure_bar: e.target.value ? parseFloat(e.target.value) : null,
+                        })
+                      }
+                      className="w-full bg-white dark:bg-dark-850 border border-slate-300 dark:border-dark-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white font-mono focus:outline-none focus:border-cyan-500 font-bold"
+                    />
+                  </div>
+                </div>
+
+                {/* 4 Wheels Visual Layout & IDs */}
+                <div className="bg-white dark:bg-dark-850 p-3 sm:p-3.5 rounded-xl border border-slate-200 dark:border-dark-750">
+                  <div className="flex items-center justify-between mb-2.5">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                      🚗 Идентификаторы датчиков (ID для привязки через сканер / OBD)
+                    </span>
+                    <span className="text-[10px] text-slate-400">HEX / DEC</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {/* Front-Left */}
+                    <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750">
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                          Переднее левое (FL / ПЛ)
+                        </label>
+                        {formData.tpms_fl_id && (
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(formData.tpms_fl_id, 'fl')}
+                            className="text-slate-400 hover:text-cyan-500 p-0.5 rounded transition"
+                            title="Копировать ID"
+                          >
+                            {copiedWheel === 'fl' ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                          </button>
+                        )}
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Например: 0A1B2C3D"
+                        value={formData.tpms_fl_id}
+                        onChange={(e) => setFormData({ ...formData, tpms_fl_id: e.target.value.toUpperCase() })}
+                        className="w-full bg-white dark:bg-dark-850 border border-slate-300 dark:border-dark-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white font-mono font-bold focus:outline-none focus:border-cyan-500 uppercase tracking-wider"
+                      />
+                    </div>
+
+                    {/* Front-Right */}
+                    <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750">
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                          Переднее правое (FR / ПП)
+                        </label>
+                        {formData.tpms_fr_id && (
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(formData.tpms_fr_id, 'fr')}
+                            className="text-slate-400 hover:text-cyan-500 p-0.5 rounded transition"
+                            title="Копировать ID"
+                          >
+                            {copiedWheel === 'fr' ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                          </button>
+                        )}
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Например: 0A1B2C3E"
+                        value={formData.tpms_fr_id}
+                        onChange={(e) => setFormData({ ...formData, tpms_fr_id: e.target.value.toUpperCase() })}
+                        className="w-full bg-white dark:bg-dark-850 border border-slate-300 dark:border-dark-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white font-mono font-bold focus:outline-none focus:border-cyan-500 uppercase tracking-wider"
+                      />
+                    </div>
+
+                    {/* Rear-Left */}
+                    <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750">
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+                          Заднее левое (RL / ЗЛ)
+                        </label>
+                        {formData.tpms_rl_id && (
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(formData.tpms_rl_id, 'rl')}
+                            className="text-slate-400 hover:text-cyan-500 p-0.5 rounded transition"
+                            title="Копировать ID"
+                          >
+                            {copiedWheel === 'rl' ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                          </button>
+                        )}
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Например: 0A1B2C3F"
+                        value={formData.tpms_rl_id}
+                        onChange={(e) => setFormData({ ...formData, tpms_rl_id: e.target.value.toUpperCase() })}
+                        className="w-full bg-white dark:bg-dark-850 border border-slate-300 dark:border-dark-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white font-mono font-bold focus:outline-none focus:border-cyan-500 uppercase tracking-wider"
+                      />
+                    </div>
+
+                    {/* Rear-Right */}
+                    <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750">
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+                          Заднее правое (RR / ЗП)
+                        </label>
+                        {formData.tpms_rr_id && (
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(formData.tpms_rr_id, 'rr')}
+                            className="text-slate-400 hover:text-cyan-500 p-0.5 rounded transition"
+                            title="Копировать ID"
+                          >
+                            {copiedWheel === 'rr' ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                          </button>
+                        )}
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Например: 0A1B2C40"
+                        value={formData.tpms_rr_id}
+                        onChange={(e) => setFormData({ ...formData, tpms_rr_id: e.target.value.toUpperCase() })}
+                        className="w-full bg-white dark:bg-dark-850 border border-slate-300 dark:border-dark-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white font-mono font-bold focus:outline-none focus:border-cyan-500 uppercase tracking-wider"
+                      />
+                    </div>
+                  </div>
+
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-2.5 flex items-center gap-1">
+                    💡 При замене или сезонной переобувке эти ID можно показать мастеру или ввести в диагностический сканер (Autel, Launch, OBDII).
+                  </p>
                 </div>
               </div>
             )}

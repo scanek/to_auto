@@ -25,7 +25,15 @@ class TyreSet(Base):
     rims_size = Column(String(50), nullable=True) # Параметры дисков (19x7.5J 5x114.3 ET45)
     rims_purchase_date = Column(DateTime, nullable=True) # Дата покупки дисков
     rims_price = Column(Float, default=0.0) # Стоимость дисков
-    tpms_sensors = Column(String(100), nullable=True) # Датчики давления TPMS
+    tpms_sensors = Column(String(100), nullable=True) # Датчики давления TPMS (legacy/summary)
+    tpms_has_sensors = Column(Boolean, default=False)
+    tpms_frequency = Column(String(50), default="433 МГц")
+    tpms_brand = Column(String(100), nullable=True)
+    tpms_pressure_bar = Column(Float, nullable=True)
+    tpms_fl_id = Column(String(50), nullable=True) # Переднее левое
+    tpms_fr_id = Column(String(50), nullable=True) # Переднее правое
+    tpms_rl_id = Column(String(50), nullable=True) # Заднее левое
+    tpms_rr_id = Column(String(50), nullable=True) # Заднее правое
     quantity = Column(Float, default=4.0)
     price_per_unit = Column(Float, default=0.0)
     total_price = Column(Float, default=0.0)

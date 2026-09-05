@@ -120,6 +120,14 @@ async def auto_migrate_sqlite(conn):
             ("rims_purchase_date", "DATETIME"),
             ("rims_price", "FLOAT DEFAULT 0.0"),
             ("tpms_sensors", "VARCHAR(100)"),
+            ("tpms_has_sensors", "BOOLEAN DEFAULT 0"),
+            ("tpms_frequency", "VARCHAR(50) DEFAULT '433 МГц'"),
+            ("tpms_brand", "VARCHAR(100)"),
+            ("tpms_pressure_bar", "FLOAT"),
+            ("tpms_fl_id", "VARCHAR(50)"),
+            ("tpms_fr_id", "VARCHAR(50)"),
+            ("tpms_rl_id", "VARCHAR(50)"),
+            ("tpms_rr_id", "VARCHAR(50)"),
         ]
     }
 

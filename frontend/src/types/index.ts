@@ -192,6 +192,14 @@ export interface TyreSet {
   rims_purchase_date?: string;
   rims_price?: number;
   tpms_sensors?: string;
+  tpms_has_sensors?: boolean;
+  tpms_frequency?: string;
+  tpms_brand?: string;
+  tpms_pressure_bar?: number | null;
+  tpms_fl_id?: string;
+  tpms_fr_id?: string;
+  tpms_rl_id?: string;
+  tpms_rr_id?: string;
   quantity: number;
   price_per_unit: number;
   total_price: number;
