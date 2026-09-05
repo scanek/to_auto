@@ -244,6 +244,8 @@ async def get_all_users(
             "full_name": u.full_name,
             "role": u.role,
             "is_active": u.is_active,
+            "telegram_chat_id": u.telegram_chat_id,
+            "telegram_username": u.telegram_username,
             "created_at": u.created_at,
             "updated_at": u.updated_at,
             "vehicles_count": count,
@@ -583,6 +585,40 @@ async def reset_password(
         user=UserResponse.model_validate(user),
         message="Пароль успешно изменен! Вы вошли в систему.",
     )
+
+
+@router.post("/admin/unlink-telegram/{user_id}")
+async def admin_unlink_telegram(
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Admin only: unlinks Telegram from any specified user account."""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Доступ разрешен только администраторам",
+        )
+
+    res = await db.execute(select(User).where(User.id == user_id))
+    target_user = res.scalar_one_or_none()
+    if not target_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Пользователь не найден",
+        )
+
+    old_tg = target_user.telegram_username or target_user.telegram_chat_id or "Telegram"
+    target_user.telegram_chat_id = None
+    target_user.telegram_username = None
+    target_user.telegram_auth_token = None
+    target_user.telegram_notifications_enabled = False
+    await db.commit()
+
+    return {
+        "status": "success",
+        "message": f"Telegram (@{old_tg}) успешно отвязан от пользователя @{target_user.username}",
+    }
 
 
 @router.post("/admin/reset-password/{user_id}")

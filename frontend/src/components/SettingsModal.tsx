@@ -345,6 +345,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   };
 
+  const handleUnlinkTelegramByAdmin = async (userId: number, username: string, tgInfo: string | null) => {
+    if (!confirm(`Отвязать Telegram (${tgInfo || 'аккаунт'}) от пользователя "${username}"?`)) {
+      return;
+    }
+    try {
+      const res = await api.adminUnlinkTelegram(userId);
+      setAdminMsg({ text: res.message, type: 'success' });
+      await loadAdminData();
+    } catch (err: any) {
+      setAdminMsg({ text: err.message || 'Ошибка отвязки Telegram', type: 'error' });
+    }
+  };
+
   const handleResetPasswordByAdmin = async (userId: number, username: string) => {
     const newPassword = prompt(`Введите новый пароль для пользователя "${username}":`);
     if (newPassword === null) return;
@@ -931,6 +944,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           <tr>
                             <th className="p-3">Пользователь</th>
                             <th className="p-3">Email</th>
+                            <th className="p-3">Telegram</th>
                             <th className="p-3">Авто</th>
                             <th className="p-3">Роль</th>
                             <th className="p-3 text-right">Действие</th>
@@ -948,6 +962,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                   <div className="text-[11px] text-slate-400 font-mono">@{u.username}</div>
                                 </td>
                                 <td className="p-3 text-slate-500">{u.email || '—'}</td>
+                                <td className="p-3">
+                                  {u.telegram_chat_id ? (
+                                    <div className="inline-flex items-center space-x-1.5 bg-sky-500/10 text-sky-700 dark:text-sky-300 border border-sky-500/20 px-2 py-0.5 rounded-lg text-[11px] font-medium">
+                                      <span>✈️</span>
+                                      <span className="font-bold">{u.telegram_username ? `@${u.telegram_username}` : `ID: ${u.telegram_chat_id}`}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleUnlinkTelegramByAdmin(u.id, u.username, u.telegram_username || u.telegram_chat_id)}
+                                        className="text-slate-400 hover:text-rose-500 transition p-0.5 rounded ml-0.5"
+                                        title="Отвязать Telegram от этого пользователя"
+                                      >
+                                        <X className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <span className="text-[11px] text-slate-400 italic">Не привязан</span>
+                                  )}
+                                </td>
                                 <td className="p-3 font-mono font-bold">
                                   <span className="bg-slate-100 dark:bg-dark-800 px-2 py-0.5 rounded text-brand-600 dark:text-brand-400">
                                     {u.vehicles_count} авто

@@ -23,6 +23,8 @@ class UserResponse(UserBase):
     id: int
     role: UserRole
     is_active: bool
+    telegram_chat_id: Optional[str] = None
+    telegram_username: Optional[str] = None
     created_at: datetime.datetime
     updated_at: datetime.datetime
 

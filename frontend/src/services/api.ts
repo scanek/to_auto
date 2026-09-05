@@ -277,6 +277,10 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ new_password }),
     }),
+  adminUnlinkTelegram: (userId: number) =>
+    request<{ status: string; message: string }>(`${API_BASE}/auth/admin/unlink-telegram/${userId}`, {
+      method: 'POST',
+    }),
 
   // -------------------------------------------------------------
   // Vehicles

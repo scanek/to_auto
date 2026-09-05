@@ -64,6 +64,8 @@ export interface User {
   full_name?: string | null;
   role: 'admin' | 'user';
   is_active: boolean;
+  telegram_chat_id?: string | null;
+  telegram_username?: string | null;
   created_at: string;
   updated_at: string;
 }
