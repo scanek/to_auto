@@ -23,6 +23,7 @@ from app.api import (
     telematics,
     telegram,
     public,
+    ocr,
 )
 from app.services.telematics_scheduler import start_telematics_background_worker
 from app.services.telegram_service import start_telegram_bot_worker
@@ -77,6 +78,7 @@ app.include_router(backup.router, prefix=api_v1_prefix)
 app.include_router(telematics.router, prefix=api_v1_prefix)
 app.include_router(telegram.router, prefix=api_v1_prefix)
 app.include_router(public.router, prefix=api_v1_prefix)
+app.include_router(ocr.router, prefix=api_v1_prefix)
 
 @app.get("/health", tags=["Health"])
 async def health_check():

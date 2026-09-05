@@ -884,4 +884,28 @@ export const api = {
     request<{ message: string; bot_username: string }>(`${API_BASE}/telegram/bot-config`, {
       method: 'DELETE',
     }),
+
+  scanReceipt: async (file: File, apiKey?: string, vehicleId?: number) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (apiKey) formData.append('api_key', apiKey);
+    if (vehicleId) formData.append('vehicle_id', String(vehicleId));
+
+    const token = getAuthToken();
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${API_BASE}/ocr/scan`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Ошибка распознавания документа' }));
+      throw new Error(err.detail || 'Не удалось распознать документ');
+    }
+
+    return res.json() as Promise<{ success: boolean; data: any }>;
+  },
 };

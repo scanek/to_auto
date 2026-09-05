@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, Wrench, Plus, Trash2, Tag, ExternalLink, Sparkles } from 'lucide-react';
+import { X, Wrench, Plus, Trash2, Tag, ExternalLink, Sparkles, Camera } from 'lucide-react';
 import { ServiceRecord, ServiceItem, Vehicle } from '../types';
+import { ReceiptScanModal } from './ReceiptScanModal';
 
 interface ServiceModalProps {
   isOpen: boolean;
@@ -49,6 +50,7 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
 
   const [items, setItems] = useState<ServiceItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   useEffect(() => {
     if (record) {
@@ -234,12 +236,23 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
               {record ? 'Редактировать запись' : `Новая запись: ${typeLabels[formData.record_type]}`}
             </h2>
           </div>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-dark-800 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              type="button"
+              onClick={() => setIsScannerOpen(true)}
+              className="px-2.5 py-1 bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/60 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 text-xs font-bold rounded-lg border border-purple-200 dark:border-purple-800/80 flex items-center space-x-1.5 transition active:scale-95 shadow-xs"
+              title="Распознать заказ-наряд или чек по фото с помощью нейросети"
+            >
+              <Camera className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+              <span className="hidden sm:inline">Скан чека (OCR)</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-dark-800 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 max-h-[82vh] overflow-y-auto">
@@ -714,6 +727,34 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
           </div>
         </form>
       </div>
+
+      {isScannerOpen && (
+        <ReceiptScanModal
+          isOpen={isScannerOpen}
+          onClose={() => setIsScannerOpen(false)}
+          vehicle={vehicle}
+          onApplyToService={(data, attachUrl) => {
+            setFormData(prev => ({
+              ...prev,
+              record_type: data.record_type || prev.record_type,
+              date: data.date || prev.date,
+              odometer: data.odometer ?? prev.odometer,
+              engine_hours: data.engine_hours ?? prev.engine_hours,
+              title: data.title || prev.title,
+              description: data.description || prev.description,
+              store: data.store || prev.store,
+              cost_labor: data.cost_labor ?? prev.cost_labor,
+              cost_parts: data.cost_parts ?? prev.cost_parts,
+              total_cost: data.total_cost ?? prev.total_cost,
+              notes: data.notes || prev.notes,
+            }));
+            if (Array.isArray(data.items) && data.items.length > 0) {
+              setItems(data.items);
+            }
+          }}
+          onApplyToFuel={() => {}}
+        />
+      )}
     </div>
   );
 };

@@ -340,7 +340,7 @@ export function App() {
 
   const handleSaveServiceRecord = async (data: Partial<ServiceRecord>) => {
     if (!selectedVehicle) return;
-    if (editingServiceRecord) {
+    if (editingServiceRecord && editingServiceRecord.id) {
       await api.updateServiceRecord(editingServiceRecord.id, data);
     } else {
       await api.createServiceRecord(selectedVehicle.id, data);
@@ -360,7 +360,7 @@ export function App() {
 
   const handleSaveFuelLog = async (data: Partial<FuelLog>) => {
     if (!selectedVehicle) return;
-    if (editingFuelLog) {
+    if (editingFuelLog && editingFuelLog.id) {
       await api.updateFuelLog(editingFuelLog.id, data);
     } else {
       await api.createFuelLog(selectedVehicle.id, data);

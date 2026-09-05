@@ -6,6 +6,7 @@ import { ConsumablesTab } from '../components/ConsumablesTab';
 import { ConsumableModal } from '../components/ConsumableModal';
 import { TyreRotationWidget } from '../components/TyreRotationWidget';
 import { PublicShareModal } from '../components/PublicShareModal';
+import { ReceiptScanModal } from '../components/ReceiptScanModal';
 import { parseDotCode } from '../utils/tyreAnalytics';
 import { downloadIcsReminder } from '../utils/qrcodeHelper';
 import {
@@ -19,6 +20,7 @@ import {
   Plus,
   ArrowLeft,
   Printer,
+  Camera,
   Edit2,
   Trash2,
   CheckCircle2,
@@ -140,6 +142,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [isPublicShareModalOpen, setIsPublicShareModalOpen] = useState(false);
   const [isStarLineModalOpen, setIsStarLineModalOpen] = useState(false);
+  const [isReceiptScanOpen, setIsReceiptScanOpen] = useState(false);
   const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
   const [isSyncingStarLine, setIsSyncingStarLine] = useState(false);
   const [showFuelInLitres, setShowFuelInLitres] = useState(true);
@@ -556,7 +559,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                     className="fixed inset-0 z-40"
                     onClick={() => setIsActionMenuOpen(false)}
                   />
-                  <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-dark-850 rounded-2xl shadow-xl border border-slate-200 dark:border-dark-750 py-1.5 z-50 animate-scaleIn origin-top-right text-xs">
+                  <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-dark-850 rounded-2xl shadow-xl border border-slate-200 dark:border-dark-750 py-1.5 z-50 animate-scaleIn origin-top-right text-xs">
                     <button
                       onClick={() => {
                         setIsActionMenuOpen(false);
@@ -616,6 +619,21 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                       <FileText className="w-4 h-4 text-emerald-500 flex-shrink-0" />
                       <span className="font-semibold">Сервисная книжка (PDF)</span>
                     </button>
+
+                    {isOwner && (
+                      <button
+                        onClick={() => {
+                          setIsActionMenuOpen(false);
+                          setIsReceiptScanOpen(true);
+                        }}
+                        className="w-full px-3.5 py-2.5 text-left text-slate-700 dark:text-slate-200 hover:bg-purple-50 dark:hover:bg-purple-950/40 flex items-center space-x-2.5 transition"
+                      >
+                        <Camera className="w-4 h-4 text-purple-600 dark:text-purple-400 flex-shrink-0" />
+                        <span className="font-semibold text-purple-700 dark:text-purple-300">
+                          Распознать заказ-наряд / чек (OCR)
+                        </span>
+                      </button>
+                    )}
 
                     <button
                       onClick={() => {
@@ -1169,64 +1187,6 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
         </div>
       </div>
 
-      {/* Quick Action Bar for Service Booklet & PDF (Prominent on Mobile & Desktop) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-        <button
-          onClick={() => api.downloadServiceBooklet(vehicle.id)}
-          className="w-full py-2.5 sm:py-3 px-3.5 sm:px-4 bg-white dark:bg-dark-850 hover:bg-slate-50 dark:hover:bg-dark-800 active:scale-[0.99] border border-slate-200 dark:border-dark-750 hover:border-emerald-500/50 rounded-2xl text-xs font-bold flex items-center justify-between shadow-xs transition group"
-        >
-          <div className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
-              <FileText className="w-4 h-4" />
-            </div>
-            <div className="text-left">
-              <div className="text-slate-900 dark:text-white font-bold group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                Брендированный PDF-отчет
-              </div>
-              <div className="text-[10.5px] text-slate-400 font-normal">
-                Сервисная книжка A4 для печати и архива
-              </div>
-            </div>
-          </div>
-          <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 px-2.5 py-1 rounded-lg flex items-center space-x-1">
-            <Printer className="w-3 h-3 flex-shrink-0" />
-            <span>PDF A4</span>
-          </span>
-        </button>
-
-        {isOwner && (
-          <button
-            onClick={() => setIsPublicShareModalOpen(true)}
-            className="w-full py-2.5 sm:py-3 px-3.5 sm:px-4 bg-white dark:bg-dark-850 hover:bg-slate-50 dark:hover:bg-dark-800 active:scale-[0.99] border border-slate-200 dark:border-dark-750 hover:border-sky-500/50 rounded-2xl text-xs font-bold flex items-center justify-between shadow-xs transition group"
-          >
-            <div className="flex items-center space-x-2.5">
-              <div className="w-8 h-8 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center flex-shrink-0">
-                <Share2 className="w-4 h-4" />
-              </div>
-              <div className="text-left">
-                <div className="text-slate-900 dark:text-white font-bold group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors flex items-center gap-1.5">
-                  <span>Публичная цифровая книжка</span>
-                  {vehicle.public_booklet_enabled && (
-                    <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                  )}
-                </div>
-                <div className="text-[10.5px] text-slate-400 font-normal">
-                  QR-код и ссылка для покупателей на Авито
-                </div>
-              </div>
-            </div>
-            <span className={`text-[11px] font-bold px-2.5 py-1 rounded-lg flex items-center space-x-1 border ${
-              vehicle.public_booklet_enabled
-                ? 'text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 border-emerald-200 dark:border-emerald-800'
-                : 'text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/50 border-sky-200 dark:border-sky-800'
-            }`}>
-              <QrCode className="w-3 h-3 flex-shrink-0" />
-              <span>{vehicle.public_booklet_enabled ? 'Активна' : 'Настроить'}</span>
-            </span>
-          </button>
-        )}
-      </div>
-
       {/* Modern 5-Column Segmented Tab Bar (Fits on 1 line on mobile and desktop) */}
       <div className="grid grid-cols-5 gap-1 p-1 bg-slate-200/70 dark:bg-dark-800 border border-slate-200 dark:border-dark-750 rounded-2xl">
         {navTabs.map((tab) => {
@@ -1265,44 +1225,6 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
         {/* Service / Repairs / Upgrades Combined Tab */}
         {['service', 'repairs', 'upgrades'].includes(activeTab) && (
           <div className="space-y-3.5">
-            {/* Service Booklet Quick Bar */}
-            <div className="bg-slate-100/80 dark:bg-dark-800/80 rounded-2xl p-3 border border-slate-200 dark:border-dark-750 flex flex-wrap items-center justify-between gap-2.5">
-              <div className="flex items-center space-x-2.5">
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
-                  <FileText className="w-4 h-4" />
-                </div>
-                <div>
-                  <span className="text-xs font-bold text-slate-900 dark:text-white block">
-                    Сервисная книжка автомобиля
-                  </span>
-                  <span className="text-[10.5px] text-slate-500 dark:text-slate-400">
-                    Официальный PDF-отчет A4 и публичный QR-доступ для продажи
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-2 w-full sm:w-auto">
-                <button
-                  onClick={() => api.downloadServiceBooklet(vehicle.id)}
-                  className="flex-1 sm:flex-initial px-3 py-1.5 bg-white dark:bg-dark-750 hover:bg-slate-50 dark:hover:bg-dark-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-dark-700 rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 transition shadow-xs active:scale-95"
-                  title="Скачать сервисный PDF-отчет формата A4"
-                >
-                  <Printer className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                  <span>Скачать PDF</span>
-                </button>
-                {isOwner && (
-                  <button
-                    onClick={() => setIsPublicShareModalOpen(true)}
-                    className="flex-1 sm:flex-initial px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 transition shadow-xs shadow-emerald-600/20"
-                    title="Поделиться цифровой ссылкой и QR-кодом"
-                  >
-                    <Share2 className="w-3.5 h-3.5" />
-                    <span>Поделиться (QR)</span>
-                  </button>
-                )}
-              </div>
-            </div>
-
             {/* Filter Chips + Search and Action Bar */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5">
               {/* Filter Chips */}
@@ -2808,6 +2730,37 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                     <span>Экспорт данных в Excel (.xlsx)</span>
                   </button>
                 </div>
+
+                {/* 5. OCR Vision Scan */}
+                <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-5 shadow-sm space-y-4 flex flex-col justify-between">
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center flex-shrink-0">
+                        <Camera className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                          Распознавание заказ-нарядов и чеков (OCR)
+                        </h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          AI-сканирование фото заказ-нарядов СТО и чеков с АЗС
+                        </p>
+                      </div>
+                    </div>
+
+                    <p className="text-[11px] text-slate-400 leading-relaxed p-3 bg-slate-50 dark:bg-dark-900/60 rounded-xl border border-slate-200/80 dark:border-dark-750">
+                      Сфотографируйте на телефон заказ-наряд или чек. Нейросеть автоматически распознает дату, пробег, цены, работы и артикулы деталей и перенесет в форму ТО.
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => setIsReceiptScanOpen(true)}
+                    className="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-2 transition shadow-md shadow-purple-600/20 active:scale-95"
+                  >
+                    <Camera className="w-4 h-4" />
+                    <span>Сканировать документ по фото</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -2880,6 +2833,27 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
           onSave={handleSaveConsumable}
           consumable={editingConsumable}
           vehicle={vehicle}
+        />
+      )}
+
+      {/* OCR / Vision Receipt Scan Modal */}
+      {isReceiptScanOpen && (
+        <ReceiptScanModal
+          isOpen={isReceiptScanOpen}
+          onClose={() => setIsReceiptScanOpen(false)}
+          vehicle={vehicle}
+          onApplyToService={(data, attachUrl) => {
+            onOpenServiceModal(data.record_type || 'service', {
+              ...data,
+              vehicle_id: vehicle.id,
+            } as any);
+          }}
+          onApplyToFuel={(data) => {
+            onOpenFuelModal({
+              ...data,
+              vehicle_id: vehicle.id,
+            } as any);
+          }}
         />
       )}
     </div>
