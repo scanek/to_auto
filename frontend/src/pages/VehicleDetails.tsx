@@ -37,6 +37,7 @@ import {
   CheckCircle,
   RefreshCw,
   FileJson,
+  Download,
   Eye,
   Globe,
   Lock,
@@ -85,6 +86,7 @@ import {
   VehicleConsumable,
 } from '../types';
 import { api } from '../services/api';
+import { localDB } from '../services/localDatabase';
 import { notificationService } from '../services/notificationService';
 import { ProgressBar } from '../components/ProgressBar';
 
@@ -237,6 +239,31 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
           alert('Ошибка при сохранении объема бака: ' + (err.message || ''));
         }
       }
+    }
+  };
+
+  const handleExportVehicleBackup = async () => {
+    try {
+      const cleanName = `${vehicle.make}_${vehicle.model}`.replace(/\s+/g, '_');
+      const dateStr = new Date().toISOString().split('T')[0];
+      const filename = `backup_${cleanName}_${dateStr}.json`;
+
+      if (localDB.isStandalone()) {
+        const jsonStr = await localDB.exportVehicleBackup(vehicle.id);
+        const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      } else {
+        window.location.href = api.exportVehicleBackupUrl(vehicle.id);
+      }
+    } catch (err: any) {
+      alert('Ошибка при экспорте бэкапа: ' + (err.message || ''));
     }
   };
 
@@ -618,6 +645,20 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                     >
                       <FileText className="w-4 h-4 text-emerald-500 flex-shrink-0" />
                       <span className="font-semibold">Сервисная книжка (PDF)</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setIsActionMenuOpen(false);
+                        handleExportVehicleBackup();
+                      }}
+                      className="w-full px-3.5 py-2.5 text-left text-slate-700 dark:text-slate-200 hover:bg-amber-50 dark:hover:bg-amber-950/40 flex items-center space-x-2.5 transition"
+                      title="Выгрузить данные этого авто в JSON для переноса на телефон"
+                    >
+                      <Download className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                      <span className="font-semibold text-amber-700 dark:text-amber-400">
+                        Бэкап этого авто (JSON)
+                      </span>
                     </button>
 
                     {isOwner && (
@@ -2759,6 +2800,37 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                   >
                     <Camera className="w-4 h-4" />
                     <span>Сканировать документ по фото</span>
+                  </button>
+                </div>
+
+                {/* 6. Vehicle JSON Backup */}
+                <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-5 shadow-sm space-y-4 flex flex-col justify-between">
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center flex-shrink-0">
+                        <Download className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                          Бэкап этого авто (JSON)
+                        </h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          Экспорт данных {vehicle.make} {vehicle.model} для переноса на телефон
+                        </p>
+                      </div>
+                    </div>
+
+                    <p className="text-[11px] text-slate-400 leading-relaxed p-3 bg-slate-50 dark:bg-dark-900/60 rounded-xl border border-slate-200/80 dark:border-dark-750">
+                      Сохраняет полную историю ТО, чеков, шин, расходников, напоминаний и документов только для этого автомобиля. Готовый файл JSON можно сразу импортировать в мобильное приложение Бортового Журнала.
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={handleExportVehicleBackup}
+                    className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-2 transition shadow-md shadow-amber-500/20 active:scale-95"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Скачать бэкап {vehicle.make} {vehicle.model} (.json)</span>
                   </button>
                 </div>
               </div>

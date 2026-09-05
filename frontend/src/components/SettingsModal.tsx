@@ -145,11 +145,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     setServerSyncMsg({ text: 'Включен автономный режим. Все данные хранятся локально на телефоне.', type: 'success' });
   };
 
-  const handleExportJson = async () => {
+  const handleExportVehicleJson = async (vehicleId?: number) => {
+    const targetId = vehicleId || selectedVehicle?.id || (vehicles.length > 0 ? vehicles[0].id : undefined);
+    if (!targetId) return;
+    const v = vehicles.find((item) => item.id === targetId);
+    const dateStr = new Date().toISOString().split('T')[0];
+    const cleanName = v ? `${v.make}_${v.model}`.replace(/\s+/g, '_') : `vehicle_${targetId}`;
+    const filename = `backup_${cleanName}_${dateStr}.json`;
+
     if (localDB.isStandalone()) {
-      const jsonStr = await localDB.exportAllBackup();
-      const dateStr = new Date().toISOString().split('T')[0];
-      const filename = `autotracker_backup_${dateStr}.json`;
+      const jsonStr = await localDB.exportVehicleBackup(targetId);
       const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -160,9 +165,34 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     } else {
-      window.location.href = api.exportAllBackupUrl();
+      window.location.href = api.exportVehicleBackupUrl(targetId);
     }
   };
+
+  const handleExportMyGarageJson = async () => {
+    if (localDB.isStandalone()) {
+      const jsonStr = await localDB.exportAllBackup();
+      const dateStr = new Date().toISOString().split('T')[0];
+      const filename = `my_garage_backup_${dateStr}.json`;
+      const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } else {
+      window.location.href = api.exportMyGarageBackupUrl();
+    }
+  };
+
+  const handleExportFullServerJson = async () => {
+    window.location.href = api.exportAllBackupUrl();
+  };
+
+  const handleExportJson = handleExportMyGarageJson;
 
   const isAdmin = currentUser?.role === 'admin';
 
@@ -465,26 +495,71 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               {/* Backup & System Data */}
               <div className="space-y-2.5">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  {currentUser?.role === 'admin' ? 'Резервное копирование' : 'Резервная копия гаража'}
+                  Резервное копирование и перенос данных
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {/* Option 1: Backup Selected Vehicle (Only this vehicle) */}
+                  {(selectedVehicle || vehicles.length > 0) && (
+                    <button
+                      onClick={() => handleExportVehicleJson()}
+                      className="p-3.5 rounded-2xl border border-slate-200 dark:border-dark-750 bg-slate-50/60 dark:bg-dark-800/60 hover:border-amber-500/40 hover:bg-amber-500/5 transition flex items-center space-x-3 group text-left"
+                      title="Выгрузить JSON только этого автомобиля"
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                        <Car className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                          {selectedVehicle ? `Бэкап: ${selectedVehicle.make} ${selectedVehicle.model}` : 'Бэкап выбранного авто'}
+                        </div>
+                        <div className="text-[11px] text-slate-500">
+                          Только этот авто для переноса на телефон
+                        </div>
+                      </div>
+                    </button>
+                  )}
+
+                  {/* Option 2: Backup My Garage (Only my vehicles) */}
                   <button
-                    onClick={handleExportJson}
+                    onClick={handleExportMyGarageJson}
                     className="p-3.5 rounded-2xl border border-slate-200 dark:border-dark-750 bg-slate-50/60 dark:bg-dark-800/60 hover:border-brand-500/40 hover:bg-brand-500/5 transition flex items-center space-x-3 group text-left"
+                    title="Выгрузить только свои автомобили"
                   >
                     <div className="w-10 h-10 rounded-xl bg-brand-500/10 text-brand-500 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
                       <Download className="w-5 h-5" />
                     </div>
                     <div className="min-w-0">
                       <div className="text-xs font-bold text-slate-900 dark:text-white">
-                        {localDB.isStandalone() ? 'Экспорт бэкапа (JSON)' : (currentUser?.role === 'admin' ? 'Экспорт всей базы (JSON)' : 'Экспорт моего гаража (JSON)')}
+                        {localDB.isStandalone() ? 'Экспорт базы устройства (JSON)' : 'Экспорт моего гаража (JSON)'}
                       </div>
                       <div className="text-[11px] text-slate-500">
-                        {localDB.isStandalone() ? 'Сохранить все данные с устройства' : (currentUser?.role === 'admin' ? 'Все пользователи и авто' : 'Сохранить мои авто и историю ТО')}
+                        {localDB.isStandalone() ? 'Все данные с телефона' : 'Все мои авто (без других пользователей)'}
                       </div>
                     </div>
                   </button>
 
+                  {/* Option 3: Full Server Database Backup (Admin only, in server mode) */}
+                  {currentUser?.role === 'admin' && !localDB.isStandalone() && (
+                    <button
+                      onClick={handleExportFullServerJson}
+                      className="p-3.5 rounded-2xl border border-slate-200 dark:border-dark-750 bg-slate-50/60 dark:bg-dark-800/60 hover:border-indigo-500/40 hover:bg-indigo-500/5 transition flex items-center space-x-3 group text-left"
+                      title="Выгрузить полный дамп всей базы сервера со всеми пользователями"
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                        <ShieldCheck className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-slate-900 dark:text-white">
+                          Полный дамп сервера (JSON)
+                        </div>
+                        <div className="text-[11px] text-slate-500">
+                          Все пользователи, авто и настройки (Админ)
+                        </div>
+                      </div>
+                    </button>
+                  )}
+
+                  {/* Option 4: Import Backup */}
                   <button
                     onClick={() => {
                       onClose();
@@ -500,7 +575,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         Восстановление из JSON
                       </div>
                       <div className="text-[11px] text-slate-500">
-                        Импортировать файл бэкапа
+                        Импортировать файл бэкапа в гараж
                       </div>
                     </div>
                   </button>
