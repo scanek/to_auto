@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { User, AdminUser, Vehicle, TelegramBotConfig } from '../types';
 import { api, removeAuthToken } from '../services/api';
+import { localDB } from '../services/localDatabase';
 
 interface SettingsModalProps {
   isOpen: boolean;
