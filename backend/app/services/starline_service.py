@@ -10,8 +10,8 @@ from sqlalchemy import select
 
 from app.models.vehicle import Vehicle
 
-DEFAULT_STARLINE_APP_ID = os.getenv("STARLINE_APP_ID", "52429")
-DEFAULT_STARLINE_SECRET = os.getenv("STARLINE_SECRET", "sLH_ZdZNh13xPAS1_taVqeUF_uoGk1wP")
+DEFAULT_STARLINE_APP_ID = os.getenv("STARLINE_APP_ID", "")
+DEFAULT_STARLINE_SECRET = os.getenv("STARLINE_SECRET", "")
 
 STARLINE_ID_URL = "https://id.starline.ru/apiV3"
 STARLINE_DEV_URL = "https://developer.starline.ru"

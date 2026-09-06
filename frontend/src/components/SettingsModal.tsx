@@ -1368,7 +1368,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           type={showBotToken ? 'text' : 'password'}
                           value={botTokenInput}
                           onChange={(e) => setBotTokenInput(e.target.value)}
-                          placeholder="8868283738:AAG3Dh994OcZ1SxHjRuWekoJQgH4vhkZXyA"
+                          placeholder="1234567890:ABCdefGHIjklMNOpqrsTUVwxyz..."
                           className="w-full text-xs font-mono px-3.5 py-2.5 pr-10 rounded-xl border border-slate-300 dark:border-dark-700 bg-slate-50 dark:bg-dark-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
                         />
                         <button

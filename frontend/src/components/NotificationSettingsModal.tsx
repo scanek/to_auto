@@ -381,7 +381,7 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
                           type={showTokenText ? 'text' : 'password'}
                           value={botTokenInput}
                           onChange={(e) => setBotTokenInput(e.target.value)}
-                          placeholder="8868283738:AAG3Dh994OcZ1SxHjRuWeko..."
+                          placeholder="1234567890:ABCdefGHIjklMNOpqrs..."
                           className="w-full text-xs font-mono px-3 py-1.5 pr-8 rounded-lg border border-slate-300 dark:border-dark-700 bg-slate-50 dark:bg-dark-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-sky-500"
                         />
                         <button

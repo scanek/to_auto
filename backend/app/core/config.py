@@ -11,7 +11,7 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "AutoTracker (LubeLogger Style)"
-    VERSION: str = "2.9.2"
+    VERSION: str = "3.0.0"
     API_V1_STR: str = "/api/v1"
     
     # Paths
@@ -27,8 +27,8 @@ class Settings(BaseSettings):
     BACKEND_CORS_ORIGINS: list[str] = ["*"]
 
     # Telegram Bot
-    TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "8868283738:AAG3Dh994OcZ1SxHjRuWekoJQgH4vhkZXyA")
-    TELEGRAM_BOT_USERNAME: str = os.getenv("TELEGRAM_BOT_USERNAME", "to_scanek_bot")
+    TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    TELEGRAM_BOT_USERNAME: str = os.getenv("TELEGRAM_BOT_USERNAME", "")
 
     # Swagger / OpenAPI documentation
     ENABLE_DOCS: bool = os.getenv("ENABLE_DOCS", "false").lower() in ("true", "1", "yes")

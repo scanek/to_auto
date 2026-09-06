@@ -11,7 +11,7 @@ from app.models.vehicle import Vehicle
 from app.models.user import User
 from app.core.security import get_current_user
 from app.services.auth_helper import verify_vehicle_access
-from app.services.starline_service import StarLineService
+from app.services.starline_service import StarLineService, DEFAULT_STARLINE_APP_ID, DEFAULT_STARLINE_SECRET
 
 router = APIRouter(prefix="/telematics", tags=["Telematics"])
 
@@ -62,8 +62,8 @@ async def authenticate_starline(
             login=payload.login,
             password=payload.password,
             app_code=payload.app_code,
-            app_id=payload.app_id or "52429",
-            secret=payload.secret or "sLH_ZdZNh13xPAS1_taVqeUF_uoGk1wP",
+            app_id=payload.app_id or DEFAULT_STARLINE_APP_ID,
+            secret=payload.secret or DEFAULT_STARLINE_SECRET,
             sms_code=payload.sms_code,
             captcha_sid=payload.captcha_sid,
             captcha_code=payload.captcha_code,

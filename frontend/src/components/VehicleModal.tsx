@@ -355,7 +355,7 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
               </label>
               <input
                 type="text"
-                placeholder="А381РН252"
+                placeholder="А123АА 777"
                 value={formData.license_plate}
                 onChange={(e) => setFormData({ ...formData, license_plate: e.target.value })}
                 className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-300 dark:border-dark-750 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 uppercase font-mono font-bold"
