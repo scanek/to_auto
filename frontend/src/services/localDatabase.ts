@@ -232,7 +232,7 @@ class LocalDatabaseEngine {
 
   public async getVehicle(id: number): Promise<Vehicle | null> {
     const vehicles = await this.getVehicles();
-    return vehicles.find((v) => v.id === id) || null;
+    return vehicles.find((v) => Number(v.id) === Number(id)) || null;
   }
 
   public async createVehicle(data: Partial<Vehicle>): Promise<Vehicle> {
@@ -568,6 +568,10 @@ class LocalDatabaseEngine {
       quantity: Number(data.quantity) || 4,
       price_per_unit: Number(data.price_per_unit) || 0,
       total_price: Number(data.total_price) || 0,
+      last_rotation_km: data.last_rotation_km !== undefined ? data.last_rotation_km : null,
+      rotation_interval_km: Number(data.rotation_interval_km) || 10000,
+      is_directional: Boolean(data.is_directional),
+      created_at: data.created_at || new Date().toISOString(),
     };
     await this.putItem(STORES.TYRES, tyre);
     return tyre;
@@ -575,11 +579,11 @@ class LocalDatabaseEngine {
 
   public async updateTyreSet(id: number, data: Partial<TyreSet>): Promise<TyreSet> {
     const all = await this.getAllFromStore<TyreSet>(STORES.TYRES);
-    const existing = all.find((t) => t.id === id);
+    const existing = all.find((t) => Number(t.id) === Number(id));
     const updated: TyreSet = {
-      ...(existing || {} as any),
+      ...(existing || ({} as any)),
       ...data,
-      id,
+      id: Number(id),
     };
     await this.putItem(STORES.TYRES, updated);
     return updated;
@@ -587,14 +591,16 @@ class LocalDatabaseEngine {
 
   public async activateTyreSet(id: number, mileage?: number): Promise<TyreSet> {
     const all = await this.getAllFromStore<TyreSet>(STORES.TYRES);
-    const target = all.find((t) => t.id === id);
+    const target = all.find((t) => Number(t.id) === Number(id));
     if (!target) throw new Error('Комплект шин не найден');
 
     for (const t of all) {
-      if (t.vehicle_id === target.vehicle_id) {
+      if (Number(t.vehicle_id) === Number(target.vehicle_id)) {
         await this.updateTyreSet(t.id, {
-          is_active: t.id === id,
-          ...(t.id === id && mileage !== undefined ? { install_mileage: mileage, install_date: new Date().toISOString() } : {}),
+          is_active: Number(t.id) === Number(id),
+          ...(Number(t.id) === Number(id) && mileage !== undefined
+            ? { install_mileage: mileage, install_date: new Date().toISOString() }
+            : {}),
         });
       }
     }
@@ -607,17 +613,55 @@ class LocalDatabaseEngine {
 
   public async rotateTyreSet(id: number, payload: TyreRotatePayload): Promise<TyreSet> {
     const all = await this.getAllFromStore<TyreSet>(STORES.TYRES);
-    const existing = all.find((t) => t.id === id);
+    const existing = all.find((t) => Number(t.id) === Number(id));
     if (!existing) throw new Error('Комплект шин не найден');
 
     const updated: TyreSet = {
       ...existing,
-      tpms_fl_id: payload.fl,
-      tpms_fr_id: payload.fr,
-      tpms_rl_id: payload.rl,
-      tpms_rr_id: payload.rr,
+      last_rotation_km: Number(payload.current_odometer),
+      updated_at: new Date().toISOString(),
     };
+
+    if (payload.swap_tpms && (existing.tpms_fl_id || existing.tpms_fr_id || existing.tpms_rl_id || existing.tpms_rr_id)) {
+      const old_fl = existing.tpms_fl_id || '';
+      const old_fr = existing.tpms_fr_id || '';
+      const old_rl = existing.tpms_rl_id || '';
+      const old_rr = existing.tpms_rr_id || '';
+
+      const pattern = (payload.drive_type || 'fwd').toLowerCase();
+      if (pattern === 'fwd') {
+        // Forward cross: Front to same rear, rear cross to opposite front
+        updated.tpms_rl_id = old_fl;
+        updated.tpms_rr_id = old_fr;
+        updated.tpms_fl_id = old_rr;
+        updated.tpms_fr_id = old_rl;
+      } else if (pattern === 'awd' || pattern === '4wd' || pattern === 'rwd') {
+        // Rearward cross: Rear to same front, front cross to opposite rear
+        updated.tpms_fl_id = old_rl;
+        updated.tpms_fr_id = old_rr;
+        updated.tpms_rl_id = old_fr;
+        updated.tpms_rr_id = old_fl;
+      } else {
+        // Directional: front and rear swap on same side
+        updated.tpms_fl_id = old_rl;
+        updated.tpms_rl_id = old_fl;
+        updated.tpms_fr_id = old_rr;
+        updated.tpms_rr_id = old_fr;
+      }
+    }
+
     await this.putItem(STORES.TYRES, updated);
+
+    // If rotation odometer is higher than vehicle current odometer, update vehicle odometer
+    if (existing.vehicle_id) {
+      const vehicle = await this.getVehicle(existing.vehicle_id);
+      if (vehicle && Number(payload.current_odometer) > (vehicle.current_odometer || 0)) {
+        await this.updateVehicle(vehicle.id, {
+          current_odometer: Number(payload.current_odometer),
+        });
+      }
+    }
+
     return updated;
   }
 

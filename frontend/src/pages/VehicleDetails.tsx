@@ -2458,7 +2458,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                         }}
                         onUpdateTyre={(updated) => {
                           setTyres((prev) =>
-                            prev.map((item) => (item.id === activeTyre.id ? { ...item, ...updated } : item))
+                            prev.map((item) => (String(item.id) === String(activeTyre.id) ? { ...item, ...updated } : item))
                           );
                         }}
                       />

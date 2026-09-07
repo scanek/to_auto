@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TyreSet, Vehicle } from '../types';
 import { api } from '../services/api';
 import { getRotationAnalysis, getRotationScheme } from '../utils/tyreAnalytics';
@@ -38,8 +38,16 @@ export const TyreRotationWidget: React.FC<TyreRotationWidgetProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  useEffect(() => {
+    setDriveType(vehicle.drive_type || 'fwd');
+  }, [vehicle.drive_type]);
+
+  useEffect(() => {
+    setIsDirectional(tyre.is_directional || false);
+  }, [tyre.is_directional]);
+
   const rotationInterval = tyre.rotation_interval_km || 10000;
-  const analysis = getRotationAnalysis(vehicle.current_odometer, tyre.last_rotation_km, rotationInterval);
+  const analysis = getRotationAnalysis(vehicle.current_odometer || 0, tyre.last_rotation_km, rotationInterval, tyre.install_mileage);
   const scheme = getRotationScheme(driveType, isDirectional);
 
   const hasTpms = Boolean(
@@ -64,6 +72,9 @@ export const TyreRotationWidget: React.FC<TyreRotationWidgetProps> = ({
     setDriveType(val);
     try {
       await api.updateVehicle(vehicle.id, { drive_type: val } as any);
+      if (onRotated) {
+        onRotated();
+      }
     } catch (err) {
       console.error('Failed to update vehicle drive_type', err);
     }
@@ -73,13 +84,16 @@ export const TyreRotationWidget: React.FC<TyreRotationWidgetProps> = ({
     setIsSubmitting(true);
     setErrorMsg(null);
     try {
-      await api.rotateTyreSet(tyre.id, {
+      const updated = await api.rotateTyreSet(tyre.id, {
         current_odometer: Number(odometerInput),
         swap_tpms: swapTpms,
         drive_type: isDirectional ? 'directional' : (driveType as any),
       });
+      if (onUpdateTyre && updated) {
+        onUpdateTyre(updated);
+      }
       setIsModalOpen(false);
-      onRotated();
+      await onRotated();
     } catch (err: any) {
       setErrorMsg(err.message || 'Ошибка при сохранении ротации шин');
     } finally {
@@ -132,7 +146,7 @@ export const TyreRotationWidget: React.FC<TyreRotationWidgetProps> = ({
               </span>
             )}
             <span className="text-xs text-slate-500 dark:text-slate-400">
-              Регламент: каждые {rotationInterval.toLocaleString()} км
+              Регламент: каждые {(rotationInterval || 0).toLocaleString()} км
             </span>
           </div>
 
@@ -157,12 +171,12 @@ export const TyreRotationWidget: React.FC<TyreRotationWidgetProps> = ({
 
         <div className="flex justify-between items-center text-[11px] text-slate-400 mt-2">
           <span>
-            {tyre.last_rotation_km
-              ? `Прошлая ротация: ${tyre.last_rotation_km.toLocaleString()} ${vehicle.distance_unit}`
+            {tyre.last_rotation_km !== undefined && tyre.last_rotation_km !== null
+              ? `Прошлая ротация: ${(tyre.last_rotation_km || 0).toLocaleString()} ${vehicle.distance_unit || 'км'}`
               : 'Прошлая ротация: не отмечена'}
           </span>
           <span>
-            Текущий пробег авто: {vehicle.current_odometer.toLocaleString()} {vehicle.distance_unit}
+            Текущий пробег авто: {(vehicle.current_odometer || 0).toLocaleString()} ${vehicle.distance_unit || 'км'}
           </span>
         </div>
       </div>
@@ -364,7 +378,7 @@ export const TyreRotationWidget: React.FC<TyreRotationWidgetProps> = ({
             <div className="space-y-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Пробег автомобиля на момент перестановки ({vehicle.distance_unit}):
+                  Пробег автомобиля на момент перестановки ({vehicle.distance_unit || 'км'}):
                 </label>
                 <input
                   type="number"

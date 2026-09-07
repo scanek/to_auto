@@ -100,23 +100,33 @@ export interface RotationAnalysis {
 }
 
 export function getRotationAnalysis(
-  currentOdometer: number,
+  currentOdometer: number = 0,
   lastRotationKm?: number | null,
-  rotationIntervalKm: number = 10000
+  rotationIntervalKm: number = 10000,
+  installMileage?: number | null
 ): RotationAnalysis {
-  const effectiveLastKm = lastRotationKm ?? 0;
-  const kmSinceRotation = Math.max(0, currentOdometer - effectiveLastKm);
-  const kmRemaining = rotationIntervalKm - kmSinceRotation;
-  const isOverdue = kmRemaining <= 0;
-  const progressPercent = Math.min(100, Math.max(0, (kmSinceRotation / rotationIntervalKm) * 100));
+  const hasRecordedRotation = lastRotationKm !== null && lastRotationKm !== undefined;
+  const baseKm = hasRecordedRotation ? Number(lastRotationKm) : (installMileage != null ? Number(installMileage) : 0);
+  const kmSinceRotation = Math.max(0, (currentOdometer || 0) - baseKm);
+  const kmRemaining = (rotationIntervalKm || 10000) - kmSinceRotation;
+  const isOverdue = hasRecordedRotation ? kmRemaining <= 0 : (installMileage != null ? kmRemaining <= 0 : false);
+  const progressPercent = Math.min(100, Math.max(0, (kmSinceRotation / (rotationIntervalKm || 10000)) * 100));
 
   let statusText = '';
-  if (lastRotationKm === null || lastRotationKm === undefined) {
-    statusText = 'Перестановка колес еще не фиксировалась';
+  if (!hasRecordedRotation) {
+    if (installMileage != null) {
+      if (isOverdue) {
+        statusText = `Рекомендуется первая перестановка! Пробег после установки: ${(kmSinceRotation || 0).toLocaleString()} км`;
+      } else {
+        statusText = `Первая перестановка через: ${(kmRemaining || 0).toLocaleString()} км`;
+      }
+    } else {
+      statusText = 'Перестановка колес еще не фиксировалась';
+    }
   } else if (isOverdue) {
-    statusText = `Срочно требуется ротация! Просрочено на ${Math.abs(kmRemaining).toLocaleString()} км`;
+    statusText = `Срочно требуется ротация! Просрочено на ${(Math.abs(kmRemaining) || 0).toLocaleString()} км`;
   } else {
-    statusText = `До следующей перестановки: ${kmRemaining.toLocaleString()} км`;
+    statusText = `До следующей перестановки: ${(kmRemaining || 0).toLocaleString()} км`;
   }
 
   return {
