@@ -8,6 +8,7 @@ import { TyreRotationWidget } from '../components/TyreRotationWidget';
 import { PublicShareModal } from '../components/PublicShareModal';
 import { ReceiptScanModal } from '../components/ReceiptScanModal';
 import { KnowledgeBaseTab } from '../components/KnowledgeBaseTab';
+import { CHANGAN_CS55_PLUS_SCHEDULE } from '../data/factorySchedulesData';
 import { parseDotCode } from '../utils/tyreAnalytics';
 import { downloadIcsReminder } from '../utils/qrcodeHelper';
 import {
@@ -125,6 +126,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   const [serviceFilter, setServiceFilter] = useState<'all' | 'service' | 'repair' | 'upgrade'>('all');
 
   const isOwner = isAuthenticated && vehicle.is_owner !== false;
+  const isChangan = `${vehicle.make} ${vehicle.model}`.toLowerCase().includes('changan');
 
   const [serviceRecords, setServiceRecords] = useState<ServiceRecord[]>([]);
   const [expandedRecords, setExpandedRecords] = useState<Record<number, boolean>>({});
@@ -1482,6 +1484,42 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               </span>
               {isOwner && (
                 <div className="flex items-center space-x-2">
+                  {isChangan && (
+                    <button
+                      onClick={async () => {
+                        if (window.confirm('Применить заводскую сервисную сетку ТО Changan CS55 Plus (7 регламентов с OEM допусками, артикулами и интервалами: масло 0W-20, салонный PM2.5, воздушный, тормозная DOT4 Class 6, свечи иридий, 7DCT, антифриз)?')) {
+                          try {
+                            for (const item of CHANGAN_CS55_PLUS_SCHEDULE) {
+                              await api.createReminder(vehicle.id, {
+                                title: item.title,
+                                category: item.category,
+                                icon: item.icon,
+                                interval_distance: item.interval_distance,
+                                interval_months: item.interval_months,
+                                notify_before_distance: item.notify_before_distance,
+                                notify_before_days: item.notify_before_days,
+                                description: `${item.description}\n\nСпецификация: ${item.spec || 'OEM'}\nАртикул: ${item.article || 'OEM'}\nЗаметка: ${item.notes}`,
+                                last_service_odometer: vehicle.current_odometer || 0,
+                                last_service_date: new Date().toISOString(),
+                              });
+                            }
+                            const updated = await api.getReminders(vehicle.id);
+                            setReminders(updated);
+                            await onRefreshVehicle();
+                            alert('Заводской регламент ТО Changan CS55 Plus успешно применен!');
+                          } catch (err) {
+                            console.error(err);
+                            alert('Ошибка применения заводских регламентов');
+                          }
+                        }
+                      }}
+                      className="flex items-center space-x-1.5 text-xs font-bold text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 px-3 py-1.5 rounded-xl transition-all shadow-sm"
+                      title="Загрузить сервисный регламент Changan CS55 Plus"
+                    >
+                      <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                      <span>⚡ Регламент Changan</span>
+                    </button>
+                  )}
                   <button
                     onClick={async () => {
                       if (window.confirm('Применить пакет стандартных регламентов (масло ДВС, фильтры, свечи, трансмиссия, антифриз, тормозная жидкость)?')) {
@@ -1519,13 +1557,50 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                   Добавьте регламент замены масла, фильтров, свечей или колодок, и система заранее предупредит о необходимости ТО.
                 </p>
                 {isOwner && (
-                  <button
-                    onClick={() => onOpenReminderModal()}
-                    className="inline-flex items-center space-x-1.5 bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-xl text-xs font-bold"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Создать регламент</span>
-                  </button>
+                  <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+                    {isChangan && (
+                      <button
+                        onClick={async () => {
+                          if (window.confirm('Применить заводскую сервисную сетку ТО Changan CS55 Plus (7 регламентов с OEM допусками и интервалами)?')) {
+                            try {
+                              for (const item of CHANGAN_CS55_PLUS_SCHEDULE) {
+                                await api.createReminder(vehicle.id, {
+                                  title: item.title,
+                                  category: item.category,
+                                  icon: item.icon,
+                                  interval_distance: item.interval_distance,
+                                  interval_months: item.interval_months,
+                                  notify_before_distance: item.notify_before_distance,
+                                  notify_before_days: item.notify_before_days,
+                                  description: `${item.description}\n\nСпецификация: ${item.spec || 'OEM'}\nАртикул: ${item.article || 'OEM'}\nЗаметка: ${item.notes}`,
+                                  last_service_odometer: vehicle.current_odometer || 0,
+                                  last_service_date: new Date().toISOString(),
+                                });
+                              }
+                              const updated = await api.getReminders(vehicle.id);
+                              setReminders(updated);
+                              await onRefreshVehicle();
+                              alert('Заводской регламент ТО Changan CS55 Plus успешно применен!');
+                            } catch (err) {
+                              console.error(err);
+                              alert('Ошибка применения регламентов');
+                            }
+                          }
+                        }}
+                        className="inline-flex items-center space-x-1.5 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition-all"
+                      >
+                        <Zap className="w-4 h-4 fill-white" />
+                        <span>⚡ Применить регламент Changan</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => onOpenReminderModal()}
+                      className="inline-flex items-center space-x-1.5 bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition-all"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Создать вручную</span>
+                    </button>
+                  </div>
                 )}
               </div>
             ) : (

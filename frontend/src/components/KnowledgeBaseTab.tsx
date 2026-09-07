@@ -5,7 +5,6 @@ import {
   X,
   SlidersHorizontal,
   Lightbulb,
-  Car,
   MapPin,
   Sparkles,
   AlertTriangle,
@@ -26,22 +25,28 @@ import {
   Archive,
   ZoomIn,
   ZoomOut,
-  ChevronLeft,
+  RotateCcw,
+  Cpu,
+  Compass,
+  ShieldAlert,
   ChevronRight,
-  Compass
+  Clock,
+  Gauge
 } from 'lucide-react';
-import { FuseBox, FuseItem, DtcCodeItem, VehicleSpecCategory, SchemeItem } from '../types';
+import { FuseBox, FuseItem, SchemeItem } from '../types';
 import { CHANGAN_CS55_PLUS_FUSE_BOXES } from '../data/fuseBoxesData';
 import { DTC_CODES_DATABASE, SYSTEM_GLOSSARY } from '../data/dtcCodesData';
 import { CHANGAN_CS55_PLUS_SPECS } from '../data/vehicleSpecsData';
 import { SCHEMES_CATALOG } from '../data/schemesCatalogData';
+import { SERVICE_PROCEDURES, ServiceProcedure } from '../data/serviceProceduresData';
+import { MANUAL_SECTIONS, ManualSection } from '../data/manualNavigationData';
 
 interface KnowledgeBaseTabProps {
   vehicleMake?: string;
   vehicleModel?: string;
 }
 
-type KnowledgeSubTab = 'fuses' | 'atlas' | 'dtc' | 'specs' | 'glossary';
+type KnowledgeSubTab = 'fuses' | 'atlas' | 'procedures' | 'manual' | 'dtc' | 'specs' | 'glossary';
 
 export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake = '', vehicleModel = '' }) => {
   const [subTab, setSubTab] = useState<KnowledgeSubTab>('fuses');
@@ -73,6 +78,13 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
   const [atlasLimit, setAtlasLimit] = useState<number>(36);
   const [activeModalScheme, setActiveModalScheme] = useState<SchemeItem | null>(null);
   const [zoomLevel, setZoomLevel] = useState<number>(1);
+
+  // PROCEDURES STATE
+  const [selectedProcId, setSelectedProcId] = useState<string>('reset_service_interval');
+  const [procSearchQuery, setProcSearchQuery] = useState<string>('');
+
+  // MANUAL NAV STATE
+  const [manualSearchQuery, setManualSearchQuery] = useState<string>('');
 
   // DTC STATE
   const [dtcSearchQuery, setDtcSearchQuery] = useState<string>('');
@@ -171,6 +183,34 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
     return list;
   }, [selectedAtlasCat, atlasSearchQuery]);
 
+  // Filtered Procedures
+  const filteredProcedures = useMemo(() => {
+    if (!procSearchQuery.trim()) return SERVICE_PROCEDURES;
+    const q = procSearchQuery.toLowerCase().trim();
+    return SERVICE_PROCEDURES.filter(
+      (p) =>
+        p.title.toLowerCase().includes(q) ||
+        p.system.toLowerCase().includes(q) ||
+        p.description.toLowerCase().includes(q)
+    );
+  }, [procSearchQuery]);
+
+  const activeProcedure: ServiceProcedure = useMemo(() => {
+    return SERVICE_PROCEDURES.find((p) => p.id === selectedProcId) || SERVICE_PROCEDURES[0];
+  }, [selectedProcId]);
+
+  // Filtered Manual Sections
+  const filteredManualSections = useMemo(() => {
+    if (!manualSearchQuery.trim()) return MANUAL_SECTIONS;
+    const q = manualSearchQuery.toLowerCase().trim();
+    return MANUAL_SECTIONS.filter(
+      (sec) =>
+        sec.chapterTitle.toLowerCase().includes(q) ||
+        sec.description.toLowerCase().includes(q) ||
+        sec.subsections.some((sub) => sub.title.toLowerCase().includes(q))
+    );
+  }, [manualSearchQuery]);
+
   // Filtered DTC codes
   const filteredDtcCodes = useMemo(() => {
     let list = DTC_CODES_DATABASE;
@@ -244,7 +284,7 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
           {featureTitle} для {vehicleMake || 'вашего автомобиля'} {vehicleModel}
         </h3>
         <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-          База электросхем и заправочных объемов сейчас наполнена для семейства Changan (CS55 Plus / UNI-S). Разделы для других марок пополняются по мере загрузки документации сообществом.
+          База электросхем, мануалов и калибровок сейчас наполнена для семейства Changan (CS55 Plus / UNI-S). Разделы для других марок пополняются по мере загрузки документации сообществом.
         </p>
       </div>
       <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -276,7 +316,7 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
           <button
             type="button"
             onClick={() => setSubTab('fuses')}
-            className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
+            className={`flex items-center space-x-2 px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
               subTab === 'fuses'
                 ? 'bg-brand-500 text-white shadow-md shadow-brand-500/20'
                 : 'bg-slate-100 dark:bg-dark-850 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-dark-800'
@@ -289,14 +329,14 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
           <button
             type="button"
             onClick={() => setSubTab('atlas')}
-            className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
+            className={`flex items-center space-x-2 px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
               subTab === 'atlas'
                 ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
                 : 'bg-slate-100 dark:bg-dark-850 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-dark-800'
             }`}
           >
             <Layers className="w-4 h-4" />
-            <span>Атлас схем и разъемов</span>
+            <span>Атлас схем</span>
             <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/20 text-white font-mono">
               674
             </span>
@@ -304,8 +344,40 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
 
           <button
             type="button"
+            onClick={() => setSubTab('procedures')}
+            className={`flex items-center space-x-2 px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
+              subTab === 'procedures'
+                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
+                : 'bg-slate-100 dark:bg-dark-850 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-dark-800'
+            }`}
+          >
+            <Cpu className="w-4 h-4" />
+            <span>Калибровки и сбросы</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/20 text-white font-mono">
+              7
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setSubTab('manual')}
+            className={`flex items-center space-x-2 px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
+              subTab === 'manual'
+                ? 'bg-sky-600 text-white shadow-md shadow-sky-600/20'
+                : 'bg-slate-100 dark:bg-dark-850 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-dark-800'
+            }`}
+          >
+            <FileText className="w-4 h-4" />
+            <span>Мануал ТО</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/20 text-white font-mono">
+              1719 стр
+            </span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setSubTab('dtc')}
-            className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
+            className={`flex items-center space-x-2 px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
               subTab === 'dtc'
                 ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20'
                 : 'bg-slate-100 dark:bg-dark-850 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-dark-800'
@@ -321,7 +393,7 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
           <button
             type="button"
             onClick={() => setSubTab('specs')}
-            className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
+            className={`flex items-center space-x-2 px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
               subTab === 'specs'
                 ? 'bg-cyan-500 text-white shadow-md shadow-cyan-500/20'
                 : 'bg-slate-100 dark:bg-dark-850 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-dark-800'
@@ -334,14 +406,14 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
           <button
             type="button"
             onClick={() => setSubTab('glossary')}
-            className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
+            className={`flex items-center space-x-2 px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
               subTab === 'glossary'
                 ? 'bg-purple-500 text-white shadow-md shadow-purple-500/20'
                 : 'bg-slate-100 dark:bg-dark-850 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-dark-800'
             }`}
           >
             <BookOpen className="w-4 h-4" />
-            <span>Словарь систем</span>
+            <span>Словарь</span>
             <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/20 text-white font-mono">
               63
             </span>
@@ -370,7 +442,6 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
             renderBrandFallback('Схемы предохранителей')
           ) : (
             <div className="space-y-6">
-              {/* Box Selector Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {CHANGAN_CS55_PLUS_FUSE_BOXES.map((box) => {
                   const isActive = box.id === activeBoxId;
@@ -415,7 +486,6 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
                 })}
               </div>
 
-              {/* Location & Driver Tips Bar with View Scheme Button */}
               <div className="bg-slate-50 dark:bg-dark-850/60 border border-slate-200 dark:border-dark-750 rounded-2xl p-4 space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-start space-x-2 text-xs text-slate-700 dark:text-slate-300">
@@ -450,7 +520,6 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
                 )}
               </div>
 
-              {/* Search and Quick Filters */}
               <div className="space-y-3">
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
                   <div className="relative flex-1">
@@ -472,7 +541,6 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
                     )}
                   </div>
 
-                  {/* Power Type Filter */}
                   <div className="flex items-center space-x-1 bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 p-1 rounded-xl flex-shrink-0 text-xs shadow-sm">
                     <span className="text-slate-400 font-bold px-2">Питание:</span>
                     <button
@@ -525,7 +593,6 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
                   </div>
                 </div>
 
-                {/* Quick Presets Pills */}
                 <div className="flex items-center space-x-1.5 overflow-x-auto py-1 scrollbar-none">
                   {quickPresets.map((preset) => {
                     const isActive = activePreset === preset.id;
@@ -547,7 +614,6 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
                 </div>
               </div>
 
-              {/* Fuses Count and List */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-1">
                   <span>Найдено цепей: <strong className="text-slate-900 dark:text-white">{filteredFuses.length}</strong></span>
@@ -644,7 +710,7 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
       )}
 
       {/* ========================================================================= */}
-      {/* 2. ATLAS OF ELECTRICAL SCHEMES & CONNECTORS TAB */}
+      {/* 2. ATLAS OF ELECTRICAL SCHEMES TAB */}
       {/* ========================================================================= */}
       {subTab === 'atlas' && (
         <>
@@ -652,7 +718,6 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
             renderBrandFallback('Атлас электросхем и распиновок')
           ) : (
             <div className="space-y-6">
-              {/* DOWNLOAD CENTER BANNER */}
               <div className="bg-gradient-to-r from-indigo-900/90 via-slate-900/90 to-brand-900/90 text-white rounded-3xl p-5 sm:p-6 border border-indigo-500/30 shadow-xl space-y-4 relative overflow-hidden">
                 <div className="absolute top-0 right-0 -mr-10 -mt-10 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -668,7 +733,6 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
                     </p>
                   </div>
 
-                  {/* Download Action Buttons */}
                   <div className="flex flex-wrap items-center gap-2">
                     <a
                       href="/downloads/CS55_Plus_Service_Manual.pdf"
@@ -684,12 +748,12 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
                       className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition border border-white/20"
                     >
                       <Archive className="w-3.5 h-3.5" />
-                      <span>Архив схем (ZIP)</span>
+                      <span>Архив схем (ZIP 50 MB)</span>
                     </a>
                     <a
                       href="/downloads/Changan_UNI-S_DTC_Codes.pdf"
                       download="Коды_ошибок_UNI-S_DTC.pdf"
-                      className="inline-flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition border border-white/20"
+                      className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition border border-white/20"
                     >
                       <FileText className="w-3.5 h-3.5" />
                       <span>Коды DTC (PDF)</span>
@@ -698,7 +762,6 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
                 </div>
               </div>
 
-              {/* Search & Category Filter */}
               <div className="space-y-3">
                 <div className="relative">
                   <input
@@ -725,7 +788,6 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
                   )}
                 </div>
 
-                {/* Category Filter Pills */}
                 <div className="flex items-center space-x-1.5 overflow-x-auto py-1 scrollbar-none text-xs">
                   {atlasCategories.map((cat) => {
                     const isActive = selectedAtlasCat === cat.id;
@@ -755,7 +817,6 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
                 </div>
               </div>
 
-              {/* Schemes Grid */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-1">
                   <span>
@@ -772,9 +833,6 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
                     <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
                       Схемы не найдены
                     </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Попробуйте упростить поисковый запрос
-                    </p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
@@ -787,7 +845,6 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
                         }}
                         className="group bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 hover:border-indigo-500 dark:hover:border-indigo-500 rounded-2xl overflow-hidden cursor-pointer transition-all shadow-sm hover:shadow-md flex flex-col justify-between"
                       >
-                        {/* Thumbnail */}
                         <div className="aspect-[4/3] bg-slate-100 dark:bg-dark-900 overflow-hidden relative">
                           <img
                             src={scheme.image}
@@ -800,7 +857,6 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
                           </div>
                         </div>
 
-                        {/* Title and metadata */}
                         <div className="p-2.5 space-y-1">
                           <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 block line-clamp-1">
                             {scheme.categoryTitle}
@@ -832,7 +888,257 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
       )}
 
       {/* ========================================================================= */}
-      {/* 3. DIAGNOSTIC TROUBLE CODES (DTC) TAB */}
+      {/* 3. SERVICE PROCEDURES & CALIBRATIONS TAB */}
+      {/* ========================================================================= */}
+      {subTab === 'procedures' && (
+        <>
+          {!isChangan && !demoMode ? (
+            renderBrandFallback('Сервисные калибровки и адаптации')
+          ) : (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                {/* Left: Procedures Navigation List */}
+                <div className="lg:col-span-4 space-y-2.5">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={procSearchQuery}
+                      onChange={(e) => setProcSearchQuery(e.target.value)}
+                      placeholder="Поиск процедур (сцепление, ручник, ТО...)..."
+                      className="w-full bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-xl pl-9 pr-9 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 shadow-sm"
+                    />
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                    {procSearchQuery && (
+                      <button onClick={() => setProcSearchQuery('')} className="absolute right-2.5 top-2 text-slate-400 p-0.5">
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    {filteredProcedures.map((proc) => {
+                      const isActive = proc.id === selectedProcId;
+                      return (
+                        <button
+                          key={proc.id}
+                          type="button"
+                          onClick={() => setSelectedProcId(proc.id)}
+                          className={`w-full text-left p-3.5 rounded-2xl border transition-all flex items-start justify-between space-x-3 ${
+                            isActive
+                              ? 'bg-emerald-500/10 border-emerald-500 ring-2 ring-emerald-500/20 shadow-sm'
+                              : 'bg-white dark:bg-dark-850 border-slate-200 dark:border-dark-750 hover:border-slate-300 dark:hover:border-dark-700 shadow-sm'
+                          }`}
+                        >
+                          <div className="space-y-1">
+                            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 block">
+                              {proc.system}
+                            </span>
+                            <h5 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white leading-snug">
+                              {proc.title}
+                            </h5>
+                            <div className="flex items-center space-x-2 text-[11px] text-slate-500 dark:text-slate-400 pt-0.5">
+                              <Clock className="w-3 h-3" />
+                              <span>{proc.timeEstimate}</span>
+                            </div>
+                          </div>
+                          <ChevronRight className={`w-4 h-4 mt-1 flex-shrink-0 transition-transform ${isActive ? 'text-emerald-500 translate-x-1' : 'text-slate-400'}`} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Right: Active Procedure Detailed Instructions */}
+                <div className="lg:col-span-8 bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-3xl p-5 sm:p-6 space-y-5 shadow-sm">
+                  <div className="border-b border-slate-200 dark:border-dark-750 pb-4 space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs font-black uppercase px-2.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                        {activeProcedure.system}
+                      </span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center space-x-1">
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>{activeProcedure.timeEstimate}</span>
+                      </span>
+                    </div>
+                    <h3 className="font-black text-base sm:text-xl text-slate-900 dark:text-white">
+                      {activeProcedure.title}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                      {activeProcedure.description}
+                    </p>
+                  </div>
+
+                  {/* Prerequisites */}
+                  {activeProcedure.prerequisites && activeProcedure.prerequisites.length > 0 && (
+                    <div className="bg-slate-50 dark:bg-dark-750/50 border border-slate-200 dark:border-dark-700 rounded-2xl p-4 space-y-2">
+                      <h5 className="font-bold text-xs text-slate-800 dark:text-slate-200 uppercase tracking-wide flex items-center space-x-1.5">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                        <span>Обязательные предварительные условия:</span>
+                      </h5>
+                      <ul className="space-y-1 text-xs text-slate-600 dark:text-slate-400 list-disc list-inside">
+                        {activeProcedure.prerequisites.map((p, idx) => (
+                          <li key={idx} className="leading-relaxed">{p}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Step by step guide */}
+                  <div className="space-y-3">
+                    <h5 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">
+                      Пошаговая инструкция выполнения:
+                    </h5>
+                    <div className="space-y-2.5">
+                      {activeProcedure.steps.map((st) => (
+                        <div
+                          key={st.step}
+                          className="flex items-start space-x-3 p-3 rounded-xl bg-slate-50/70 dark:bg-dark-750/30 border border-slate-100 dark:border-dark-700/60"
+                        >
+                          <span className="w-6 h-6 rounded-full bg-emerald-500 text-white font-black text-xs flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm shadow-emerald-500/20">
+                            {st.step}
+                          </span>
+                          <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed font-medium">
+                            {st.text}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Warnings */}
+                  {activeProcedure.warnings && activeProcedure.warnings.length > 0 && (
+                    <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 space-y-1.5 text-xs text-amber-700 dark:text-amber-400">
+                      <div className="font-bold flex items-center space-x-1.5">
+                        <AlertTriangle className="w-4 h-4 text-amber-500" />
+                        <span>Важные предостережения и примечания:</span>
+                      </div>
+                      <ul className="space-y-1 list-disc list-inside pl-1 text-slate-700 dark:text-slate-300">
+                        {activeProcedure.warnings.map((w, idx) => (
+                          <li key={idx} className="leading-relaxed">{w}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 4. SERVICE MANUAL 1,719-PAGE NAVIGATOR TAB */}
+      {/* ========================================================================= */}
+      {subTab === 'manual' && (
+        <>
+          {!isChangan && !demoMode ? (
+            renderBrandFallback('Навигатор по Сервисному Мануалу')
+          ) : (
+            <div className="space-y-6">
+              <div className="bg-gradient-to-r from-sky-900/90 via-slate-900/90 to-brand-900/90 text-white rounded-3xl p-5 sm:p-6 border border-sky-500/30 shadow-xl space-y-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center space-x-2">
+                      <BookOpen className="w-5 h-5 text-sky-400" />
+                      <h3 className="font-black text-base sm:text-lg">
+                        Интерактивный навигатор по сервисному руководству (1 719 страниц)
+                      </h3>
+                    </div>
+                    <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
+                      Полный дилерский мануал CS55 Plus / UNI-S разбит по 11 главам. Нажмите на любой раздел, и мануал откроется в читалке браузера ровно на нужной странице.
+                    </p>
+                  </div>
+                  <a
+                    href="/downloads/CS55_Plus_Service_Manual.pdf"
+                    download="CS55_Plus_Руководство_по_ТО_и_ремонту.pdf"
+                    className="inline-flex items-center space-x-1.5 px-4 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-xs font-bold transition shadow-md shadow-sky-500/30 flex-shrink-0"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Скачать весь PDF (32 МБ)</span>
+                  </a>
+                </div>
+              </div>
+
+              {/* Search bar */}
+              <div className="relative">
+                <input
+                  type="text"
+                  value={manualSearchQuery}
+                  onChange={(e) => setManualSearchQuery(e.target.value)}
+                  placeholder="Поиск по содержанию мануала (турбина, тормоза, кондиционер, бампер, сцепление, зазоры)..."
+                  className="w-full bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-xl pl-9 pr-9 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-sky-500 shadow-sm"
+                />
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                {manualSearchQuery && (
+                  <button onClick={() => setManualSearchQuery('')} className="absolute right-2.5 top-2.5 text-slate-400 p-0.5">
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
+              {/* Sections Accordion / Cards Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredManualSections.map((sec) => (
+                  <div
+                    key={sec.id}
+                    className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-4 sm:p-5 shadow-sm space-y-3.5 flex flex-col justify-between hover:border-sky-500/40 transition"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono font-black text-xs px-2.5 py-1 rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
+                          ГЛАВА {sec.chapterNumber}
+                        </span>
+                        <a
+                          href={`/downloads/CS55_Plus_Service_Manual.pdf#page=${sec.page}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs font-mono font-bold text-slate-500 hover:text-sky-600 dark:hover:text-sky-400 flex items-center space-x-1"
+                        >
+                          <span>Стр. {sec.page}</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+
+                      <h4 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white leading-snug">
+                        {sec.chapterTitle}
+                      </h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                        {sec.description}
+                      </p>
+                    </div>
+
+                    {/* Subsections Quick Jump */}
+                    <div className="pt-2 border-t border-slate-100 dark:border-dark-750 space-y-1.5">
+                      <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide block">
+                        Ключевые разделы главы:
+                      </span>
+                      <div className="grid grid-cols-1 gap-1">
+                        {sec.subsections.map((sub, idx) => (
+                          <a
+                            key={idx}
+                            href={`/downloads/CS55_Plus_Service_Manual.pdf#page=${sub.page}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-slate-700 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 py-1 px-2 rounded-lg hover:bg-slate-50 dark:hover:bg-dark-750 flex items-center justify-between transition"
+                          >
+                            <span className="truncate pr-2">{sub.title}</span>
+                            <span className="font-mono text-[11px] text-slate-400 flex-shrink-0">
+                              стр. {sub.page} →
+                            </span>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 5. DIAGNOSTIC TROUBLE CODES (DTC) TAB */}
       {/* ========================================================================= */}
       {subTab === 'dtc' && (
         <div className="space-y-6">
@@ -900,7 +1206,7 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
                       ? 'bg-emerald-500 text-white shadow-sm'
                       : 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10'
                   }`}
-                  title="Стандартные общепринятые коды OBD-II для всех марок (LADA, Toyota, Changan, и т.д.)"
+                  title="Стандартные общепринятые коды OBD-II для всех марок"
                 >
                   Стандарт OBD-II
                 </button>
@@ -912,7 +1218,7 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
                       ? 'bg-amber-500 text-white shadow-sm'
                       : 'text-amber-600 dark:text-amber-400 hover:bg-amber-500/10'
                   }`}
-                  title="Заводские коды Changan с подробным байтом типа неисправности (короткое замыкание, обрыв цепи)"
+                  title="Заводские коды Changan с подробным байтом типа неисправности"
                 >
                   Специфика Changan
                 </button>
@@ -940,7 +1246,7 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
                     : 'bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-dark-700'
                 }`}
               >
-                ⚙️ P — Двигатель и КПП
+                ⚙️ P — ДВС и КПП
               </button>
               <button
                 type="button"
@@ -951,7 +1257,7 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
                     : 'bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-dark-700'
                 }`}
               >
-                🚗 B — Кузов и салон (BCM)
+                🚗 B — Кузов и BCM
               </button>
               <button
                 type="button"
@@ -962,7 +1268,7 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
                     : 'bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-dark-700'
                 }`}
               >
-                🛑 C — Шасси, Тормоза и ABS
+                🛑 C — Шасси и Тормоза
               </button>
               <button
                 type="button"
@@ -973,7 +1279,7 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
                     : 'bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-dark-700'
                 }`}
               >
-                🌐 U — CAN-шина и связь
+                🌐 U — CAN и Связь
               </button>
             </div>
           </div>
@@ -1073,7 +1379,7 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
       )}
 
       {/* ========================================================================= */}
-      {/* 4. FLUIDS & SERVICE SPECS TAB */}
+      {/* 6. FLUIDS & SERVICE SPECS TAB */}
       {/* ========================================================================= */}
       {subTab === 'specs' && (
         <>
@@ -1133,10 +1439,7 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
                 />
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                 {specSearchQuery && (
-                  <button
-                    onClick={() => setSpecSearchQuery('')}
-                    className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 dark:hover:text-white p-0.5"
-                  >
+                  <button onClick={() => setSpecSearchQuery('')} className="absolute right-2.5 top-2 text-slate-400 p-0.5">
                     <X className="w-4 h-4" />
                   </button>
                 )}
@@ -1177,7 +1480,7 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
       )}
 
       {/* ========================================================================= */}
-      {/* 5. ELECTRONIC SYSTEM GLOSSARY TAB */}
+      {/* 7. GLOSSARY TAB */}
       {/* ========================================================================= */}
       {subTab === 'glossary' && (
         <div className="space-y-4">
@@ -1206,10 +1509,7 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
             />
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
             {glossarySearchQuery && (
-              <button
-                onClick={() => setGlossarySearchQuery('')}
-                className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-white p-0.5"
-              >
+              <button onClick={() => setGlossarySearchQuery('')} className="absolute right-2.5 top-2.5 text-slate-400 p-0.5">
                 <X className="w-4 h-4" />
               </button>
             )}
@@ -1278,12 +1578,11 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
       )}
 
       {/* ========================================================================= */}
-      {/* ATLAS FULLSCREEN MODAL VIEWER WITH ZOOM & PAN */}
+      {/* ATLAS FULLSCREEN MODAL VIEWER WITH ZOOM */}
       {/* ========================================================================= */}
       {activeModalScheme && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/90 backdrop-blur-md animate-fadeIn">
           <div className="bg-white dark:bg-dark-850 rounded-3xl border border-slate-200 dark:border-dark-700 shadow-2xl w-full max-w-6xl h-[92vh] flex flex-col overflow-hidden">
-            {/* Modal Header */}
             <div className="flex items-center justify-between px-5 py-3 border-b border-slate-200 dark:border-dark-750">
               <div className="space-y-0.5">
                 <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wide">
@@ -1294,7 +1593,6 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
                 </h3>
               </div>
 
-              {/* Zoom & Action Controls */}
               <div className="flex items-center space-x-1.5 sm:space-x-2">
                 <button
                   type="button"
@@ -1344,7 +1642,6 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
               </div>
             </div>
 
-            {/* Modal Image Body with Zoom & Scroll */}
             <div className="flex-1 overflow-auto p-4 bg-slate-100 dark:bg-dark-900 flex items-center justify-center">
               <div
                 style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'center center' }}
