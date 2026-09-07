@@ -47,6 +47,7 @@ export interface Vehicle {
   is_public?: boolean;
   is_owner?: boolean;
   owner_name?: string;
+  enabled_tabs?: string;
   // Telematics (StarLine S96 / CAN OBD / Webhooks)
   telematics_provider?: 'none' | 'starline' | 'webhook';
   starline_device_alias?: string;

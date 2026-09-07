@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Car, Upload, Image as ImageIcon, Globe, Lock, Calendar, Gauge, Fuel, Sparkles, Search, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
+import { X, Car, Upload, Image as ImageIcon, Globe, Lock, Calendar, Gauge, Fuel, Sparkles, Search, CheckCircle2, AlertCircle, RefreshCw, Wrench, CalendarClock, BarChart3, BookOpen, Disc, FileText, Zap, Sliders, Check } from 'lucide-react';
 import { Vehicle } from '../types';
 import { api } from '../services/api';
 
@@ -9,6 +9,66 @@ interface VehicleModalProps {
   onSave: (data: Partial<Vehicle>) => Promise<void>;
   vehicle?: Vehicle | null;
 }
+
+export const ALL_VEHICLE_TABS = [
+  {
+    id: 'service',
+    label: 'ТО и работы',
+    shortLabel: 'ТО',
+    description: 'Журнал сервиса, ремонты, тюнинг и запчасти',
+    icon: Wrench,
+    badge: 'Базовый',
+  },
+  {
+    id: 'fuel',
+    label: 'Топливо',
+    shortLabel: 'Топливо',
+    description: 'Учет заправок, расход и статистика по АЗС',
+    icon: Fuel,
+  },
+  {
+    id: 'reminders',
+    label: 'Регламент',
+    shortLabel: 'План',
+    description: 'График ТО, износ расходников и напоминания',
+    icon: CalendarClock,
+  },
+  {
+    id: 'analytics',
+    label: 'Аналитика',
+    shortLabel: 'Отчет',
+    description: 'Графики затрат, стоимость 1 км и расходы',
+    icon: BarChart3,
+  },
+  {
+    id: 'specs',
+    label: 'Расходники',
+    shortLabel: 'Детали',
+    description: 'Каталог артикулов, запчастей и допусков',
+    icon: BookOpen,
+  },
+  {
+    id: 'tyres',
+    label: 'Шины',
+    shortLabel: 'Шины',
+    description: 'Комплекты колес, износ и схема ротации',
+    icon: Disc,
+  },
+  {
+    id: 'documents',
+    label: 'Документы',
+    shortLabel: 'Документы',
+    description: 'ОСАГО, КАСКО, СТС, права и заметки',
+    icon: FileText,
+  },
+  {
+    id: 'wiki',
+    label: 'База знаний',
+    shortLabel: 'Wiki',
+    description: 'Схемы, предохранители, калибровки и DTC',
+    icon: Zap,
+  },
+];
 
 export const VehicleModal: React.FC<VehicleModalProps> = ({
   isOpen,
@@ -38,6 +98,7 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
     currency: 'RUB',
     photo_url: '',
     notes: '',
+    enabled_tabs: 'service,fuel,reminders,analytics,specs,tyres,documents,wiki',
   });
 
   const [loading, setLoading] = useState(false);
@@ -116,6 +177,7 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
         currency: vehicle.currency || 'RUB',
         photo_url: vehicle.photo_url || '',
         notes: vehicle.notes || '',
+        enabled_tabs: vehicle.enabled_tabs || 'service,fuel,reminders,analytics,specs,tyres,documents,wiki',
       });
     } else {
       const today = new Date().toISOString().split('T')[0];
@@ -141,11 +203,49 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
         currency: 'RUB',
         photo_url: '',
         notes: '',
+        enabled_tabs: 'service,fuel,reminders,analytics,specs,tyres,documents,wiki',
       });
     }
   }, [vehicle, isOpen]);
 
   if (!isOpen) return null;
+
+  const currentTabsList = formData.enabled_tabs
+    ? formData.enabled_tabs.split(',').map((s) => s.trim()).filter(Boolean)
+    : ALL_VEHICLE_TABS.map((t) => t.id);
+
+  const toggleTab = (tabId: string) => {
+    let updated: string[];
+    if (currentTabsList.includes(tabId)) {
+      // Must keep at least one tab enabled
+      if (currentTabsList.length <= 1) return;
+      updated = currentTabsList.filter((t) => t !== tabId);
+    } else {
+      updated = [...currentTabsList, tabId];
+    }
+    setFormData((prev) => ({ ...prev, enabled_tabs: updated.join(',') }));
+  };
+
+  const setAllTabs = () => {
+    setFormData((prev) => ({
+      ...prev,
+      enabled_tabs: ALL_VEHICLE_TABS.map((t) => t.id).join(','),
+    }));
+  };
+
+  const setBasicTabs = () => {
+    setFormData((prev) => ({
+      ...prev,
+      enabled_tabs: 'service,fuel',
+    }));
+  };
+
+  const setStandardTabsNoWiki = () => {
+    setFormData((prev) => ({
+      ...prev,
+      enabled_tabs: 'service,fuel,reminders,analytics,specs,tyres,documents',
+    }));
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -619,6 +719,105 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-300 dark:border-dark-750 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
             />
+          </div>
+
+                    {/* MODULAR TABS CUSTOMIZATION */}
+          <div className="bg-slate-50 dark:bg-dark-900/80 border border-slate-200 dark:border-dark-750 p-4 rounded-2xl space-y-3.5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-8 h-8 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center flex-shrink-0">
+                  <Sliders className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                    Отображение разделов автомобиля
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Включайте или отключайте вкладки под ваш сценарий использования.
+                  </p>
+                </div>
+              </div>
+
+              {/* Quick Presets */}
+              <div className="flex items-center space-x-1.5 self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={setAllTabs}
+                  className="px-2 py-1 text-[10px] font-bold rounded-lg bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 text-slate-700 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors shadow-xs"
+                >
+                  Все
+                </button>
+                <button
+                  type="button"
+                  onClick={setStandardTabsNoWiki}
+                  className="px-2 py-1 text-[10px] font-bold rounded-lg bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 text-slate-700 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors shadow-xs"
+                >
+                  Без Wiki
+                </button>
+                <button
+                  type="button"
+                  onClick={setBasicTabs}
+                  className="px-2 py-1 text-[10px] font-bold rounded-lg bg-white dark:bg-dark-800 border border-slate-200 dark:border-dark-700 text-slate-700 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors shadow-xs"
+                >
+                  ТО + АЗС
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+              {ALL_VEHICLE_TABS.map((t) => {
+                const Icon = t.icon;
+                const isChecked = currentTabsList.includes(t.id);
+                return (
+                  <div
+                    key={t.id}
+                    onClick={() => toggleTab(t.id)}
+                    className={`flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer select-none ${
+                      isChecked
+                        ? 'bg-white dark:bg-dark-850 border-brand-500/40 shadow-xs ring-1 ring-brand-500/20'
+                        : 'bg-slate-100/60 dark:bg-dark-900/40 border-slate-200 dark:border-dark-800 opacity-60 hover:opacity-100'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-2.5 min-w-0 pr-2">
+                      <div
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${
+                          isChecked
+                            ? 'bg-brand-500/10 text-brand-600 dark:text-brand-400'
+                            : 'bg-slate-200 dark:bg-dark-800 text-slate-400'
+                        }`}
+                      >
+                        <Icon className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center space-x-1.5">
+                          <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                            {t.label}
+                          </span>
+                          {t.badge && (
+                            <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded bg-slate-200 dark:bg-dark-750 text-slate-600 dark:text-slate-300">
+                              {t.badge}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                          {t.description}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div
+                      className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 transition-all ${
+                        isChecked
+                          ? 'bg-brand-500 text-white shadow-xs'
+                          : 'border border-slate-300 dark:border-dark-700 bg-white dark:bg-dark-800'
+                      }`}
+                    >
+                      {isChecked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           {/* Privacy Switch (Public / Private) */}

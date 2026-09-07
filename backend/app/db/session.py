@@ -82,6 +82,7 @@ async def auto_migrate_sqlite(conn):
             ("public_booklet_token", "VARCHAR(64)"),
             ("public_booklet_enabled", "BOOLEAN DEFAULT 0"),
             ("public_show_costs", "BOOLEAN DEFAULT 0"),
+            ("enabled_tabs", "VARCHAR(255) DEFAULT 'service,fuel,reminders,analytics,specs,tyres,documents,wiki'"),
         ],
         "service_records": [
             ("to_tag", "VARCHAR(50)"),

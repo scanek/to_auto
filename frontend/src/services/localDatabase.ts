@@ -220,6 +220,7 @@ class LocalDatabaseEngine {
       updated_at: data.updated_at || now,
       is_owner: true,
       is_public: !!data.is_public,
+      enabled_tabs: data.enabled_tabs || 'service,fuel,reminders,analytics,specs,tyres,documents,wiki',
     };
     await this.putItem(STORES.VEHICLES, vehicle);
     return vehicle;

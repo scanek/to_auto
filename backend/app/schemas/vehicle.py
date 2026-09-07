@@ -26,6 +26,7 @@ class VehicleBase(BaseModel):
     public_booklet_token: Optional[str] = None
     public_booklet_enabled: bool = False
     public_show_costs: bool = False
+    enabled_tabs: Optional[str] = "service,fuel,reminders,analytics,specs,tyres,documents,wiki"
 
     # Telematics fields
     telematics_provider: Optional[str] = "none"
@@ -79,6 +80,7 @@ class VehicleUpdate(BaseModel):
     public_booklet_token: Optional[str] = None
     public_booklet_enabled: Optional[bool] = None
     public_show_costs: Optional[bool] = None
+    enabled_tabs: Optional[str] = None
     starline_auto_sync_interval_minutes: Optional[int] = None
     telematics_auto_sync: Optional[bool] = None
 

@@ -33,6 +33,7 @@ class Vehicle(Base):
     public_booklet_token = Column(String(64), nullable=True, unique=True, index=True)
     public_booklet_enabled = Column(Boolean, default=False, nullable=False)
     public_show_costs = Column(Boolean, default=False, nullable=False)
+    enabled_tabs = Column(String(255), default="service,fuel,reminders,analytics,specs,tyres,documents,wiki", nullable=True)
 
     # Telematics (StarLine S96 / CAN OBD / Webhooks)
     telematics_provider = Column(String(50), default="none")

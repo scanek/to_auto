@@ -499,7 +499,16 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
     return null;
   };
 
-  const navTabs = [
+  const enabledTabsList = useMemo(() => {
+    const raw = vehicle.enabled_tabs;
+    if (!raw || typeof raw !== 'string') {
+      return ['service', 'fuel', 'reminders', 'analytics', 'specs', 'tyres', 'documents', 'wiki'];
+    }
+    const list = raw.split(',').map((s) => s.trim()).filter(Boolean);
+    return list.length > 0 ? list : ['service'];
+  }, [vehicle.enabled_tabs]);
+
+  const allNavTabs = [
     { id: 'service', label: 'ТО и работы', shortLabel: 'ТО', icon: Wrench, count: Array.isArray(serviceRecords) ? serviceRecords.length : 0 },
     { id: 'fuel', label: 'Топливо', shortLabel: 'Топливо', icon: Fuel, count: Array.isArray(fuelLogs) ? fuelLogs.length : 0 },
     { id: 'reminders', label: 'Регламент', shortLabel: 'План', icon: CalendarClock, count: Array.isArray(reminders) ? reminders.length : 0 },
@@ -509,6 +518,17 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
     { id: 'documents', label: 'Документы', shortLabel: 'Документы', icon: FileText, count: Array.isArray(documents) ? documents.length : 0 },
     { id: 'wiki', label: 'База знаний', shortLabel: 'Wiki', icon: Zap },
   ];
+
+  const navTabs = useMemo(() => {
+    return allNavTabs.filter((tab) => enabledTabsList.includes(tab.id));
+  }, [allNavTabs, enabledTabsList]);
+
+  // If currently active tab was hidden by user settings, fallback to first visible tab
+  useEffect(() => {
+    if (navTabs.length > 0 && !navTabs.some((t) => t.id === activeTab)) {
+      setActiveTab(navTabs[0].id as any);
+    }
+  }, [navTabs, activeTab]);
 
   return (
     <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6 animate-fadeIn">
@@ -1118,8 +1138,8 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
         </div>
       </div>
 
-      {/* Modern 8-Column Segmented Tab Bar (iOS / macOS Floating Capsule Design) */}
-      <div className="grid grid-cols-4 sm:grid-cols-8 gap-1 sm:gap-1.5 p-1.5 bg-slate-100/90 dark:bg-dark-900/90 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.06] rounded-2xl shadow-inner">
+      {/* Modern Dynamic Segmented Tab Bar (Adaptive Capsule Design) */}
+      <div className="flex flex-wrap sm:flex-nowrap items-stretch gap-1 sm:gap-1.5 p-1.5 bg-slate-100/90 dark:bg-dark-900/90 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.06] rounded-2xl shadow-inner">
         {navTabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id || (tab.id === 'service' && ['service', 'repairs', 'upgrades'].includes(activeTab));
@@ -1127,7 +1147,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`relative flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 py-1.5 sm:py-2.5 px-0.5 sm:px-2 rounded-xl font-bold transition-all duration-200 ${
+              className={`flex-1 min-w-[65px] relative flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 py-1.5 sm:py-2 px-1 sm:px-2 rounded-xl font-bold transition-all duration-200 ${
                 isActive
                   ? 'bg-gradient-to-b from-brand-500 to-brand-600 text-white shadow-md shadow-brand-500/25 scale-[1.01]'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/70 dark:hover:bg-white/[0.04]'
