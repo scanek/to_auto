@@ -127,6 +127,10 @@ async def get_vehicles(
         for v in vehicles:
             resp = VehicleResponse.model_validate(v)
             resp.is_owner = False
+            resp.starline_gps_lat = None
+            resp.starline_gps_lon = None
+            resp.starline_gps_type = None
+            resp.starline_is_spoofed = False
             if v.user:
                 resp.owner_name = v.user.full_name or v.user.username
             responses.append(resp)
@@ -146,6 +150,11 @@ async def get_vehicles(
     for v in vehicles:
         resp = VehicleResponse.model_validate(v)
         resp.is_owner = (v.user_id == current_user.id)
+        if not resp.is_owner:
+            resp.starline_gps_lat = None
+            resp.starline_gps_lon = None
+            resp.starline_gps_type = None
+            resp.starline_is_spoofed = False
         if v.user:
             resp.owner_name = v.user.full_name or v.user.username
         responses.append(resp)
@@ -177,6 +186,11 @@ async def get_all_vehicles_admin(
     for v in vehicles:
         resp = VehicleResponse.model_validate(v)
         resp.is_owner = (v.user_id == current_user.id)
+        if not resp.is_owner:
+            resp.starline_gps_lat = None
+            resp.starline_gps_lon = None
+            resp.starline_gps_type = None
+            resp.starline_is_spoofed = False
         if v.user:
             resp.owner_name = v.user.full_name or v.user.username
         responses.append(resp)
@@ -242,6 +256,11 @@ async def get_vehicle(
     vehicle = await verify_vehicle_access(db, vehicle_id, current_user, require_owner=False)
     resp = VehicleResponse.model_validate(vehicle)
     resp.is_owner = bool(current_user and vehicle.user_id == current_user.id)
+    if not resp.is_owner:
+        resp.starline_gps_lat = None
+        resp.starline_gps_lon = None
+        resp.starline_gps_type = None
+        resp.starline_is_spoofed = False
     if vehicle.user:
         resp.owner_name = vehicle.user.full_name or vehicle.user.username
     await batch_populate_vehicles_totals(db, [vehicle], [resp])

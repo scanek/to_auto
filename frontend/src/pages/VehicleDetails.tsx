@@ -908,8 +908,8 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               </div>
             )}
 
-            {/* GPS / LBS Location & Parking Map Link */}
-            {!isTelematicsCollapsed && (
+            {/* GPS / LBS Location & Parking Map Link (Visible ONLY to Owner) */}
+            {!isTelematicsCollapsed && isOwner && (
               <div className="p-2.5 sm:p-3 rounded-xl bg-white/70 dark:bg-dark-800/70 border border-sky-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 animate-fadeIn">
                 <div className="flex items-center space-x-2 text-xs min-w-0">
                   <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-sky-500/15 text-sky-600 dark:text-sky-400 flex items-center justify-center flex-shrink-0">
