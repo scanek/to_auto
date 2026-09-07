@@ -5,7 +5,6 @@ import {
   X,
   SlidersHorizontal,
   Lightbulb,
-  ShieldAlert,
   Car,
   MapPin,
   Sparkles,
@@ -19,25 +18,30 @@ import {
   Copy,
   Check,
   Maximize2,
-  ChevronRight,
   Info,
   Layers,
-  Cpu,
   Eye,
-  ArrowRight,
-  RotateCcw
+  Download,
+  FileText,
+  Archive,
+  ZoomIn,
+  ZoomOut,
+  ChevronLeft,
+  ChevronRight,
+  Compass
 } from 'lucide-react';
-import { FuseBox, FuseItem, FusePowerType, DtcCategory, DtcCodeItem, VehicleSpecCategory } from '../types';
+import { FuseBox, FuseItem, DtcCodeItem, VehicleSpecCategory, SchemeItem } from '../types';
 import { CHANGAN_CS55_PLUS_FUSE_BOXES } from '../data/fuseBoxesData';
 import { DTC_CODES_DATABASE, SYSTEM_GLOSSARY } from '../data/dtcCodesData';
 import { CHANGAN_CS55_PLUS_SPECS } from '../data/vehicleSpecsData';
+import { SCHEMES_CATALOG } from '../data/schemesCatalogData';
 
 interface KnowledgeBaseTabProps {
   vehicleMake?: string;
   vehicleModel?: string;
 }
 
-type KnowledgeSubTab = 'fuses' | 'dtc' | 'specs' | 'glossary';
+type KnowledgeSubTab = 'fuses' | 'atlas' | 'dtc' | 'specs' | 'glossary';
 
 export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake = '', vehicleModel = '' }) => {
   const [subTab, setSubTab] = useState<KnowledgeSubTab>('fuses');
@@ -47,7 +51,13 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
   const isChangan = useMemo(() => {
     const make = (vehicleMake || '').toLowerCase();
     const model = (vehicleModel || '').toLowerCase();
-    return make.includes('changan') || make.includes('чанган') || make.includes('uni') || model.includes('cs55') || model.includes('uni');
+    return (
+      make.includes('changan') ||
+      make.includes('чанган') ||
+      make.includes('uni') ||
+      model.includes('cs55') ||
+      model.includes('uni')
+    );
   }, [vehicleMake, vehicleModel]);
 
   // FUSE BOX STATE
@@ -56,6 +66,13 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
   const [selectedPowerType, setSelectedPowerType] = useState<string>('all');
   const [activePreset, setActivePreset] = useState<string>('all');
   const [viewingSchemeImage, setViewingSchemeImage] = useState<string | null>(null);
+
+  // ATLAS SCHEMES STATE
+  const [atlasSearchQuery, setAtlasSearchQuery] = useState<string>('');
+  const [selectedAtlasCat, setSelectedAtlasCat] = useState<string>('all');
+  const [atlasLimit, setAtlasLimit] = useState<number>(36);
+  const [activeModalScheme, setActiveModalScheme] = useState<SchemeItem | null>(null);
+  const [zoomLevel, setZoomLevel] = useState<number>(1);
 
   // DTC STATE
   const [dtcSearchQuery, setDtcSearchQuery] = useState<string>('');
@@ -119,6 +136,40 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
 
     return list;
   }, [currentBox, activePreset, selectedPowerType, fuseSearchQuery]);
+
+  // ATLAS CATEGORIES
+  const atlasCategories = [
+    { id: 'all', title: 'Все схемы', count: SCHEMES_CATALOG.length },
+    { id: 'engine_transmission', title: '⚙️ ДВС и 7DCT', count: SCHEMES_CATALOG.filter((s) => s.category === 'engine_transmission').length },
+    { id: 'lighting_body', title: '💡 Освещение и кузов', count: SCHEMES_CATALOG.filter((s) => s.category === 'lighting_body').length },
+    { id: 'climate_comfort', title: '❄️ Климат и обогревы', count: SCHEMES_CATALOG.filter((s) => s.category === 'climate_comfort').length },
+    { id: 'safety_chassis', title: '🛡️ Шасси, Тормоза и ADAS', count: SCHEMES_CATALOG.filter((s) => s.category === 'safety_chassis').length },
+    { id: 'multimedia_network', title: '🎵 Мультимедиа и CAN', count: SCHEMES_CATALOG.filter((s) => s.category === 'multimedia_network').length },
+    { id: 'connectors', title: '🔌 Распиновки разъемов', count: SCHEMES_CATALOG.filter((s) => s.category === 'connectors').length },
+    { id: 'grounding', title: '📍 Точки массы (GND)', count: SCHEMES_CATALOG.filter((s) => s.category === 'grounding').length },
+    { id: 'harnesses', title: '🗺️ Трассировка жгутов', count: SCHEMES_CATALOG.filter((s) => s.category === 'harnesses').length },
+  ];
+
+  // Filtered Atlas Schemes
+  const filteredSchemes = useMemo(() => {
+    let list = SCHEMES_CATALOG;
+
+    if (selectedAtlasCat !== 'all') {
+      list = list.filter((s) => s.category === selectedAtlasCat);
+    }
+
+    if (atlasSearchQuery.trim()) {
+      const q = atlasSearchQuery.toLowerCase().trim();
+      list = list.filter(
+        (s) =>
+          s.title.toLowerCase().includes(q) ||
+          s.section.toLowerCase().includes(q) ||
+          s.originalFile.toLowerCase().includes(q)
+      );
+    }
+
+    return list;
+  }, [selectedAtlasCat, atlasSearchQuery]);
 
   // Filtered DTC codes
   const filteredDtcCodes = useMemo(() => {
@@ -193,7 +244,7 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
           {featureTitle} для {vehicleMake || 'вашего автомобиля'} {vehicleModel}
         </h3>
         <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-          База электросхем и заправочных объемов сейчас наполнена для семейства Changan (CS55 Plus / UNI-S). Разделы для других марок пополняются по мере загрузки технической документации сообществом.
+          База электросхем и заправочных объемов сейчас наполнена для семейства Changan (CS55 Plus / UNI-S). Разделы для других марок пополняются по мере загрузки документации сообществом.
         </p>
       </div>
       <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -232,7 +283,23 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
             }`}
           >
             <Zap className="w-4 h-4" />
-            <span>Предохранители и схемы</span>
+            <span>Предохранители</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setSubTab('atlas')}
+            className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
+              subTab === 'atlas'
+                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                : 'bg-slate-100 dark:bg-dark-850 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-dark-800'
+            }`}
+          >
+            <Layers className="w-4 h-4" />
+            <span>Атлас схем и разъемов</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/20 text-white font-mono">
+              674
+            </span>
           </button>
 
           <button
@@ -245,7 +312,7 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
             }`}
           >
             <AlertTriangle className="w-4 h-4" />
-            <span>Коды ошибок (DTC)</span>
+            <span>Сканер DTC</span>
             <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/20 text-white font-mono">
               1391
             </span>
@@ -261,7 +328,7 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
             }`}
           >
             <Droplets className="w-4 h-4" />
-            <span>Заправочные объемы и ТО</span>
+            <span>Объемы и ТО</span>
           </button>
 
           <button
@@ -366,7 +433,7 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
                       className="inline-flex items-center justify-center space-x-1.5 px-3 py-1.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold transition shadow-sm flex-shrink-0"
                     >
                       <Maximize2 className="w-3.5 h-3.5" />
-                      <span>Схема блока (Заводской чертеж)</span>
+                      <span>Схема блока (Чертеж)</span>
                     </button>
                   )}
                 </div>
@@ -500,14 +567,10 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
                     <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
                       Предохранители не найдены
                     </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Попробуйте изменить поисковый запрос или фильтр питания
-                    </p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                     {filteredFuses.map((fuse) => {
-                      // Color badges for ratings
                       let ratingBadgeBg = 'bg-slate-100 dark:bg-dark-750 text-slate-700 dark:text-slate-300';
                       if (fuse.ratingValue) {
                         if (fuse.ratingValue <= 7.5) ratingBadgeBg = 'bg-amber-900/10 text-amber-800 dark:text-amber-400 border border-amber-800/30';
@@ -541,7 +604,6 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
                               )}
                             </div>
 
-                            {/* Power type badge */}
                             <span
                               className={`text-[10px] font-black px-2 py-0.5 rounded-md ${
                                 fuse.powerType === 'battery'
@@ -582,11 +644,198 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
       )}
 
       {/* ========================================================================= */}
-      {/* 2. DIAGNOSTIC TROUBLE CODES (DTC) TAB */}
+      {/* 2. ATLAS OF ELECTRICAL SCHEMES & CONNECTORS TAB */}
+      {/* ========================================================================= */}
+      {subTab === 'atlas' && (
+        <>
+          {!isChangan && !demoMode ? (
+            renderBrandFallback('Атлас электросхем и распиновок')
+          ) : (
+            <div className="space-y-6">
+              {/* DOWNLOAD CENTER BANNER */}
+              <div className="bg-gradient-to-r from-indigo-900/90 via-slate-900/90 to-brand-900/90 text-white rounded-3xl p-5 sm:p-6 border border-indigo-500/30 shadow-xl space-y-4 relative overflow-hidden">
+                <div className="absolute top-0 right-0 -mr-10 -mt-10 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center space-x-2">
+                      <Archive className="w-5 h-5 text-indigo-400" />
+                      <h3 className="font-black text-base sm:text-lg">
+                        Центр загрузки технической документации Changan
+                      </h3>
+                    </div>
+                    <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
+                      Официальные заводские материалы CS55 Plus / UNI-S доступны для сохранения на телефон или компьютер в оффлайн-формате.
+                    </p>
+                  </div>
+
+                  {/* Download Action Buttons */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <a
+                      href="/downloads/CS55_Plus_Service_Manual.pdf"
+                      download="CS55_Plus_Руководство_по_ТО_и_ремонту.pdf"
+                      className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white text-xs font-bold transition shadow-md shadow-indigo-500/30"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Мануал ТО (PDF 32 MB)</span>
+                    </a>
+                    <a
+                      href="/downloads/Changan_CS55_Plus_Wiring_Schemes.zip"
+                      download="Changan_CS55_Plus_Электросхемы.zip"
+                      className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition border border-white/20"
+                    >
+                      <Archive className="w-3.5 h-3.5" />
+                      <span>Архив схем (ZIP)</span>
+                    </a>
+                    <a
+                      href="/downloads/Changan_UNI-S_DTC_Codes.pdf"
+                      download="Коды_ошибок_UNI-S_DTC.pdf"
+                      className="inline-flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition border border-white/20"
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      <span>Коды DTC (PDF)</span>
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              {/* Search & Category Filter */}
+              <div className="space-y-3">
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={atlasSearchQuery}
+                    onChange={(e) => {
+                      setAtlasSearchQuery(e.target.value);
+                      setAtlasLimit(36);
+                    }}
+                    placeholder="Поиск по названию схемы (фары, климат, D01, BCM, масса, круиз, камера)..."
+                    className="w-full bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-xl pl-9 pr-9 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 shadow-sm"
+                  />
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                  {atlasSearchQuery && (
+                    <button
+                      onClick={() => {
+                        setAtlasSearchQuery('');
+                        setAtlasLimit(36);
+                      }}
+                      className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-white p-0.5 rounded-lg"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Category Filter Pills */}
+                <div className="flex items-center space-x-1.5 overflow-x-auto py-1 scrollbar-none text-xs">
+                  {atlasCategories.map((cat) => {
+                    const isActive = selectedAtlasCat === cat.id;
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedAtlasCat(cat.id);
+                          setAtlasLimit(36);
+                        }}
+                        className={`px-3 py-1.5 rounded-xl font-bold transition whitespace-nowrap flex items-center space-x-1.5 ${
+                          isActive
+                            ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                            : 'bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-dark-700'
+                        }`}
+                      >
+                        <span>{cat.title}</span>
+                        <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                          isActive ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-dark-750 text-slate-500'
+                        }`}>
+                          {cat.count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Schemes Grid */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-1">
+                  <span>
+                    Найдено: <strong className="text-slate-900 dark:text-white">{filteredSchemes.length}</strong> схем
+                  </span>
+                  <span>
+                    Показано: {Math.min(atlasLimit, filteredSchemes.length)} из {filteredSchemes.length}
+                  </span>
+                </div>
+
+                {filteredSchemes.length === 0 ? (
+                  <div className="p-8 text-center bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl space-y-2">
+                    <Layers className="w-8 h-8 text-slate-400 mx-auto" />
+                    <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                      Схемы не найдены
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Попробуйте упростить поисковый запрос
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                    {filteredSchemes.slice(0, atlasLimit).map((scheme) => (
+                      <div
+                        key={scheme.id}
+                        onClick={() => {
+                          setActiveModalScheme(scheme);
+                          setZoomLevel(1);
+                        }}
+                        className="group bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 hover:border-indigo-500 dark:hover:border-indigo-500 rounded-2xl overflow-hidden cursor-pointer transition-all shadow-sm hover:shadow-md flex flex-col justify-between"
+                      >
+                        {/* Thumbnail */}
+                        <div className="aspect-[4/3] bg-slate-100 dark:bg-dark-900 overflow-hidden relative">
+                          <img
+                            src={scheme.image}
+                            alt={scheme.title}
+                            loading="lazy"
+                            className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300"
+                          />
+                          <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <Maximize2 className="w-5 h-5 text-white drop-shadow-md" />
+                          </div>
+                        </div>
+
+                        {/* Title and metadata */}
+                        <div className="p-2.5 space-y-1">
+                          <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 block line-clamp-1">
+                            {scheme.categoryTitle}
+                          </span>
+                          <h6 className="font-bold text-xs text-slate-800 dark:text-slate-200 line-clamp-2 leading-snug">
+                            {scheme.title}
+                          </h6>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {filteredSchemes.length > atlasLimit && (
+                  <div className="text-center pt-3">
+                    <button
+                      type="button"
+                      onClick={() => setAtlasLimit((prev) => prev + 36)}
+                      className="px-6 py-2.5 rounded-xl bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 hover:bg-slate-50 dark:hover:bg-dark-800 text-xs font-bold text-slate-700 dark:text-slate-300 shadow-sm transition"
+                    >
+                      Показать еще 36 схем (осталось {filteredSchemes.length - atlasLimit})
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 3. DIAGNOSTIC TROUBLE CODES (DTC) TAB */}
       {/* ========================================================================= */}
       {subTab === 'dtc' && (
         <div className="space-y-6">
-          {/* Header Description */}
           <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/20 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="space-y-1">
               <div className="flex items-center space-x-2">
@@ -604,10 +853,8 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
             </div>
           </div>
 
-          {/* Search & Category Pills */}
           <div className="space-y-3">
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-              {/* Live search input */}
               <div className="relative flex-1">
                 <input
                   type="text"
@@ -633,7 +880,6 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
                 )}
               </div>
 
-              {/* Standard vs Brand Scope Toggle */}
               <div className="flex items-center space-x-1 bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 p-1 rounded-xl flex-shrink-0 text-xs shadow-sm">
                 <button
                   type="button"
@@ -673,7 +919,6 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
               </div>
             </div>
 
-            {/* Category Filter Buttons */}
             <div className="flex items-center space-x-1.5 overflow-x-auto py-1 scrollbar-none text-xs">
               <button
                 type="button"
@@ -733,7 +978,6 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
             </div>
           </div>
 
-          {/* DTC Items List */}
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-1">
               <span>
@@ -749,9 +993,6 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
                 <AlertTriangle className="w-8 h-8 text-slate-400 mx-auto" />
                 <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
                   Код неисправности не найден
-                </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Попробуйте ввести только первые 4-5 символов (например, P0300 или B1001)
                 </p>
               </div>
             ) : (
@@ -832,7 +1073,7 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
       )}
 
       {/* ========================================================================= */}
-      {/* 3. FLUIDS & SERVICE SPECS TAB */}
+      {/* 4. FLUIDS & SERVICE SPECS TAB */}
       {/* ========================================================================= */}
       {subTab === 'specs' && (
         <>
@@ -840,7 +1081,6 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
             renderBrandFallback('Заправочные объемы и регламент ТО')
           ) : (
             <div className="space-y-6">
-              {/* Category Selector Tabs */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                 {CHANGAN_CS55_PLUS_SPECS.map((cat) => {
                   const isActive = cat.id === activeSpecCategory;
@@ -883,7 +1123,6 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
                 })}
               </div>
 
-              {/* Search in Specs */}
               <div className="relative">
                 <input
                   type="text"
@@ -903,7 +1142,6 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
                 )}
               </div>
 
-              {/* Specs Cards Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {filteredSpecs.map((spec, idx) => (
                   <div
@@ -939,7 +1177,7 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
       )}
 
       {/* ========================================================================= */}
-      {/* 4. ELECTRONIC SYSTEM GLOSSARY TAB */}
+      {/* 5. ELECTRONIC SYSTEM GLOSSARY TAB */}
       {/* ========================================================================= */}
       {subTab === 'glossary' && (
         <div className="space-y-4">
@@ -996,12 +1234,11 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
       )}
 
       {/* ========================================================================= */}
-      {/* SCHEMATIC IMAGE VIEWER MODAL */}
+      {/* SCHEMATIC IMAGE VIEWER MODAL (FUSES) */}
       {/* ========================================================================= */}
       {viewingSchemeImage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white dark:bg-dark-850 rounded-3xl border border-slate-200 dark:border-dark-700 shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
-            {/* Modal Header */}
             <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-200 dark:border-dark-750">
               <div className="flex items-center space-x-2">
                 <Layers className="w-4 h-4 text-brand-500" />
@@ -1029,13 +1266,96 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
               </div>
             </div>
 
-            {/* Modal Image Body with Zoom/Scroll */}
             <div className="flex-1 overflow-auto p-4 bg-slate-100 dark:bg-dark-900 flex items-center justify-center">
               <img
                 src={viewingSchemeImage}
                 alt="Схема расположения предохранителей"
                 className="max-w-full max-h-[75vh] object-contain rounded-xl shadow-lg border border-slate-200 dark:border-dark-800"
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* ATLAS FULLSCREEN MODAL VIEWER WITH ZOOM & PAN */}
+      {/* ========================================================================= */}
+      {activeModalScheme && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/90 backdrop-blur-md animate-fadeIn">
+          <div className="bg-white dark:bg-dark-850 rounded-3xl border border-slate-200 dark:border-dark-700 shadow-2xl w-full max-w-6xl h-[92vh] flex flex-col overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-5 py-3 border-b border-slate-200 dark:border-dark-750">
+              <div className="space-y-0.5">
+                <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wide">
+                  {activeModalScheme.categoryTitle}
+                </span>
+                <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white line-clamp-1">
+                  {activeModalScheme.title}
+                </h3>
+              </div>
+
+              {/* Zoom & Action Controls */}
+              <div className="flex items-center space-x-1.5 sm:space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setZoomLevel((z) => Math.max(0.5, z - 0.25))}
+                  className="p-1.5 rounded-xl bg-slate-100 dark:bg-dark-750 hover:bg-slate-200 dark:hover:bg-dark-700 text-slate-700 dark:text-slate-300 transition"
+                  title="Уменьшить"
+                >
+                  <ZoomOut className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setZoomLevel(1)}
+                  className="px-2.5 py-1 text-xs font-mono font-bold rounded-xl bg-slate-100 dark:bg-dark-750 hover:bg-slate-200 dark:hover:bg-dark-700 text-slate-700 dark:text-slate-300 transition"
+                  title="Сбросить масштаб"
+                >
+                  {Math.round(zoomLevel * 100)}%
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setZoomLevel((z) => Math.min(3, z + 0.25))}
+                  className="p-1.5 rounded-xl bg-slate-100 dark:bg-dark-750 hover:bg-slate-200 dark:hover:bg-dark-700 text-slate-700 dark:text-slate-300 transition"
+                  title="Увеличить"
+                >
+                  <ZoomIn className="w-4 h-4" />
+                </button>
+
+                <div className="h-5 w-px bg-slate-200 dark:bg-dark-700 mx-1" />
+
+                <a
+                  href={activeModalScheme.image}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 text-xs font-bold transition"
+                  title="Открыть в новой вкладке"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Оригинал</span>
+                </a>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveModalScheme(null)}
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-dark-750 transition ml-1"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Image Body with Zoom & Scroll */}
+            <div className="flex-1 overflow-auto p-4 bg-slate-100 dark:bg-dark-900 flex items-center justify-center">
+              <div
+                style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'center center' }}
+                className="transition-transform duration-200 max-w-full"
+              >
+                <img
+                  src={activeModalScheme.image}
+                  alt={activeModalScheme.title}
+                  className="rounded-xl shadow-2xl border border-slate-200 dark:border-dark-800 object-contain max-h-[78vh]"
+                />
+              </div>
             </div>
           </div>
         </div>

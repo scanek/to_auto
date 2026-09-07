@@ -477,3 +477,13 @@ export interface SystemGlossaryItem {
   desc: string;
 }
 
+export interface SchemeItem {
+  id: string;
+  title: string;
+  category: string;
+  categoryTitle: string;
+  section: string;
+  image: string;
+  originalFile: string;
+}
+
