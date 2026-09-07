@@ -127,6 +127,8 @@ async def get_vehicles(
         for v in vehicles:
             resp = VehicleResponse.model_validate(v)
             resp.is_owner = False
+            resp.license_plate = None
+            resp.vin = None
             resp.starline_gps_lat = None
             resp.starline_gps_lon = None
             resp.starline_gps_type = None
@@ -151,6 +153,8 @@ async def get_vehicles(
         resp = VehicleResponse.model_validate(v)
         resp.is_owner = (v.user_id == current_user.id)
         if not resp.is_owner:
+            resp.license_plate = None
+            resp.vin = None
             resp.starline_gps_lat = None
             resp.starline_gps_lon = None
             resp.starline_gps_type = None
@@ -257,6 +261,8 @@ async def get_vehicle(
     resp = VehicleResponse.model_validate(vehicle)
     resp.is_owner = bool(current_user and vehicle.user_id == current_user.id)
     if not resp.is_owner:
+        resp.license_plate = None
+        resp.vin = None
         resp.starline_gps_lat = None
         resp.starline_gps_lon = None
         resp.starline_gps_type = None

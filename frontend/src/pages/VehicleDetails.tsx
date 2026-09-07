@@ -552,7 +552,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 <h1 className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight truncate">
                   {vehicle.name || `${vehicle.make} ${vehicle.model}`}
                 </h1>
-                {vehicle.license_plate && (
+                {isOwner && vehicle.license_plate && (
                   <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-gradient-to-b from-white to-slate-100 dark:from-dark-800 dark:to-dark-900 text-slate-900 dark:text-white font-mono font-black text-xs tracking-wider shadow-sm select-none flex-shrink-0">
                     <span className="text-[9px] text-slate-400 font-extrabold mr-0.5 tracking-tighter">RUS</span>
                     <span>{vehicle.license_plate}</span>
@@ -562,7 +562,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               <div className="text-xs text-slate-500 dark:text-slate-400 flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5 font-medium">
                 {vehicle.year && <span>{vehicle.year} г.</span>}
                 {vehicle.engine && <span>• {vehicle.engine}</span>}
-                {vehicle.vin && (
+                {isOwner && vehicle.vin && (
                   <span className="font-mono text-slate-400 dark:text-slate-500" title={`VIN: ${vehicle.vin}`}>
                     • VIN: {vehicle.vin}
                   </span>

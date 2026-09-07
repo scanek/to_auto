@@ -320,7 +320,7 @@ export const Garage: React.FC<GarageProps> = ({
 
                     {/* License Plate & Year Badges */}
                     <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between pointer-events-none">
-                      {v.license_plate && (
+                      {isOwner && v.license_plate && (
                         <span className="bg-slate-900/90 dark:bg-dark-950/90 backdrop-blur-md border border-slate-700/80 text-amber-300 font-mono font-black text-xs px-2.5 py-1 rounded-lg shadow-md flex items-center space-x-1">
                           <span className="text-[9px] text-slate-400 font-extrabold mr-0.5">RUS</span>
                           <span>{v.license_plate}</span>
@@ -356,7 +356,7 @@ export const Garage: React.FC<GarageProps> = ({
                           </h3>
                           <div className="text-xs text-slate-500 dark:text-slate-400 font-medium flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
                             {v.engine && <span>{v.engine}</span>}
-                            {v.vin && <span className="font-mono text-slate-400 dark:text-slate-500">• VIN: {v.vin}</span>}
+                            {isOwner && v.vin && <span className="font-mono text-slate-400 dark:text-slate-500">• VIN: {v.vin}</span>}
                           </div>
                         </div>
 
@@ -552,7 +552,7 @@ export const Garage: React.FC<GarageProps> = ({
 
                     {/* License plate & Year overlay */}
                     <div className="absolute bottom-2 left-2.5 right-2.5 flex items-center justify-between">
-                      {v.license_plate && (
+                      {isOwner && v.license_plate && (
                         <span className="bg-slate-900/85 dark:bg-dark-950/85 backdrop-blur-md border border-slate-700/80 text-amber-300 text-[11px] font-mono font-black px-2 py-0.5 rounded-md shadow">
                           {v.license_plate}
                         </span>
