@@ -443,6 +443,37 @@ export interface FuseBox {
   code: string;
   title: string;
   location: string;
+  image?: string;
   items: FuseItem[];
   tips?: string[];
 }
+
+export type DtcCategory = 'powertrain' | 'body' | 'chassis' | 'network';
+
+export interface DtcCodeItem {
+  code: string;
+  desc: string;
+  category: DtcCategory;
+  system: string;
+  isGeneric: boolean;
+}
+
+export interface VehicleSpecItem {
+  name: string;
+  value: string;
+  standardOrSpec?: string;
+  notes?: string;
+}
+
+export interface VehicleSpecCategory {
+  id: string;
+  title: string;
+  icon: string;
+  specs: VehicleSpecItem[];
+}
+
+export interface SystemGlossaryItem {
+  abbrev: string;
+  desc: string;
+}
+

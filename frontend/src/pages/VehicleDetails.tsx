@@ -7,7 +7,7 @@ import { ConsumableModal } from '../components/ConsumableModal';
 import { TyreRotationWidget } from '../components/TyreRotationWidget';
 import { PublicShareModal } from '../components/PublicShareModal';
 import { ReceiptScanModal } from '../components/ReceiptScanModal';
-import { FuseBoxTab } from '../components/FuseBoxTab';
+import { KnowledgeBaseTab } from '../components/KnowledgeBaseTab';
 import { parseDotCode } from '../utils/tyreAnalytics';
 import { downloadIcsReminder } from '../utils/qrcodeHelper';
 import {
@@ -505,7 +505,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
     { id: 'specs', label: 'Расходники', shortLabel: 'Детали', icon: BookOpen, count: Array.isArray(consumables) ? consumables.length : 0 },
     { id: 'tyres', label: 'Шины', shortLabel: 'Шины', icon: Disc, count: Array.isArray(tyres) ? tyres.length : 0 },
     { id: 'documents', label: 'Документы', shortLabel: 'Документы', icon: FileText, count: Array.isArray(documents) ? documents.length : 0 },
-    { id: 'wiki', label: 'База знаний', shortLabel: 'Схемы', icon: Zap },
+    { id: 'wiki', label: 'База знаний', shortLabel: 'Wiki', icon: Zap },
   ];
 
   return (
@@ -2499,7 +2499,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
 
         {/* Knowledge Base / Wiki Tab */}
         {activeTab === 'wiki' && (
-          <FuseBoxTab
+          <KnowledgeBaseTab
             vehicleMake={vehicle.make}
             vehicleModel={vehicle.model}
           />
