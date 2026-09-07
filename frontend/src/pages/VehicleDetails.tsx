@@ -7,9 +7,11 @@ import { ConsumableModal } from '../components/ConsumableModal';
 import { TyreRotationWidget } from '../components/TyreRotationWidget';
 import { PublicShareModal } from '../components/PublicShareModal';
 import { ReceiptScanModal } from '../components/ReceiptScanModal';
+import { FuseBoxTab } from '../components/FuseBoxTab';
 import { parseDotCode } from '../utils/tyreAnalytics';
 import { downloadIcsReminder } from '../utils/qrcodeHelper';
 import {
+  Zap,
   Wrench,
   Fuel,
   CalendarClock,
@@ -118,7 +120,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   onOpenTyreModal,
 }) => {
   const [activeTab, setActiveTab] = useState<
-    'service' | 'repairs' | 'upgrades' | 'fuel' | 'reminders' | 'analytics' | 'specs' | 'tyres' | 'documents'
+    'service' | 'repairs' | 'upgrades' | 'fuel' | 'reminders' | 'analytics' | 'specs' | 'tyres' | 'documents' | 'wiki'
   >('service');
   const [serviceFilter, setServiceFilter] = useState<'all' | 'service' | 'repair' | 'upgrade'>('all');
 
@@ -503,6 +505,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
     { id: 'specs', label: 'Расходники', shortLabel: 'Детали', icon: BookOpen, count: Array.isArray(consumables) ? consumables.length : 0 },
     { id: 'tyres', label: 'Шины', shortLabel: 'Шины', icon: Disc, count: Array.isArray(tyres) ? tyres.length : 0 },
     { id: 'documents', label: 'Документы', shortLabel: 'Документы', icon: FileText, count: Array.isArray(documents) ? documents.length : 0 },
+    { id: 'wiki', label: 'База знаний', shortLabel: 'Схемы', icon: Zap },
   ];
 
   return (
@@ -1113,8 +1116,8 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
         </div>
       </div>
 
-      {/* Modern 7-Column Segmented Tab Bar (iOS / macOS Floating Capsule Design) */}
-      <div className="grid grid-cols-7 gap-1 sm:gap-1.5 p-1.5 bg-slate-100/90 dark:bg-dark-900/90 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.06] rounded-2xl shadow-inner">
+      {/* Modern 8-Column Segmented Tab Bar (iOS / macOS Floating Capsule Design) */}
+      <div className="grid grid-cols-4 sm:grid-cols-8 gap-1 sm:gap-1.5 p-1.5 bg-slate-100/90 dark:bg-dark-900/90 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.06] rounded-2xl shadow-inner">
         {navTabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id || (tab.id === 'service' && ['service', 'repairs', 'upgrades'].includes(activeTab));
@@ -2493,6 +2496,14 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 )}
               </div>
             )}
+
+        {/* Knowledge Base / Wiki Tab */}
+        {activeTab === 'wiki' && (
+          <FuseBoxTab
+            vehicleMake={vehicle.make}
+            vehicleModel={vehicle.model}
+          />
+        )}
       </div>
 
       {/* Quick Mileage Update Modal */}

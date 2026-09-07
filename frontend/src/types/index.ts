@@ -420,3 +420,29 @@ export interface PublicBookletData {
   consumables: VehicleConsumable[];
   public_show_costs: boolean;
 }
+
+export type FusePowerType = 'battery' | 'acc' | 'ignition' | 'unknown';
+export type FuseCategory = 'power' | 'comfort' | 'lighting' | 'powertrain' | 'safety' | 'climate' | 'electronics';
+
+export interface FuseItem {
+  code: string;
+  type: 'fuse' | 'relay' | 'maxi' | 'terminal';
+  name: string;
+  rating?: string;
+  ratingValue?: number;
+  color?: string;
+  powerType: FusePowerType;
+  category: FuseCategory;
+  description?: string;
+  locationDetails?: string;
+  notes?: string;
+}
+
+export interface FuseBox {
+  id: string;
+  code: string;
+  title: string;
+  location: string;
+  items: FuseItem[];
+  tips?: string[];
+}

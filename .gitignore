@@ -26,9 +26,10 @@ ENV/
 
 # SQLite Database & Local Data
 backend/data/*.db
+backend/data/.jwt_secret
 backend/data/uploads/*
 !backend/data/uploads/.gitkeep
-data/
+/data/
 
 # Testing & Linting
 .pytest_cache/
