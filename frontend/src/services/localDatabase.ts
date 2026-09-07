@@ -731,28 +731,61 @@ class LocalDatabaseEngine {
     const vehicle = await this.getVehicle(vehicleId);
     const services = await this.getServiceRecords(vehicleId);
     const fuel = await this.getFuelLogs(vehicleId);
+    const tyres = await this.getTyreSets(vehicleId);
+    const documents = await this.getDocuments(vehicleId);
 
-    const total_service_cost = services.reduce((acc, s) => acc + (s.total_cost || 0), 0);
-    const total_fuel_cost = fuel.reduce((acc, f) => acc + (f.total_cost || 0), 0);
-    const total_expenses = total_service_cost + total_fuel_cost;
+    let total_service_spend = 0;
+    let total_repair_spend = 0;
+    let total_upgrade_spend = 0;
+
+    services.forEach((s) => {
+      const cost = Number(s.total_cost) || 0;
+      if (s.record_type === 'repair') {
+        total_repair_spend += cost;
+      } else if (s.record_type === 'upgrade') {
+        total_upgrade_spend += cost;
+      } else {
+        total_service_spend += cost;
+      }
+    });
+
+    const total_fuel_spend = fuel.reduce((acc, f) => acc + (Number(f.total_cost) || 0), 0);
+    const total_fuel_liters = fuel.reduce((acc, f) => acc + (Number(f.fuel_amount) || 0), 0);
+    const total_tyre_spend = tyres.reduce((acc, t) => acc + (Number(t.total_price) || 0) + (Number(t.rims_price) || 0), 0);
+    const total_document_spend = documents.reduce((acc, d) => acc + (Number(d.price) || 0), 0);
+
+    const total_spend = total_service_spend + total_repair_spend + total_upgrade_spend + total_fuel_spend + total_tyre_spend + total_document_spend;
 
     const startOdo = vehicle?.starting_odometer || 0;
     const currentOdo = vehicle?.current_odometer || startOdo;
-    const total_mileage = Math.max(0, currentOdo - startOdo);
-    const cost_per_km = total_mileage > 0 ? total_expenses / total_mileage : 0;
-
-    const total_fuel_liters = fuel.reduce((acc, f) => acc + (f.fuel_amount || 0), 0);
-    const avg_fuel_consumption = total_mileage > 0 ? (total_fuel_liters / total_mileage) * 100 : null;
+    const total_distance_tracked = Math.max(0, currentOdo - startOdo);
+    const cost_per_distance_unit = total_distance_tracked > 0 ? total_spend / total_distance_tracked : 0;
+    const avg_fuel_consumption = total_distance_tracked > 0 ? (total_fuel_liters / total_distance_tracked) * 100 : null;
 
     return {
-      total_expenses,
-      total_service_cost,
-      total_fuel_cost,
-      total_mileage,
-      cost_per_km,
+      vehicle_id: vehicleId,
+      total_distance_tracked,
+      total_spend,
+      total_service_spend,
+      total_repair_spend,
+      total_upgrade_spend,
+      total_fuel_spend,
+      total_tyre_spend,
+      total_document_spend,
+      cost_per_distance_unit,
       avg_fuel_consumption,
-      monthly_expenses: [],
-      category_breakdown: [],
+      avg_fuel_price: null,
+      total_fuel_liters,
+      categories: [
+        { category: 'ТО', amount: total_service_spend, percentage: total_spend > 0 ? Math.round((total_service_spend / total_spend) * 100) : 0 },
+        { category: 'Ремонты', amount: total_repair_spend, percentage: total_spend > 0 ? Math.round((total_repair_spend / total_spend) * 100) : 0 },
+        { category: 'Топливо', amount: total_fuel_spend, percentage: total_spend > 0 ? Math.round((total_fuel_spend / total_spend) * 100) : 0 },
+        { category: 'Тюнинг', amount: total_upgrade_spend, percentage: total_spend > 0 ? Math.round((total_upgrade_spend / total_spend) * 100) : 0 },
+        { category: 'Шины', amount: total_tyre_spend, percentage: total_spend > 0 ? Math.round((total_tyre_spend / total_spend) * 100) : 0 },
+        { category: 'Документы', amount: total_document_spend, percentage: total_spend > 0 ? Math.round((total_document_spend / total_spend) * 100) : 0 },
+      ].filter((c) => c.amount > 0),
+      monthly_costs: [],
+      fuel_trend: [],
     };
   }
 
