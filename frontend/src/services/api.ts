@@ -516,16 +516,22 @@ export const api = {
   // -------------------------------------------------------------
   // Reminders / Maintenance Planner
   // -------------------------------------------------------------
-  getReminders: (vehicleId: number) => {
+  getReminders: async (vehicleId: number) => {
+    if (localDB.isStandalone()) {
+      return localDB.getReminders(vehicleId);
+    }
     const url = new URL(`${window.location.origin}${API_BASE}/reminders`);
     url.searchParams.set('vehicle_id', String(vehicleId));
     return request<MaintenancePlan[]>(url.pathname + url.search, undefined, {
       cacheKey: `reminders_${vehicleId}`,
-      fallbackMock: () => [],
+      fallbackMock: () => localDB.getReminders(vehicleId),
     });
   },
-  createReminder: (vehicleId: number, data: Partial<MaintenancePlan>) =>
-    request<MaintenancePlan>(
+  createReminder: async (vehicleId: number, data: Partial<MaintenancePlan>) => {
+    if (localDB.isStandalone()) {
+      return localDB.createReminder(vehicleId, data);
+    }
+    const res = await request<MaintenancePlan>(
       `${API_BASE}/reminders?vehicle_id=${vehicleId}`,
       {
         method: 'POST',
@@ -534,11 +540,17 @@ export const api = {
       {
         description: `Регламент: ${data.title || ''}`,
         entityType: 'reminder',
-        fallbackMock: () => ({ id: Date.now(), vehicle_id: vehicleId, ...data } as MaintenancePlan),
+        fallbackMock: () => localDB.createReminder(vehicleId, data),
       }
-    ),
-  updateReminder: (id: number, data: Partial<MaintenancePlan>) =>
-    request<MaintenancePlan>(
+    );
+    await localDB.createReminder(vehicleId, res).catch(() => {});
+    return res;
+  },
+  updateReminder: async (id: number, data: Partial<MaintenancePlan>) => {
+    if (localDB.isStandalone()) {
+      return localDB.updateReminder(id, data);
+    }
+    const res = await request<MaintenancePlan>(
       `${API_BASE}/reminders/${id}`,
       {
         method: 'PUT',
@@ -547,35 +559,55 @@ export const api = {
       {
         description: `Обновление регламента #${id}`,
         entityType: 'reminder',
-        fallbackMock: () => ({ id, ...data } as MaintenancePlan),
+        fallbackMock: () => localDB.updateReminder(id, data),
       }
-    ),
-  deleteReminder: (id: number) =>
-    request<void>(
+    );
+    await localDB.updateReminder(id, data).catch(() => {});
+    return res;
+  },
+  deleteReminder: async (id: number) => {
+    if (localDB.isStandalone()) {
+      return localDB.deleteReminder(id);
+    }
+    await request<void>(
       `${API_BASE}/reminders/${id}`,
       { method: 'DELETE' },
       {
         description: `Удаление регламента #${id}`,
         entityType: 'reminder',
       }
-    ),
-  applyDefaultReminders: (vehicleId: number) =>
-    request<MaintenancePlan[]>(
+    );
+    await localDB.deleteReminder(id).catch(() => {});
+  },
+  applyDefaultReminders: async (vehicleId: number) => {
+    if (localDB.isStandalone()) {
+      return localDB.applyDefaultReminders(vehicleId);
+    }
+    const res = await request<MaintenancePlan[]>(
       `${API_BASE}/reminders/apply-default-pack?vehicle_id=${vehicleId}`,
       { method: 'POST' }
-    ),
-  markReminderDone: (id: number, odo?: number, hours?: number) => {
+    );
+    await localDB.applyDefaultReminders(vehicleId).catch(() => {});
+    return res;
+  },
+  markReminderDone: async (id: number, odo?: number, hours?: number) => {
+    if (localDB.isStandalone()) {
+      return localDB.markReminderDone(id, odo, hours);
+    }
     const url = new URL(`${window.location.origin}${API_BASE}/reminders/${id}/mark-done`);
     if (odo !== undefined) url.searchParams.set('odometer', String(odo));
     if (hours !== undefined) url.searchParams.set('hours', String(hours));
-    return request<MaintenancePlan>(
+    const res = await request<MaintenancePlan>(
       url.pathname + url.search,
       { method: 'POST' },
       {
         description: `Выполнение регламента #${id}`,
         entityType: 'reminder',
+        fallbackMock: () => localDB.markReminderDone(id, odo, hours),
       }
     );
+    await localDB.markReminderDone(id, odo, hours).catch(() => {});
+    return res;
   },
 
   // -------------------------------------------------------------
@@ -707,20 +739,29 @@ export const api = {
     );
     await localDB.deleteTyreSet(id).catch(() => {});
   },
-  activateTyreSet: (id: number, mileage?: number) => {
+  activateTyreSet: async (id: number, mileage?: number) => {
+    if (localDB.isStandalone()) {
+      return localDB.activateTyreSet(id, mileage);
+    }
     const url = new URL(`${window.location.origin}${API_BASE}/tyres/${id}/activate`);
     if (mileage !== undefined) url.searchParams.set('mileage', String(mileage));
-    return request<TyreSet>(
+    const res = await request<TyreSet>(
       url.pathname + url.search,
       { method: 'POST' },
       {
         description: `Смена комплекта шин #${id}`,
         entityType: 'tyre',
+        fallbackMock: () => localDB.activateTyreSet(id, mileage),
       }
     );
+    await localDB.activateTyreSet(id, mileage).catch(() => {});
+    return res;
   },
-  rotateTyreSet: (id: number, payload: TyreRotatePayload) =>
-    request<TyreSet>(
+  rotateTyreSet: async (id: number, payload: TyreRotatePayload) => {
+    if (localDB.isStandalone()) {
+      return localDB.rotateTyreSet(id, payload);
+    }
+    const res = await request<TyreSet>(
       `${API_BASE}/tyres/${id}/rotate`,
       {
         method: 'POST',
@@ -729,22 +770,32 @@ export const api = {
       {
         description: `Ротация шин #${id}`,
         entityType: 'tyre',
+        fallbackMock: () => localDB.rotateTyreSet(id, payload),
       }
-    ),
+    );
+    await localDB.rotateTyreSet(id, payload).catch(() => {});
+    return res;
+  },
 
   // -------------------------------------------------------------
   // Consumables & Specifications (Шпаргалка ТО)
   // -------------------------------------------------------------
-  getConsumables: (vehicleId: number) => {
+  getConsumables: async (vehicleId: number) => {
+    if (localDB.isStandalone()) {
+      return localDB.getConsumables(vehicleId);
+    }
     const url = new URL(`${window.location.origin}${API_BASE}/consumables`);
     url.searchParams.set('vehicle_id', String(vehicleId));
     return request<VehicleConsumable[]>(url.pathname + url.search, undefined, {
       cacheKey: `consumables_${vehicleId}`,
-      fallbackMock: () => [],
+      fallbackMock: () => localDB.getConsumables(vehicleId),
     });
   },
-  createConsumable: (vehicleId: number, data: Partial<VehicleConsumable>) =>
-    request<VehicleConsumable>(
+  createConsumable: async (vehicleId: number, data: Partial<VehicleConsumable>) => {
+    if (localDB.isStandalone()) {
+      return localDB.createConsumable(vehicleId, data);
+    }
+    const res = await request<VehicleConsumable>(
       `${API_BASE}/consumables?vehicle_id=${vehicleId}`,
       {
         method: 'POST',
@@ -753,11 +804,17 @@ export const api = {
       {
         description: `Добавление расходника: ${data.name || 'Расходник'}`,
         entityType: 'other',
-        fallbackMock: () => ({ id: Date.now(), vehicle_id: vehicleId, ...data } as VehicleConsumable),
+        fallbackMock: () => localDB.createConsumable(vehicleId, data),
       }
-    ),
-  prefillConsumablesTemplate: (vehicleId: number) =>
-    request<VehicleConsumable[]>(
+    );
+    await localDB.createConsumable(vehicleId, res).catch(() => {});
+    return res;
+  },
+  prefillConsumablesTemplate: async (vehicleId: number) => {
+    if (localDB.isStandalone()) {
+      return localDB.prefillConsumablesTemplate(vehicleId);
+    }
+    const res = await request<VehicleConsumable[]>(
       `${API_BASE}/consumables/template?vehicle_id=${vehicleId}`,
       {
         method: 'POST',
@@ -765,11 +822,16 @@ export const api = {
       {
         description: `Заполнение стандартного шаблона расходников`,
         entityType: 'other',
-        fallbackMock: () => [],
+        fallbackMock: () => localDB.prefillConsumablesTemplate(vehicleId),
       }
-    ),
-  updateConsumable: (id: number, data: Partial<VehicleConsumable>) =>
-    request<VehicleConsumable>(
+    );
+    return res;
+  },
+  updateConsumable: async (id: number, data: Partial<VehicleConsumable>) => {
+    if (localDB.isStandalone()) {
+      return localDB.updateConsumable(id, data);
+    }
+    const res = await request<VehicleConsumable>(
       `${API_BASE}/consumables/${id}`,
       {
         method: 'PUT',
@@ -778,23 +840,40 @@ export const api = {
       {
         description: `Обновление расходника #${id}`,
         entityType: 'other',
-        fallbackMock: () => ({ id, ...data } as VehicleConsumable),
+        fallbackMock: () => localDB.updateConsumable(id, data),
       }
-    ),
-  deleteConsumable: (id: number) =>
-    request<void>(
+    );
+    await localDB.updateConsumable(id, data).catch(() => {});
+    return res;
+  },
+  deleteConsumable: async (id: number) => {
+    if (localDB.isStandalone()) {
+      return localDB.deleteConsumable(id);
+    }
+    await request<void>(
       `${API_BASE}/consumables/${id}`,
       { method: 'DELETE' },
       {
         description: `Удаление расходника #${id}`,
         entityType: 'other',
       }
-    ),
+    );
+    await localDB.deleteConsumable(id).catch(() => {});
+  },
 
   // -------------------------------------------------------------
   // Analytics
   // -------------------------------------------------------------
-  getAnalytics: (vehicleId: number) =>
+  getAnalytics: async (vehicleId: number) => {
+    if (localDB.isStandalone()) {
+      return localDB.getAnalytics(vehicleId);
+    }
+    return request<VehicleAnalytics>(`${API_BASE}/analytics/${vehicleId}`, undefined, {
+      cacheKey: `analytics_${vehicleId}`,
+      fallbackMock: () => localDB.getAnalytics(vehicleId),
+    });
+  },
+  _oldGetAnalytics: (vehicleId: number) =>
     request<VehicleAnalytics>(`${API_BASE}/analytics/${vehicleId}`, undefined, {
       cacheKey: `analytics_${vehicleId}`,
       fallbackMock: () => ({

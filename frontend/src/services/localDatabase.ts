@@ -585,6 +585,22 @@ class LocalDatabaseEngine {
     return updated;
   }
 
+  public async activateTyreSet(id: number, mileage?: number): Promise<TyreSet> {
+    const all = await this.getAllFromStore<TyreSet>(STORES.TYRES);
+    const target = all.find((t) => t.id === id);
+    if (!target) throw new Error('Комплект шин не найден');
+
+    for (const t of all) {
+      if (t.vehicle_id === target.vehicle_id) {
+        await this.updateTyreSet(t.id, {
+          is_active: t.id === id,
+          ...(t.id === id && mileage !== undefined ? { install_mileage: mileage, install_date: new Date().toISOString() } : {}),
+        });
+      }
+    }
+    return { ...target, is_active: true };
+  }
+
   public async deleteTyreSet(id: number): Promise<void> {
     await this.deleteItem(STORES.TYRES, id);
   }
