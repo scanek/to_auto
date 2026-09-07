@@ -61,7 +61,7 @@ export const VehicleToolsModal: React.FC<VehicleToolsModalProps> = ({
                 Инструменты и опции
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[280px] sm:max-w-md">
-                {vehicle.name || `${vehicle.make} ${vehicle.model}`} {vehicle.license_plate ? `(${vehicle.license_plate})` : ''}
+                {vehicle.name || `${vehicle.make} ${vehicle.model}`} {isOwner && vehicle.license_plate ? `(${vehicle.license_plate})` : ''}
               </p>
             </div>
           </div>
@@ -124,25 +124,27 @@ export const VehicleToolsModal: React.FC<VehicleToolsModalProps> = ({
               </button>
 
               {/* Vehicle JSON Backup */}
-              <button
-                onClick={() => {
-                  onExportVehicleBackup();
-                  onClose();
-                }}
-                className="p-3.5 rounded-2xl border border-slate-200 dark:border-dark-750 bg-slate-50/60 dark:bg-dark-800/60 hover:border-amber-500/40 hover:bg-amber-500/5 transition flex items-center space-x-3 text-left group sm:col-span-2"
-              >
-                <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-                  <Download className="w-5 h-5" />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-xs font-bold text-slate-900 dark:text-white">
-                    Резервная копия этого авто (JSON)
+              {isOwner && (
+                <button
+                  onClick={() => {
+                    onExportVehicleBackup();
+                    onClose();
+                  }}
+                  className="p-3.5 rounded-2xl border border-slate-200 dark:border-dark-750 bg-slate-50/60 dark:bg-dark-800/60 hover:border-amber-500/40 hover:bg-amber-500/5 transition flex items-center space-x-3 text-left group sm:col-span-2"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                    <Download className="w-5 h-5" />
                   </div>
-                  <div className="text-[11px] text-slate-500">
-                    Полный бэкап истории этой машины для переноса в приложение
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-slate-900 dark:text-white">
+                      Резервная копия этого авто (JSON)
+                    </div>
+                    <div className="text-[11px] text-slate-500">
+                      Полный бэкап истории этой машины для переноса в приложение
+                    </div>
                   </div>
-                </div>
-              </button>
+                </button>
+              )}
             </div>
           </div>
 

@@ -900,7 +900,11 @@ class LocalDatabaseEngine {
       const consumables = await this.getConsumables(v.id);
 
       allData.push({
-        vehicle: v,
+        vehicle: {
+          ...v,
+          license_plate: null,
+          vin: null,
+        },
         service_records: services,
         fuel_logs: fuel,
         trackers: reminders.map((r) => ({
@@ -956,7 +960,11 @@ class LocalDatabaseEngine {
       version: '1.0',
       app: 'Бортовой Журнал Mobile',
       exported_at: new Date().toISOString(),
-      vehicle: v,
+      vehicle: {
+        ...v,
+        license_plate: null,
+        vin: null,
+      },
       service_records: services,
       fuel_logs: fuel,
       trackers: reminders.map((r) => ({

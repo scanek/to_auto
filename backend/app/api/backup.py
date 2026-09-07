@@ -32,7 +32,16 @@ from app.services.auth_helper import verify_vehicle_access, resolve_user_from_he
 
 router = APIRouter(prefix="/backup", tags=["Backup & Restore"])
 
-def serialize_vehicle_dict(vehicle: Vehicle, service_records, fuel_logs, reminders, tyres, documents, consumables=None) -> Dict[str, Any]:
+def serialize_vehicle_dict(
+    vehicle: Vehicle,
+    service_records,
+    fuel_logs,
+    reminders,
+    tyres,
+    documents,
+    consumables=None,
+    include_private_data: bool = False,
+) -> Dict[str, Any]:
     """Helper to serialize full vehicle entity with all related history."""
     return {
         "vehicle": {
@@ -43,8 +52,8 @@ def serialize_vehicle_dict(vehicle: Vehicle, service_records, fuel_logs, reminde
             "model": vehicle.model,
             "year": vehicle.year,
             "engine": vehicle.engine,
-            "license_plate": vehicle.license_plate,
-            "vin": vehicle.vin,
+            "license_plate": vehicle.license_plate if include_private_data else None,
+            "vin": vehicle.vin if include_private_data else None,
             "starting_odometer": vehicle.starting_odometer,
             "current_odometer": vehicle.current_odometer,
             "current_engine_hours": vehicle.current_engine_hours,
@@ -205,7 +214,7 @@ async def export_vehicle_backup(
     Exports a complete JSON backup for a single vehicle owned by user.
     """
     user = await resolve_user_from_header_or_query(authorization, token, db)
-    vehicle = await verify_vehicle_access(db, vehicle_id, user)
+    vehicle = await verify_vehicle_access(db, vehicle_id, user, require_owner=True)
 
     srv_res = await db.execute(
         select(ServiceRecord)
@@ -247,7 +256,16 @@ async def export_vehicle_backup(
     )
     consumables = con_res.scalars().all()
 
-    backup_payload = serialize_vehicle_dict(vehicle, service_records, fuel_logs, reminders, tyres, documents, consumables)
+    backup_payload = serialize_vehicle_dict(
+        vehicle,
+        service_records,
+        fuel_logs,
+        reminders,
+        tyres,
+        documents,
+        consumables,
+        include_private_data=False,
+    )
     backup_payload["version"] = "1.0"
     backup_payload["exported_at"] = datetime.datetime.utcnow().isoformat()
     backup_payload["app"] = "Бортовой Журнал"
@@ -357,7 +375,18 @@ async def generate_backup_json_bytes(
         )
         consumables = con_res.scalars().all()
 
-        all_data.append(serialize_vehicle_dict(vehicle, service_records, fuel_logs, reminders, tyres, documents, consumables))
+        all_data.append(
+            serialize_vehicle_dict(
+                vehicle,
+                service_records,
+                fuel_logs,
+                reminders,
+                tyres,
+                documents,
+                consumables,
+                include_private_data=is_full_admin_backup,
+            )
+        )
 
     payload = {
         "version": "1.0",
