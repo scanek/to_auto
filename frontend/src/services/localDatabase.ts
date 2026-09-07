@@ -155,11 +155,18 @@ class LocalDatabaseEngine {
     const mode = localStorage.getItem('autotracker_app_mode');
     if (mode === 'standalone') return true;
     if (mode === 'synced' && serverUrl) return false;
+    // On GitHub Pages or static hosting: default to standalone if no server configured
+    if (window.location.hostname.includes('github.io') || window.location.hostname.includes('pages.dev')) {
+      return !serverUrl;
+    }
     // On native Android: default to standalone if no server configured
     if (this.isNative()) {
       return !serverUrl;
     }
-    // On web browser: if user manually set standalone mode or if running from file
+    // Web without backend: default to standalone if no server configured and not localhost
+    if (!serverUrl && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      return true;
+    }
     return !serverUrl && window.location.protocol === 'file:';
   }
 
@@ -276,7 +283,10 @@ class LocalDatabaseEngine {
 
   public async createServiceRecord(vehicleId: number, data: Partial<ServiceRecord>): Promise<ServiceRecord> {
     const nextId = data.id || (await this.getNextId(STORES.SERVICE_RECORDS));
-    const total_cost = (Number(data.cost_labor) || 0) + (Number(data.cost_parts) || 0);
+    const calcCost = (Number(data.cost_labor) || 0) + (Number(data.cost_parts) || 0);
+    const total_cost = data.total_cost !== undefined && data.total_cost !== null && !isNaN(Number(data.total_cost)) && Number(data.total_cost) > 0
+      ? Number(data.total_cost)
+      : (calcCost > 0 ? calcCost : (Number(data.total_cost) || 0));
     const record: ServiceRecord = {
       id: nextId,
       vehicle_id: vehicleId,
@@ -319,7 +329,10 @@ class LocalDatabaseEngine {
   public async updateServiceRecord(id: number, data: Partial<ServiceRecord>): Promise<ServiceRecord> {
     const all = await this.getAllFromStore<ServiceRecord>(STORES.SERVICE_RECORDS);
     const existing = all.find((s) => s.id === id);
-    const total_cost = (Number(data.cost_labor) || 0) + (Number(data.cost_parts) || 0);
+    const calcCost = (Number(data.cost_labor ?? existing?.cost_labor) || 0) + (Number(data.cost_parts ?? existing?.cost_parts) || 0);
+    const total_cost = data.total_cost !== undefined && data.total_cost !== null && !isNaN(Number(data.total_cost)) && Number(data.total_cost) > 0
+      ? Number(data.total_cost)
+      : (calcCost > 0 ? calcCost : (Number(data.total_cost ?? existing?.total_cost) || 0));
     const updated: ServiceRecord = {
       ...(existing || {} as any),
       ...data,
@@ -617,9 +630,9 @@ class LocalDatabaseEngine {
       category: data.category || 'other',
       name: data.name || '',
       specification: data.specification || '',
-      oem_part_number: data.oem_part_number || '',
-      aftermarket_parts: data.aftermarket_parts || '',
-      replacement_interval: data.replacement_interval || '',
+      oem_part_number: (data as any).oem_part_number || (data as any).oem_number || '',
+      aftermarket_parts: (data as any).aftermarket_parts || (data as any).analog_numbers || '',
+      replacement_interval: (data as any).replacement_interval || ((data as any).replacement_interval_km ? `${(data as any).replacement_interval_km} км` : ''),
       notes: data.notes || '',
       order_index: data.order_index ?? 0,
     };
@@ -742,7 +755,7 @@ class LocalDatabaseEngine {
         model: vData.model || '',
         year: vData.year ? Number(vData.year) : undefined,
         engine: vData.engine || '',
-        license_plate: vData.license_plate || '',
+        license_plate: vData.license_plate || vData.plate || '',
         vin: vData.vin || '',
         starting_odometer: Number(vData.starting_odometer) || 0,
         current_odometer: Number(vData.current_odometer) || Number(vData.starting_odometer) || 0,
@@ -755,6 +768,7 @@ class LocalDatabaseEngine {
         photo_url: vData.photo_url || '',
         notes: vData.notes || '',
         drive_type: vData.drive_type || 'fwd',
+        enabled_tabs: vData.enabled_tabs || undefined,
       });
 
       if (!firstVehicleId) firstVehicleId = newVehicle.id;
@@ -773,6 +787,7 @@ class LocalDatabaseEngine {
           description: s.description || '',
           cost_labor: Number(s.cost_labor) || 0,
           cost_parts: Number(s.cost_parts) || 0,
+          total_cost: s.total_cost !== undefined && s.total_cost !== null ? Number(s.total_cost) : undefined,
           store: s.store || '',
           url: s.url || '',
           notes: s.notes || '',
@@ -876,7 +891,17 @@ class LocalDatabaseEngine {
       // 6. Consumables
       const cList = pkg.consumables || [];
       for (let i = 0; i < cList.length; i++) {
-        await this.createConsumable(newVehicle.id, { ...cList[i], order_index: i });
+        const c = cList[i];
+        await this.createConsumable(newVehicle.id, {
+          category: c.category || 'other',
+          name: c.name || '',
+          specification: c.specification || '',
+          oem_part_number: c.oem_part_number || c.oem_number || '',
+          aftermarket_parts: c.aftermarket_parts || c.analog_numbers || '',
+          replacement_interval: c.replacement_interval || (c.replacement_interval_km ? `${c.replacement_interval_km} км` : ''),
+          notes: c.notes || '',
+          order_index: c.order_index ?? i,
+        });
       }
     }
 
@@ -902,8 +927,8 @@ class LocalDatabaseEngine {
       allData.push({
         vehicle: {
           ...v,
-          license_plate: null,
-          vin: null,
+          license_plate: v.license_plate,
+          vin: v.vin,
         },
         service_records: services,
         fuel_logs: fuel,
@@ -962,8 +987,8 @@ class LocalDatabaseEngine {
       exported_at: new Date().toISOString(),
       vehicle: {
         ...v,
-        license_plate: null,
-        vin: null,
+        license_plate: v.license_plate,
+        vin: v.vin,
       },
       service_records: services,
       fuel_logs: fuel,

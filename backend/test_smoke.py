@@ -161,7 +161,37 @@ async def run_tests():
         assert res.status_code == 200
         assert "Сервисная книжка" in res.text
 
+        # 9. Test Backup Export and Import Fidelity
+        res = await ac.get(f"/api/v1/backup/export/{veh_id}", headers=headers)
+        assert res.status_code == 200, f"Export failed: {res.text}"
+        backup_json = res.json()
+        assert backup_json["vehicle"]["vin"] == "JTMDREV1234567890", f"VIN lost: {backup_json['vehicle']}"
+        assert backup_json["vehicle"]["license_plate"] == "A777AA 777", f"Plate lost: {backup_json['vehicle']}"
+        assert len(backup_json["service_records"]) > 0
+        assert backup_json["service_records"][0]["total_cost"] == 9700
+
+        # Export garage
+        res_garage = await ac.get("/api/v1/backup/export-all?scope=mine", headers=headers)
+        assert res_garage.status_code == 200
+        garage_json = res_garage.json()
+        assert len(garage_json["data"]) > 0
+        assert garage_json["data"][0]["vehicle"]["vin"] == "JTMDREV1234567890"
+        assert garage_json["data"][0]["vehicle"]["license_plate"] == "A777AA 777"
+
+        # Import backup
+        res_import = await ac.post("/api/v1/backup/import", headers=headers, json=backup_json)
+        assert res_import.status_code == 200, f"Import failed: {res_import.text}"
+        imported_id = res_import.json()["vehicle_id"]
+
+        # Verify imported vehicle has VIN and plate
+        res_check = await ac.get(f"/api/v1/vehicles/{imported_id}", headers=headers)
+        assert res_check.status_code == 200
+        imported_veh = res_check.json()
+        assert imported_veh["vin"] == "JTMDREV1234567890"
+        assert imported_veh["license_plate"] == "A777AA 777"
+
     print("ALL SMOKE TESTS PASSED SUCCESSFULLY!")
 
 if __name__ == "__main__":
     asyncio.run(run_tests())
+

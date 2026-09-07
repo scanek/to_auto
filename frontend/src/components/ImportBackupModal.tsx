@@ -133,12 +133,45 @@ export const ImportBackupModal: React.FC<ImportBackupModalProps> = ({
     }
   };
 
-  const veh = parsedData?.vehicle || parsedData?.vehicles?.[0];
-  const recordsCount = parsedData?.service_records?.length || parsedData?.maintenance_records?.length || 0;
-  const trackersCount = parsedData?.trackers?.length || veh?.trackers?.length || 0;
-  const tyresCount = parsedData?.tyre_sets?.length || 0;
-  const insCount = parsedData?.documents?.length || parsedData?.insurances?.length || 0;
-  const fuelCount = parsedData?.fuel_logs?.length || 0;
+  const dataList: any[] = Array.isArray(parsedData?.data)
+    ? parsedData.data
+    : (parsedData ? [parsedData] : []);
+
+  const totalVehicles = Array.isArray(parsedData?.data)
+    ? parsedData.data.length
+    : (parsedData?.vehicles?.length || (parsedData?.vehicle || parsedData?.make || parsedData?.name ? 1 : 0));
+
+  const veh = parsedData?.vehicle || parsedData?.vehicles?.[0] || parsedData?.data?.[0]?.vehicle || (parsedData?.make ? parsedData : null);
+
+  const recordsCount = dataList.reduce(
+    (sum, item) => sum + (item.service_records?.length || item.maintenance_records?.length || 0),
+    0
+  ) || (parsedData?.service_records?.length || 0);
+
+  const trackersCount = dataList.reduce(
+    (sum, item) => sum + (item.trackers?.length || item.reminders?.length || item.vehicle?.trackers?.length || 0),
+    0
+  ) || (parsedData?.trackers?.length || 0);
+
+  const tyresCount = dataList.reduce(
+    (sum, item) => sum + (item.tyre_sets?.length || item.tyres?.length || 0),
+    0
+  ) || (parsedData?.tyre_sets?.length || 0);
+
+  const insCount = dataList.reduce(
+    (sum, item) => sum + (item.documents?.length || item.insurances?.length || 0),
+    0
+  ) || (parsedData?.documents?.length || 0);
+
+  const fuelCount = dataList.reduce(
+    (sum, item) => sum + (item.fuel_logs?.length || item.fuel?.length || 0),
+    0
+  ) || (parsedData?.fuel_logs?.length || 0);
+
+  const consumablesCount = dataList.reduce(
+    (sum, item) => sum + (item.consumables?.length || 0),
+    0
+  ) || (parsedData?.consumables?.length || 0);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm animate-fade-in">
@@ -282,6 +315,11 @@ export const ImportBackupModal: React.FC<ImportBackupModalProps> = ({
                     <span className="bg-white dark:bg-dark-800 px-2 py-1 rounded border border-slate-200 dark:border-dark-700">
                       🛡️ Страховки: <strong>{insCount}</strong>
                     </span>
+                    {consumablesCount > 0 && (
+                      <span className="bg-white dark:bg-dark-800 px-2 py-1 rounded border border-slate-200 dark:border-dark-700">
+                        📦 Расходники: <strong>{consumablesCount}</strong>
+                      </span>
+                    )}
                   </div>
                 </div>
               )}

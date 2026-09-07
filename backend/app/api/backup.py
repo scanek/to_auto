@@ -40,7 +40,7 @@ def serialize_vehicle_dict(
     tyres,
     documents,
     consumables=None,
-    include_private_data: bool = False,
+    include_private_data: bool = True,
 ) -> Dict[str, Any]:
     """Helper to serialize full vehicle entity with all related history."""
     return {
@@ -57,7 +57,12 @@ def serialize_vehicle_dict(
             "starting_odometer": vehicle.starting_odometer,
             "current_odometer": vehicle.current_odometer,
             "current_engine_hours": vehicle.current_engine_hours,
+            "track_engine_hours": getattr(vehicle, "track_engine_hours", False),
             "oil_spec": vehicle.oil_spec,
+            "drive_type": getattr(vehicle, "drive_type", "fwd"),
+            "fuel_tank_capacity": getattr(vehicle, "fuel_tank_capacity", None),
+            "enabled_tabs": getattr(vehicle, "enabled_tabs", None),
+            "purchase_date": vehicle.purchase_date.isoformat() if getattr(vehicle, "purchase_date", None) else None,
             "is_public": getattr(vehicle, "is_public", False),
             "distance_unit": vehicle.distance_unit,
             "fuel_unit": vehicle.fuel_unit,
@@ -194,7 +199,9 @@ def serialize_vehicle_dict(
                 "name": c.name,
                 "specification": c.specification,
                 "oem_part_number": c.oem_part_number,
+                "oem_number": c.oem_part_number,
                 "aftermarket_parts": c.aftermarket_parts,
+                "analog_numbers": c.aftermarket_parts,
                 "replacement_interval": c.replacement_interval,
                 "notes": c.notes,
                 "order_index": c.order_index,
@@ -264,7 +271,7 @@ async def export_vehicle_backup(
         tyres,
         documents,
         consumables,
-        include_private_data=False,
+        include_private_data=True,
     )
     backup_payload["version"] = "1.0"
     backup_payload["exported_at"] = datetime.datetime.utcnow().isoformat()
@@ -384,7 +391,7 @@ async def generate_backup_json_bytes(
                 tyres,
                 documents,
                 consumables,
-                include_private_data=is_full_admin_backup,
+                include_private_data=True,
             )
         )
 
@@ -1189,11 +1196,14 @@ async def import_backup(
                 if not c_name:
                     continue
                 c_match = next((ec for ec in existing_cons if ec.name.strip().lower() == c_name.lower()), None)
+                oem_val = str(c.get("oem_part_number") or c.get("oem_number") or "")
+                analog_val = str(c.get("aftermarket_parts") or c.get("analog_numbers") or "")
+                interval_val = str(c.get("replacement_interval") or (f"{c.get('replacement_interval_km')} км" if c.get("replacement_interval_km") else ""))
                 if c_match:
                     if c.get("specification"): c_match.specification = str(c["specification"])
-                    if c.get("oem_part_number"): c_match.oem_part_number = str(c["oem_part_number"])
-                    if c.get("aftermarket_parts"): c_match.aftermarket_parts = str(c["aftermarket_parts"])
-                    if c.get("replacement_interval"): c_match.replacement_interval = str(c["replacement_interval"])
+                    if oem_val: c_match.oem_part_number = oem_val
+                    if analog_val: c_match.aftermarket_parts = analog_val
+                    if interval_val: c_match.replacement_interval = interval_val
                     if c.get("notes"): c_match.notes = str(c["notes"])
                 else:
                     new_c = VehicleConsumable(
@@ -1201,9 +1211,9 @@ async def import_backup(
                         category=str(c.get("category") or "engine"),
                         name=c_name,
                         specification=str(c.get("specification")) if c.get("specification") else None,
-                        oem_part_number=str(c.get("oem_part_number")) if c.get("oem_part_number") else None,
-                        aftermarket_parts=str(c.get("aftermarket_parts")) if c.get("aftermarket_parts") else None,
-                        replacement_interval=str(c.get("replacement_interval")) if c.get("replacement_interval") else None,
+                        oem_part_number=oem_val if oem_val else None,
+                        aftermarket_parts=analog_val if analog_val else None,
+                        replacement_interval=interval_val if interval_val else None,
                         notes=str(c.get("notes")) if c.get("notes") else None,
                         order_index=int(c.get("order_index") or 0),
                     )
