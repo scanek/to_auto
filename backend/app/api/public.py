@@ -156,8 +156,8 @@ async def get_public_service_booklet(
             "model": vehicle.model,
             "year": vehicle.year,
             "engine": vehicle.engine,
-            "license_plate": vehicle.license_plate,
-            "vin": vehicle.vin,
+            "license_plate": None,
+            "vin": None,
             "drive_type": vehicle.drive_type or "fwd",
             "current_odometer": vehicle.current_odometer,
             "distance_unit": vehicle.distance_unit,
@@ -215,8 +215,18 @@ async def get_public_service_booklet_print(
     )
     consumables = cons_res.scalars().all()
 
+    class PublicVehicleWrapper:
+        def __init__(self, v):
+            self._v = v
+            self.license_plate = None
+            self.vin = None
+        def __getattr__(self, item):
+            return getattr(self._v, item)
+
+    sanitized_vehicle = PublicVehicleWrapper(vehicle)
+
     html_content = generate_service_booklet_html(
-        vehicle,
+        sanitized_vehicle,
         service_records,
         tyres=tyre_sets,
         consumables=consumables,

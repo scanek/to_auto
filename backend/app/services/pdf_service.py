@@ -293,12 +293,16 @@ def generate_service_booklet_html(
         else '<span>Финансовые затраты: скрыты владельцем автомобиля</span>'
     )
 
+    title_plate = f" ({vehicle.license_plate})" if getattr(vehicle, "license_plate", None) else ""
+    plate_html = f"""<div class="item"><span class="label">Госномер</span><span class="value">{vehicle.license_plate}</span></div>""" if getattr(vehicle, "license_plate", None) else ""
+    vin_html = f"""<div class="item"><span class="label">VIN номер</span><span class="value">{vehicle.vin}</span></div>""" if getattr(vehicle, "vin", None) else ""
+
     html = f"""<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Сервисная книжка - {vehicle.make} {vehicle.model} ({vehicle.license_plate or ''})</title>
+    <title>Сервисная книжка - {vehicle.make} {vehicle.model}{title_plate}</title>
     <style>
         @page {{
             size: A4;
@@ -509,14 +513,8 @@ def generate_service_booklet_html(
             <span class="label">Автомобиль</span>
             <span class="value">{vehicle.make} {vehicle.model} {f'({vehicle.year} г.)' if vehicle.year else ''}</span>
         </div>
-        <div class="item">
-            <span class="label">Госномер</span>
-            <span class="value">{vehicle.license_plate or 'Не указан'}</span>
-        </div>
-        <div class="item">
-            <span class="label">VIN номер</span>
-            <span class="value">{vehicle.vin or 'Не указан'}</span>
-        </div>
+        {plate_html}
+        {vin_html}
         <div class="item">
             <span class="label">Привод</span>
             <span class="value">{drive_type_display}</span>

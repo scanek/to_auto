@@ -152,16 +152,6 @@ export const PublicServiceBooklet: React.FC = () => {
                 <span className="px-2.5 py-1 bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 font-bold text-xs rounded-md border border-sky-200 dark:border-sky-800">
                   {vehicle.year ? `${vehicle.year} г.в.` : 'Год не указан'}
                 </span>
-                {vehicle.license_plate && (
-                  <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 font-mono font-bold text-xs rounded-md border border-slate-300 dark:border-slate-700 tracking-wider">
-                    {vehicle.license_plate}
-                  </span>
-                )}
-                {vehicle.vin && (
-                  <span className="px-2.5 py-1 bg-slate-50 dark:bg-slate-800/60 font-mono text-[11px] text-slate-500 dark:text-slate-400 rounded-md border border-slate-200 dark:border-slate-700">
-                    VIN: {vehicle.vin}
-                  </span>
-                )}
               </div>
 
               <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">

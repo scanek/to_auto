@@ -73,7 +73,19 @@ async def export_service_booklet(
     authorization: Optional[str] = Header(None),
     db: AsyncSession = Depends(get_db),
 ):
-    _, vehicle = await resolve_user_for_export(db, vehicle_id, authorization, ticket, token)
+    user, vehicle = await resolve_user_for_export(db, vehicle_id, authorization, ticket, token)
+    is_owner = (user is not None and user.id == vehicle.user_id)
+
+    target_vehicle = vehicle
+    if not is_owner:
+        class PublicVehicleWrapper:
+            def __init__(self, v):
+                self._v = v
+                self.license_plate = None
+                self.vin = None
+            def __getattr__(self, item):
+                return getattr(self._v, item)
+        target_vehicle = PublicVehicleWrapper(vehicle)
 
     srv_res = await db.execute(
         select(ServiceRecord)
@@ -97,7 +109,7 @@ async def export_service_booklet(
     )
     consumables = cons_res.scalars().all()
 
-    html_content = generate_service_booklet_html(vehicle, service_records, tyres=tyres, consumables=consumables)
+    html_content = generate_service_booklet_html(target_vehicle, service_records, tyres=tyres, consumables=consumables)
     
     return Response(
         content=html_content,
@@ -116,7 +128,19 @@ async def export_excel(
     authorization: Optional[str] = Header(None),
     db: AsyncSession = Depends(get_db),
 ):
-    _, vehicle = await resolve_user_for_export(db, vehicle_id, authorization, ticket, token)
+    user, vehicle = await resolve_user_for_export(db, vehicle_id, authorization, ticket, token)
+    is_owner = (user is not None and user.id == vehicle.user_id)
+
+    target_vehicle = vehicle
+    if not is_owner:
+        class PublicVehicleWrapper:
+            def __init__(self, v):
+                self._v = v
+                self.license_plate = None
+                self.vin = None
+            def __getattr__(self, item):
+                return getattr(self._v, item)
+        target_vehicle = PublicVehicleWrapper(vehicle)
 
     srv_res = await db.execute(
         select(ServiceRecord)
@@ -154,7 +178,7 @@ async def export_excel(
     documents = doc_res.scalars().all()
 
     analytics = await compute_vehicle_analytics(db, vehicle)
-    excel_bytes = generate_vehicle_excel(vehicle, service_records, fuel_logs, reminders, tyres, documents, analytics)
+    excel_bytes = generate_vehicle_excel(target_vehicle, service_records, fuel_logs, reminders, tyres, documents, analytics)
     
     filename = f"AutoTracker_{vehicle.id}_{vehicle.make}_{vehicle.model}.xlsx"
     encoded_filename = urllib.parse.quote(filename)
