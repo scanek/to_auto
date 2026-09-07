@@ -73,10 +73,15 @@ export const StarLineModal: React.FC<StarLineModalProps> = ({
       });
 
       if (res.status === 'captcha_needed' || res.captcha_sid) {
+        const wasCaptcha = Boolean(captchaSid);
         setCaptchaSid(res.captcha_sid || null);
         setCaptchaImg(res.captcha_img || null);
         setCaptchaCode('');
-        setErrorMsg('StarLine запросил ввод капчи. Введите символы с картинки.');
+        setErrorMsg(
+          wasCaptcha
+            ? 'Символы с картинки введены неверно! Загружена новая картинка. Обратите внимание: латинские буквы, строго с учетом регистра (большие и маленькие).'
+            : 'StarLine запросил ввод капчи. Введите символы с картинки (латиница, с учетом регистра: строчные и заглавные).'
+        );
         return;
       }
 
@@ -103,6 +108,28 @@ export const StarLineModal: React.FC<StarLineModalProps> = ({
       } else {
         setErrorMsg(errStr || 'Ошибка подключения к StarLine. Проверьте логин и пароль.');
       }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRefreshCaptcha = async () => {
+    setLoading(true);
+    setErrorMsg(null);
+    try {
+      const res = await api.authStarLine(vehicle.id, {
+        login,
+        password,
+        app_id: customAppId.trim() || undefined,
+        secret: customSecret.trim() || undefined,
+      });
+      if (res.status === 'captcha_needed' || res.captcha_sid) {
+        setCaptchaSid(res.captcha_sid || null);
+        setCaptchaImg(res.captcha_img || null);
+        setCaptchaCode('');
+      }
+    } catch (err: any) {
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -382,24 +409,40 @@ export const StarLineModal: React.FC<StarLineModalProps> = ({
               {/* CAPTCHA SECTION */}
               {captchaImg && (
                 <div className="p-3 rounded-xl bg-sky-500/10 border border-sky-500/20 space-y-2 animate-fadeIn">
-                  <label className="block text-xs font-bold text-sky-800 dark:text-sky-200">
-                    Код с картинки (Captcha) *
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-bold text-sky-800 dark:text-sky-200">
+                      Код с картинки (Captcha) *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleRefreshCaptcha}
+                      disabled={loading}
+                      className="text-[11px] text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1 font-semibold"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+                      Обновить картинку
+                    </button>
+                  </div>
                   <div className="flex items-center space-x-3">
-                    <img
-                      src={captchaImg}
-                      alt="StarLine Captcha"
-                      className="h-10 rounded-lg border border-slate-300 bg-white p-1 shadow-sm"
-                    />
+                    <div className="bg-white p-1.5 rounded-xl border border-slate-300 shadow-sm flex items-center justify-center">
+                      <img
+                        src={captchaImg}
+                        alt="StarLine Captcha"
+                        className="h-12 object-contain select-none"
+                      />
+                    </div>
                     <input
                       type="text"
                       required
-                      placeholder="Символы"
+                      placeholder="Символы (напр. 3E9p4s)"
                       value={captchaCode}
                       onChange={(e) => setCaptchaCode(e.target.value)}
-                      className="flex-1 px-3 py-2 bg-white dark:bg-dark-900 border border-sky-400 rounded-xl text-xs font-bold font-mono tracking-wider text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                      className="flex-1 px-3 py-2.5 bg-white dark:bg-dark-900 border border-sky-400 rounded-xl text-sm font-bold font-mono tracking-wider text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 focus:outline-none"
                     />
                   </div>
+                  <p className="text-[11px] text-sky-700 dark:text-sky-300 font-medium leading-snug">
+                    ⚠️ <strong>Внимание:</strong> капча StarLine чувствительна к регистру! Вводите английскими буквами, строго различая строчные (маленькие) и заглавные (БОЛЬШИЕ) буквы.
+                  </p>
                 </div>
               )}
 

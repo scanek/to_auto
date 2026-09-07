@@ -1,4 +1,4 @@
-const CACHE_NAME = 'autotracker-cache-v18';
+const CACHE_NAME = 'autotracker-cache-v19';
 
 // Assets to pre-cache on install
 const PRECACHE_ASSETS = [
