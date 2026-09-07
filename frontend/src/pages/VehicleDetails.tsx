@@ -1089,8 +1089,8 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
             </div>
             <div className="mt-1.5">
               <span className="text-sm sm:text-base font-black text-emerald-600 dark:text-emerald-400 font-mono tracking-tight">
-                {analytics?.avg_fuel_consumption ? (
-                  `${analytics.avg_fuel_consumption} л`
+                {analytics?.avg_fuel_consumption != null ? (
+                  `${typeof analytics.avg_fuel_consumption === 'number' ? analytics.avg_fuel_consumption.toFixed(1) : analytics.avg_fuel_consumption} л`
                 ) : fuelLogs.length === 1 ? (
                   <span className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold" title="Первая заправка служит базовой точкой отсчета. При следующей заправке будет рассчитан расход">
                     Точка отсчета 📍
@@ -1099,7 +1099,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                   '—'
                 )}
               </span>
-              {analytics?.avg_fuel_consumption && (
+              {analytics?.avg_fuel_consumption != null && (
                 <span className="text-[10px] font-semibold text-slate-400 ml-1">/ 100 км</span>
               )}
             </div>
@@ -1127,11 +1127,11 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
             </div>
             <div className="mt-1.5 flex items-baseline space-x-1">
               <span className="text-sm sm:text-base font-black text-amber-600 dark:text-amber-400 font-mono tracking-tight">
-                {analytics?.cost_per_distance_unit
-                  ? `${analytics.cost_per_distance_unit}`
+                {analytics?.cost_per_distance_unit != null && analytics.cost_per_distance_unit > 0
+                  ? `${typeof analytics.cost_per_distance_unit === 'number' ? analytics.cost_per_distance_unit.toFixed(2) : analytics.cost_per_distance_unit}`
                   : '—'}
               </span>
-              {analytics?.cost_per_distance_unit && (
+              {analytics?.cost_per_distance_unit != null && analytics.cost_per_distance_unit > 0 && (
                 <span className="text-[10px] font-semibold text-slate-400">{vehicle.currency || '₽'}/{vehicle.distance_unit || 'км'}</span>
               )}
             </div>
@@ -1920,7 +1920,9 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                   ⛽ Топливо / 1 км
                 </span>
                 <div className="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400 font-mono mt-0.5">
-                  {analytics.fuel_cost_per_distance ? `${analytics.fuel_cost_per_distance} ${vehicle.currency || '₽'}/км` : '—'}
+                  {analytics.fuel_cost_per_distance != null && analytics.fuel_cost_per_distance > 0
+                    ? `${Number(analytics.fuel_cost_per_distance).toFixed(2)} ${vehicle.currency || '₽'}/км`
+                    : '—'}
                 </div>
                 <span className="text-[11px] text-emerald-600/80 dark:text-emerald-400/80 block mt-0.5">
                   Только прямые затраты на топливо
@@ -1932,7 +1934,9 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                   🔧 ТО и запчасти / 1 км
                 </span>
                 <div className="text-base sm:text-lg font-black text-brand-600 dark:text-brand-400 font-mono mt-0.5">
-                  {analytics.service_cost_per_distance ? `${analytics.service_cost_per_distance} ${vehicle.currency || '₽'}/км` : '—'}
+                  {analytics.service_cost_per_distance != null && analytics.service_cost_per_distance > 0
+                    ? `${Number(analytics.service_cost_per_distance).toFixed(2)} ${vehicle.currency || '₽'}/км`
+                    : '—'}
                 </div>
                 <span className="text-[11px] text-brand-600/80 dark:text-brand-400/80 block mt-0.5">
                   Обслуживание, расходники и ремонты
@@ -1944,7 +1948,9 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                   💰 Полная себестоимость / 1 км
                 </span>
                 <div className="text-base sm:text-lg font-black text-amber-600 dark:text-amber-400 font-mono mt-0.5">
-                  {analytics.cost_per_distance_unit ? `${analytics.cost_per_distance_unit} ${vehicle.currency || '₽'}/${vehicle.distance_unit || 'км'}` : '—'}
+                  {analytics.cost_per_distance_unit != null && analytics.cost_per_distance_unit > 0
+                    ? `${Number(analytics.cost_per_distance_unit).toFixed(2)} ${vehicle.currency || '₽'}/${vehicle.distance_unit || 'км'}`
+                    : '—'}
                 </div>
                 <span className="text-[11px] text-amber-700/80 dark:text-amber-400/80 block mt-0.5">
                   Все расходы: топливо, ТО, шины, страховки
