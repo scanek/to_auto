@@ -4,7 +4,7 @@
 
 Автор и разработчик: **Александр Щеголев** ([@scanek](https://github.com/scanek))  
 Официальный репозиторий: **[https://github.com/scanek/to_auto](https://github.com/scanek/to_auto)**  
-Текущая версия: **v3.0.0 (Smart VIN Decoder, Telegram 1-Click Backup, Mobile FAB & Hero Showcase Garage)**
+Текущая версия: **v3.0.1 (Security Hardening, Mobile Speed-Dial FAB Enhancements & Production Release)**
 
 ---
 
