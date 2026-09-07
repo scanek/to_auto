@@ -185,11 +185,29 @@ class LocalDatabaseEngine {
   }
 
   public isStandalone(): boolean {
-    if (typeof window === 'undefined') return true;
+    if (typeof window === 'undefined') return false;
     const serverUrl = this.getServerUrl();
     const mode = localStorage.getItem('autotracker_app_mode');
+
+    // Hosted on a regular server (e.g. your VPS / Docker / local network server):
+    // If not GitHub Pages, not Cloudflare Pages, not native Android, and not file:// protocol,
+    // it is ALWAYS a web server with backend at /api/v1.
+    const isHostedServer = !this.isNative() &&
+      !window.location.hostname.includes('github.io') &&
+      !window.location.hostname.includes('pages.dev') &&
+      window.location.protocol !== 'file:';
+
+    if (isHostedServer) {
+      // Clear accidental standalone mode in localStorage if set
+      if (mode === 'standalone') {
+        localStorage.removeItem('autotracker_app_mode');
+      }
+      return false;
+    }
+
     if (mode === 'standalone') return true;
     if (mode === 'synced' && serverUrl) return false;
+
     // On GitHub Pages or static hosting: default to standalone if no server configured
     if (window.location.hostname.includes('github.io') || window.location.hostname.includes('pages.dev')) {
       return !serverUrl;
@@ -197,10 +215,6 @@ class LocalDatabaseEngine {
     // On native Android: default to standalone if no server configured
     if (this.isNative()) {
       return !serverUrl;
-    }
-    // Web without backend: default to standalone if no server configured and not localhost
-    if (!serverUrl && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-      return true;
     }
     return !serverUrl && window.location.protocol === 'file:';
   }
