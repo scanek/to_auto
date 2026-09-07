@@ -19,7 +19,7 @@ import {
 import { Capacitor } from '@capacitor/core';
 
 const DB_NAME = 'autotracker_standalone_db';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 const STORES = {
   VEHICLES: 'vehicles',
@@ -48,6 +48,7 @@ class LocalDatabaseEngine {
 
       request.onupgradeneeded = (e: any) => {
         const db: IDBDatabase = e.target.result;
+        const tx: IDBTransaction = e.target.transaction;
         Object.values(STORES).forEach((storeName) => {
           if (!db.objectStoreNames.contains(storeName)) {
             if (storeName === STORES.SETTINGS) {
@@ -57,6 +58,15 @@ class LocalDatabaseEngine {
               if (storeName !== STORES.VEHICLES) {
                 store.createIndex('vehicle_id', 'vehicle_id', { unique: false });
               }
+            }
+          } else if (storeName !== STORES.SETTINGS && storeName !== STORES.VEHICLES) {
+            try {
+              const store = tx.objectStore(storeName);
+              if (!store.indexNames.contains('vehicle_id')) {
+                store.createIndex('vehicle_id', 'vehicle_id', { unique: false });
+              }
+            } catch (err) {
+              console.warn(`Could not verify index on ${storeName}:`, err);
             }
           }
         });
@@ -81,15 +91,40 @@ class LocalDatabaseEngine {
     });
   }
 
-  public async getByVehicleId<T>(storeName: string, vehicleId: number): Promise<T[]> {
+  public async getByVehicleId<T>(storeName: string, vehicleId: number | string): Promise<T[]> {
     const db = await this.getDB();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(storeName, 'readonly');
-      const store = tx.objectStore(storeName);
-      const index = store.index('vehicle_id');
-      const req = index.getAll(vehicleId);
-      req.onsuccess = () => resolve(req.result || []);
-      req.onerror = () => reject(req.error);
+    const numId = Number(vehicleId);
+    return new Promise((resolve) => {
+      try {
+        const tx = db.transaction(storeName, 'readonly');
+        const store = tx.objectStore(storeName);
+        if (store.indexNames.contains('vehicle_id')) {
+          const index = store.index('vehicle_id');
+          const req = index.getAll(numId);
+          req.onsuccess = () => {
+            if (req.result && req.result.length > 0) {
+              resolve(req.result);
+            } else {
+              this.getAllFromStore<any>(storeName).then((all) => {
+                resolve(all.filter((it) => it.vehicle_id == vehicleId || Number(it.vehicle_id) === numId) as T[]);
+              }).catch(() => resolve([]));
+            }
+          };
+          req.onerror = () => {
+            this.getAllFromStore<any>(storeName).then((all) => {
+              resolve(all.filter((it) => it.vehicle_id == vehicleId || Number(it.vehicle_id) === numId) as T[]);
+            }).catch(() => resolve([]));
+          };
+        } else {
+          this.getAllFromStore<any>(storeName).then((all) => {
+            resolve(all.filter((it) => it.vehicle_id == vehicleId || Number(it.vehicle_id) === numId) as T[]);
+          }).catch(() => resolve([]));
+        }
+      } catch {
+        this.getAllFromStore<any>(storeName).then((all) => {
+          resolve(all.filter((it) => it.vehicle_id == vehicleId || Number(it.vehicle_id) === numId) as T[]);
+        }).catch(() => resolve([]));
+      }
     });
   }
 
@@ -715,10 +750,18 @@ class LocalDatabaseEngine {
     if (Array.isArray(data.data) && data.data.length > 0) {
       packages = data.data;
     } else if (data.vehicle) {
-      packages = [data];
+      packages = [{
+        vehicle: data.vehicle,
+        service_records: data.service_records || data.vehicle.service_records || data.services || data.maintenance_records || [],
+        fuel_logs: data.fuel_logs || data.vehicle.fuel_logs || data.fuel || [],
+        trackers: data.trackers || data.vehicle.trackers || data.reminders || [],
+        tyre_sets: data.tyre_sets || data.vehicle.tyre_sets || data.tyres || [],
+        documents: data.documents || data.vehicle.documents || data.insurances || [],
+        consumables: data.consumables || data.vehicle.consumables || [],
+      }];
     } else if (Array.isArray(data.vehicles) && data.vehicles.length > 0) {
       const flatVehicles = data.vehicles;
-      const flatServices = data.services || data.service_records || [];
+      const flatServices = data.services || data.service_records || data.maintenance_records || [];
       const flatFuel = data.fuel || data.fuel_logs || [];
       const flatReminders = data.reminders || data.trackers || [];
       const flatTyres = data.tyres || data.tyre_sets || [];
@@ -739,7 +782,15 @@ class LocalDatabaseEngine {
         });
       }
     } else if (data.make || data.model || data.name) {
-      packages = [{ vehicle: data, trackers: data.trackers || data.reminders || [] }];
+      packages = [{
+        vehicle: data,
+        service_records: data.service_records || data.services || data.maintenance_records || [],
+        fuel_logs: data.fuel_logs || data.fuel || [],
+        trackers: data.trackers || data.reminders || [],
+        tyre_sets: data.tyre_sets || data.tyres || [],
+        documents: data.documents || data.insurances || [],
+        consumables: data.consumables || [],
+      }];
     } else {
       throw new Error('Некорректная структура файла бэкапа AutoTracker');
     }
@@ -775,7 +826,7 @@ class LocalDatabaseEngine {
       importedVehiclesCount++;
 
       // 1. Service Records
-      const sList = pkg.service_records || pkg.maintenance_records || [];
+      const sList = pkg.service_records || pkg.vehicle?.service_records || pkg.maintenance_records || pkg.services || [];
       for (const s of sList) {
         await this.createServiceRecord(newVehicle.id, {
           record_type: s.record_type || 'service',
@@ -796,7 +847,7 @@ class LocalDatabaseEngine {
       }
 
       // 2. Fuel Logs
-      const fList = pkg.fuel_logs || pkg.fuel || [];
+      const fList = pkg.fuel_logs || pkg.vehicle?.fuel_logs || pkg.fuel || [];
       for (const f of fList) {
         await this.createFuelLog(newVehicle.id, {
           date: f.date ? f.date.split('T')[0] : new Date().toISOString().split('T')[0],
@@ -813,7 +864,7 @@ class LocalDatabaseEngine {
       }
 
       // 3. Maintenance Trackers / Reminders
-      const rList = pkg.trackers || pkg.reminders || [];
+      const rList = pkg.trackers || pkg.vehicle?.trackers || pkg.reminders || [];
       for (const r of rList) {
         await this.createReminder(newVehicle.id, {
           tracker_id: r.id || r.tracker_id || `tracker_${Date.now()}`,
@@ -838,7 +889,7 @@ class LocalDatabaseEngine {
       }
 
       // 4. Tyre Sets
-      const tList = pkg.tyre_sets || pkg.tyres || [];
+      const tList = pkg.tyre_sets || pkg.vehicle?.tyre_sets || pkg.tyres || [];
       for (const t of tList) {
         await this.createTyreSet(newVehicle.id, {
           name: t.name || 'Комплект шин',
@@ -871,7 +922,7 @@ class LocalDatabaseEngine {
       }
 
       // 5. Documents
-      const dList = pkg.documents || pkg.insurances || [];
+      const dList = pkg.documents || pkg.vehicle?.documents || pkg.insurances || [];
       for (const d of dList) {
         await this.createDocument(newVehicle.id, {
           title: d.title || 'Документ',
@@ -889,7 +940,7 @@ class LocalDatabaseEngine {
       }
 
       // 6. Consumables
-      const cList = pkg.consumables || [];
+      const cList = pkg.consumables || pkg.vehicle?.consumables || [];
       for (let i = 0; i < cList.length; i++) {
         const c = cList[i];
         await this.createConsumable(newVehicle.id, {

@@ -1,0 +1,155 @@
+{
+  "vehicle": {
+    "id": 66,
+    "user_id": 3,
+    "name": "Семейный кроссовер",
+    "make": "Toyota",
+    "model": "RAV4",
+    "year": 2021,
+    "engine": null,
+    "license_plate": "A777AA 777",
+    "vin": "JTMDREV1234567890",
+    "starting_odometer": 45000.0,
+    "current_odometer": 50100.0,
+    "current_engine_hours": 0.0,
+    "track_engine_hours": true,
+    "oil_spec": null,
+    "drive_type": "fwd",
+    "fuel_tank_capacity": 55.0,
+    "enabled_tabs": "service,fuel,reminders,analytics,specs,tyres,documents,wiki",
+    "purchase_date": null,
+    "is_public": false,
+    "distance_unit": "km",
+    "fuel_unit": "L",
+    "currency": "RUB",
+    "photo_url": null,
+    "notes": "2.0L 4WD Вариатор"
+  },
+  "trackers": [
+    {
+      "id": "60",
+      "name": "Замена моторного масла",
+      "category": "Обслуживание",
+      "brand": null,
+      "spec": null,
+      "article": null,
+      "icon": "droplet",
+      "interval_km": 8000.0,
+      "interval_hours": null,
+      "interval_months": 12,
+      "last_service_odometer": 50000.0,
+      "last_service_hours": 0.0,
+      "last_service_date": "2024-03-15T10:00:00",
+      "enabled": true,
+      "warn_km": 500.0,
+      "warn_hours": 30.0,
+      "warn_days": 14,
+      "notes": null
+    }
+  ],
+  "service_records": [
+    {
+      "id": 71,
+      "date": "2024-03-15T10:00:00",
+      "odometer": 50000.0,
+      "engine_hours": null,
+      "record_type": "service",
+      "to_tag": null,
+      "title": "ТО-5 (50 000 км) - Замена масла и фильтров",
+      "description": "Плановое обслуживание",
+      "cost_labor": 3500.0,
+      "cost_parts": 6200.0,
+      "total_cost": 9700.0,
+      "store": null,
+      "url": null,
+      "notes": null,
+      "items": [
+        {
+          "name": "Масло моторное Toyota 5W-30 (4.2 л)",
+          "brand": null,
+          "part_number": "08880-80845",
+          "category": "part",
+          "unit": "шт",
+          "quantity": 1.0,
+          "unit_price": 4500.0,
+          "total_price": 4500.0,
+          "store": null,
+          "url": null
+        },
+        {
+          "name": "Фильтр масляный",
+          "brand": null,
+          "part_number": "90915-10004",
+          "category": "part",
+          "unit": "шт",
+          "quantity": 1.0,
+          "unit_price": 800.0,
+          "total_price": 800.0,
+          "store": null,
+          "url": null
+        },
+        {
+          "name": "Фильтр салонный угольный",
+          "brand": null,
+          "part_number": "87139-50100",
+          "category": "part",
+          "unit": "шт",
+          "quantity": 1.0,
+          "unit_price": 900.0,
+          "total_price": 900.0,
+          "store": null,
+          "url": null
+        }
+      ]
+    }
+  ],
+  "fuel_logs": [
+    {
+      "id": 108,
+      "date": "2024-03-10T12:00:00",
+      "odometer": 49500.0,
+      "fuel_amount": 50.0,
+      "total_cost": 3000.0,
+      "unit_price": 60.0,
+      "is_full_tank": true,
+      "is_missed": false,
+      "fuel_grade": "АИ-95",
+      "gas_station": "Лукойл",
+      "notes": null
+    },
+    {
+      "id": 109,
+      "date": "2024-03-25T14:00:00",
+      "odometer": 50100.0,
+      "fuel_amount": 48.0,
+      "total_cost": 2880.0,
+      "unit_price": 60.0,
+      "is_full_tank": true,
+      "is_missed": false,
+      "fuel_grade": "АИ-95",
+      "gas_station": "Газпромнефть",
+      "notes": null
+    }
+  ],
+  "tyre_sets": [],
+  "documents": [
+    {
+      "id": 52,
+      "title": "Полис ОСАГО",
+      "doc_type": "insurance",
+      "company": null,
+      "document_number": "XXX 0987654321",
+      "issue_date": null,
+      "expiration_date": "2026-12-31T00:00:00",
+      "price": 0.0,
+      "mileage": null,
+      "engine_hours": null,
+      "is_active": true,
+      "notes": "Без ограничений"
+    }
+  ],
+  "consumables": [],
+  "version": "1.0",
+  "exported_at": "2026-09-07T16:43:32.365671",
+  "app": "Бортовой Журнал"
+}

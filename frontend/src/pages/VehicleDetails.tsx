@@ -274,7 +274,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
 
   const loadData = async () => {
     try {
-      const [srv, fuel, rem, docs, an, ty, con] = await Promise.all([
+      const results = await Promise.allSettled([
         api.getServiceRecords(vehicle.id),
         api.getFuelLogs(vehicle.id),
         api.getReminders(vehicle.id),
@@ -283,15 +283,16 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
         api.getTyreSets(vehicle.id),
         api.getConsumables(vehicle.id),
       ]);
-      setServiceRecords(srv);
-      setFuelLogs(fuel);
-      setReminders(rem);
-      setDocuments(docs);
-      setAnalytics(an);
-      setTyres(ty);
-      setConsumables(con);
+      if (results[0].status === 'fulfilled') setServiceRecords(results[0].value);
+      if (results[1].status === 'fulfilled') setFuelLogs(results[1].value);
+      if (results[2].status === 'fulfilled') setReminders(results[2].value);
+      if (results[3].status === 'fulfilled') setDocuments(results[3].value);
+      if (results[4].status === 'fulfilled') setAnalytics(results[4].value);
+      if (results[5].status === 'fulfilled') setTyres(results[5].value);
+      if (results[6].status === 'fulfilled') setConsumables(results[6].value);
 
-      // Check upcoming maintenance and insurance triggers for push alerts
+      const rem = results[2].status === 'fulfilled' ? results[2].value : [];
+      const docs = results[3].status === 'fulfilled' ? results[3].value : [];
       notificationService.checkAndNotifyVehicle(vehicle, rem, docs).catch(() => {});
     } catch (err) {
       console.error('Error loading vehicle data', err);
