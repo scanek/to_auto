@@ -1,0 +1,74 @@
+# Default values for autotracker.
+replicaCount: 1
+
+image:
+  repository: scanek/autotracker
+  pullPolicy: IfNotPresent
+  tag: "3.5.0"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: false
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  fsGroup: 1000
+
+securityContext:
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: false
+  runAsNonRoot: false
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8000
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: autotracker.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  #  - secretName: autotracker-tls
+  #    hosts:
+  #      - autotracker.local
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# Persistent Volume for SQLite Database and Uploaded Media
+persistence:
+  enabled: true
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 10Gi
+  existingClaim: ""
+
+# Application Configuration & Secrets
+env:
+  SECRET_KEY: "bortovoi_jwt_secret_key_change_in_production_350"
+  ENABLE_DOCS: "false"
+  BACKEND_CORS_ORIGINS: '["*"]'
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

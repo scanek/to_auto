@@ -1,0 +1,17 @@
+apiVersion: v2
+name: autotracker
+description: Helm-чарт для Бортового Журнала (AutoTracker) — учет обслуживания, расходов и регламентов ТО автомобиля
+type: application
+version: 3.5.0
+appVersion: "3.5.0"
+keywords:
+  - autotracker
+  - car-maintenance
+  - bortovoi-zhurnal
+  - vehicle-tracker
+home: https://github.com/scanek/to_auto
+sources:
+  - https://github.com/scanek/to_auto
+maintainers:
+  - name: scanek
+    url: https://github.com/scanek

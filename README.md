@@ -129,6 +129,18 @@ docker compose up -d --build
 
 ---
 
+### ☸️ Развертывание в Kubernetes / k3s / TrueNAS SCALE (Helm)
+
+В репозитории доступен готовый официальный Helm-чарт:
+
+```bash
+helm install autotracker ./deploy/helm/autotracker
+```
+
+Подробная инструкция по настройке Ingress, сертификатов TLS и StorageClass доступна в [документации чарта](./deploy/helm/autotracker/README.md).
+
+---
+
 ## 🔄 Как обновиться на сервере до последней версии
 
 Для обновления работающего контейнера на сервере выполните:
