@@ -22,6 +22,7 @@ import { QuickActionFab } from './components/QuickActionFab';
 import { QuickOdometerModal } from './components/QuickOdometerModal';
 import { PublicServiceBooklet } from './pages/PublicServiceBooklet';
 import { Github, ZapOff, RefreshCw, CheckCircle2, AlertTriangle, ShieldAlert, Info, X } from 'lucide-react';
+import packageJson from '../package.json';
 
 export function App() {
   // Public service booklet route (Avito / Auto.ru sharing)
@@ -803,7 +804,7 @@ export function App() {
           </div>
           <div className="flex items-center space-x-2 font-mono text-[11px]">
             <span className="px-2.5 py-1 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 font-bold border border-brand-500/25 shadow-sm">
-              Версия программы: v3.1.0
+              Версия программы: v{packageJson.version}
             </span>
           </div>
         </div>
