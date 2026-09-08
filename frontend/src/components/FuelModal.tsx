@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, Fuel } from 'lucide-react';
+import { X, Fuel, Calculator } from 'lucide-react';
 import { FuelLog, Vehicle } from '../types';
+import { api } from '../services/api';
 
 interface FuelModalProps {
   isOpen: boolean;
@@ -30,64 +31,178 @@ export const FuelModal: React.FC<FuelModalProps> = ({
     notes: '',
   });
 
+  // String inputs for smooth decimal/comma typing on mobile and desktop
+  const [amountInput, setAmountInput] = useState<string>('40');
+  const [unitPriceInput, setUnitPriceInput] = useState<string>('60');
+  const [totalCostInput, setTotalCostInput] = useState<string>('2400');
+
+  // Which field is currently auto-calculated ('amount' | 'price' | 'total')
+  const [calculatedTarget, setCalculatedTarget] = useState<'amount' | 'price' | 'total'>('total');
+  // Last edited field by user
+  const [lastEdited, setLastEdited] = useState<'amount' | 'price' | 'total'>('amount');
+
   const [loading, setLoading] = useState(false);
+
+  const round2 = (num: number) => Math.round(num * 100) / 100;
 
   useEffect(() => {
     if (log) {
+      const initialAmt = log.fuel_amount || 0;
+      const initialPrc = log.unit_price || 0;
+      const initialTot = log.total_cost || 0;
+
       setFormData({
         date: log.date.split('T')[0],
         odometer: log.odometer,
-        fuel_amount: log.fuel_amount,
-        total_cost: log.total_cost,
-        unit_price: log.unit_price,
+        fuel_amount: initialAmt,
+        total_cost: initialTot,
+        unit_price: initialPrc,
         is_full_tank: log.is_full_tank,
         is_missed: log.is_missed,
         fuel_grade: log.fuel_grade || 'АИ-95',
         gas_station: log.gas_station || '',
         notes: log.notes || '',
       });
-    } else {
+      setAmountInput(String(initialAmt));
+      setUnitPriceInput(String(initialPrc));
+      setTotalCostInput(String(initialTot));
+      setLastEdited('amount');
+      setCalculatedTarget('total');
+    } else if (isOpen) {
+      const defaultAmt = 40;
+      const defaultPrc = 60;
+      const defaultTot = 2400;
+
       setFormData({
         date: new Date().toISOString().split('T')[0],
         odometer: vehicle.current_odometer || 0,
-        fuel_amount: 45,
-        total_cost: 2700,
-        unit_price: 60,
+        fuel_amount: defaultAmt,
+        total_cost: defaultTot,
+        unit_price: defaultPrc,
         is_full_tank: true,
         is_missed: false,
         fuel_grade: 'АИ-95',
         gas_station: '',
         notes: '',
       });
+      setAmountInput(String(defaultAmt));
+      setUnitPriceInput(String(defaultPrc));
+      setTotalCostInput(String(defaultTot));
+      setLastEdited('amount');
+      setCalculatedTarget('total');
+
+      // Pre-fill smart defaults from user's last fuel log for this car
+      if (vehicle?.id) {
+        api.getFuelLogs(vehicle.id).then((logs) => {
+          if (logs && logs.length > 0) {
+            const last = logs[0];
+            const prc = last.unit_price || defaultPrc;
+            const tot = round2(defaultAmt * prc);
+
+            setFormData((prev) => ({
+              ...prev,
+              fuel_grade: last.fuel_grade || prev.fuel_grade,
+              gas_station: last.gas_station || prev.gas_station,
+              unit_price: prc,
+              total_cost: tot,
+            }));
+            setUnitPriceInput(String(prc));
+            setTotalCostInput(String(tot));
+          }
+        }).catch((err) => console.warn('Could not fetch last fuel log for defaults', err));
+      }
     }
   }, [log, isOpen, vehicle]);
 
   if (!isOpen) return null;
 
-  const handleAmountChange = (amount: number) => {
-    const total = amount * formData.unit_price;
+  const handleFieldChange = (field: 'amount' | 'price' | 'total', rawValue: string) => {
+    // Normalize comma to dot for Russian mobile keyboards, allow numbers & decimal point
+    const normalized = rawValue.replace(',', '.');
+    if (normalized !== '' && !/^[0-9]*\.?[0-9]*$/.test(normalized)) {
+      return;
+    }
+
+    // Determine auto-calculated target:
+    // If user edits the current calculatedTarget, switch target to the third untouched field
+    let newTarget = calculatedTarget;
+    if (field === calculatedTarget) {
+      if (field === 'amount') {
+        newTarget = lastEdited === 'price' ? 'total' : 'price';
+      } else if (field === 'price') {
+        newTarget = lastEdited === 'amount' ? 'total' : 'amount';
+      } else if (field === 'total') {
+        newTarget = lastEdited === 'amount' ? 'price' : 'amount';
+      }
+      setCalculatedTarget(newTarget);
+    }
+    setLastEdited(field);
+
+    let amt = field === 'amount' ? parseFloat(normalized) || 0 : parseFloat(amountInput) || 0;
+    let prc = field === 'price' ? parseFloat(normalized) || 0 : parseFloat(unitPriceInput) || 0;
+    let tot = field === 'total' ? parseFloat(normalized) || 0 : parseFloat(totalCostInput) || 0;
+
+    if (field === 'amount') setAmountInput(normalized);
+    if (field === 'price') setUnitPriceInput(normalized);
+    if (field === 'total') setTotalCostInput(normalized);
+
+    // 3-way recalculation
+    if (newTarget === 'amount') {
+      if (prc > 0 && tot > 0) {
+        const calculatedAmt = round2(tot / prc);
+        setAmountInput(String(calculatedAmt));
+        amt = calculatedAmt;
+      }
+    } else if (newTarget === 'price') {
+      if (amt > 0 && tot > 0) {
+        const calculatedPrc = round2(tot / amt);
+        setUnitPriceInput(String(calculatedPrc));
+        prc = calculatedPrc;
+      }
+    } else if (newTarget === 'total') {
+      if (amt > 0 && prc > 0) {
+        const calculatedTot = round2(amt * prc);
+        setTotalCostInput(String(calculatedTot));
+        tot = calculatedTot;
+      }
+    }
+
     setFormData((prev) => ({
       ...prev,
-      fuel_amount: amount,
-      total_cost: Math.round(total * 100) / 100,
+      fuel_amount: amt,
+      unit_price: prc,
+      total_cost: tot,
     }));
   };
 
-  const handleTotalCostChange = (total: number) => {
-    const unitPrice = formData.fuel_amount > 0 ? total / formData.fuel_amount : formData.unit_price;
-    setFormData((prev) => ({
-      ...prev,
-      total_cost: total,
-      unit_price: Math.round(unitPrice * 100) / 100,
-    }));
-  };
+  const handleCalculate = (target: 'amount' | 'price' | 'total') => {
+    setCalculatedTarget(target);
+    let amt = parseFloat(amountInput) || 0;
+    let prc = parseFloat(unitPriceInput) || 0;
+    let tot = parseFloat(totalCostInput) || 0;
 
-  const handleUnitPriceChange = (price: number) => {
-    const total = formData.fuel_amount * price;
+    if (target === 'amount') {
+      if (prc > 0 && tot > 0) {
+        amt = round2(tot / prc);
+        setAmountInput(String(amt));
+      }
+    } else if (target === 'price') {
+      if (amt > 0 && tot > 0) {
+        prc = round2(tot / amt);
+        setUnitPriceInput(String(prc));
+      }
+    } else if (target === 'total') {
+      if (amt > 0 && prc > 0) {
+        tot = round2(amt * prc);
+        setTotalCostInput(String(tot));
+      }
+    }
+
     setFormData((prev) => ({
       ...prev,
-      unit_price: price,
-      total_cost: Math.round(total * 100) / 100,
+      fuel_amount: amt,
+      unit_price: prc,
+      total_cost: tot,
     }));
   };
 
@@ -95,8 +210,15 @@ export const FuelModal: React.FC<FuelModalProps> = ({
     e.preventDefault();
     setLoading(true);
     try {
+      const finalAmount = parseFloat(amountInput) || formData.fuel_amount || 0;
+      const finalPrice = parseFloat(unitPriceInput) || formData.unit_price || 0;
+      const finalTotal = parseFloat(totalCostInput) || formData.total_cost || 0;
+
       await onSave({
         ...formData,
+        fuel_amount: finalAmount,
+        unit_price: finalPrice,
+        total_cost: finalTotal,
         date: new Date(formData.date).toISOString(),
       });
       onClose();
@@ -156,46 +278,103 @@ export const FuelModal: React.FC<FuelModalProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-2.5 sm:gap-3 bg-slate-50 dark:bg-dark-900/80 p-3 sm:p-3.5 rounded-2xl border border-slate-200 dark:border-dark-750">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 bg-slate-50 dark:bg-dark-900/80 p-3 sm:p-3.5 rounded-2xl border border-slate-200 dark:border-dark-750">
             <div>
-              <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                Объем ({vehicle.fuel_unit}) *
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 truncate">
+                  Объем ({vehicle.fuel_unit}) *
+                </label>
+                {calculatedTarget === 'amount' ? (
+                  <span className="text-[10px] text-brand-600 dark:text-brand-400 font-bold bg-brand-500/10 px-1 py-0.5 rounded border border-brand-500/20" title="Вычисляется автоматически">
+                    авто
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleCalculate('amount')}
+                    title="Рассчитать литры из суммы и цены"
+                    className="text-[10px] text-slate-400 hover:text-brand-500 font-medium hover:underline flex items-center gap-0.5"
+                  >
+                    <Calculator className="w-2.5 h-2.5" />
+                  </button>
+                )}
+              </div>
               <input
-                type="number"
-                step="any"
-                min="0.1"
+                type="text"
+                inputMode="decimal"
                 required
-                value={formData.fuel_amount}
-                onChange={(e) => handleAmountChange(parseFloat(e.target.value) || 0)}
-                className="w-full bg-white dark:bg-dark-850 border border-slate-300 dark:border-dark-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-mono font-semibold"
+                value={amountInput}
+                onChange={(e) => handleFieldChange('amount', e.target.value)}
+                className={`w-full bg-white dark:bg-dark-850 border rounded-xl px-2.5 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none font-mono font-semibold transition ${
+                  calculatedTarget === 'amount'
+                    ? 'border-brand-500 ring-1 ring-brand-500/30'
+                    : 'border-slate-300 dark:border-dark-700 focus:border-brand-500'
+                }`}
               />
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                Цена за {vehicle.fuel_unit}
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 truncate">
+                  Цена за {vehicle.fuel_unit}
+                </label>
+                {calculatedTarget === 'price' ? (
+                  <span className="text-[10px] text-brand-600 dark:text-brand-400 font-bold bg-brand-500/10 px-1 py-0.5 rounded border border-brand-500/20" title="Вычисляется автоматически">
+                    авто
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleCalculate('price')}
+                    title="Рассчитать цену за литр из суммы и объема"
+                    className="text-[10px] text-slate-400 hover:text-brand-500 font-medium hover:underline flex items-center gap-0.5"
+                  >
+                    <Calculator className="w-2.5 h-2.5" />
+                  </button>
+                )}
+              </div>
               <input
-                type="number"
-                step="any"
-                min="0"
-                value={formData.unit_price}
-                onChange={(e) => handleUnitPriceChange(parseFloat(e.target.value) || 0)}
-                className="w-full bg-white dark:bg-dark-850 border border-slate-300 dark:border-dark-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-mono font-semibold"
+                type="text"
+                inputMode="decimal"
+                value={unitPriceInput}
+                onChange={(e) => handleFieldChange('price', e.target.value)}
+                className={`w-full bg-white dark:bg-dark-850 border rounded-xl px-2.5 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none font-mono font-semibold transition ${
+                  calculatedTarget === 'price'
+                    ? 'border-brand-500 ring-1 ring-brand-500/30'
+                    : 'border-slate-300 dark:border-dark-700 focus:border-brand-500'
+                }`}
               />
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 mb-1">
-                Сумма ({vehicle.currency}) *
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 truncate">
+                  Сумма ({vehicle.currency}) *
+                </label>
+                {calculatedTarget === 'total' ? (
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-500/10 px-1 py-0.5 rounded border border-emerald-500/20" title="Вычисляется автоматически">
+                    авто
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleCalculate('total')}
+                    title="Рассчитать сумму из объема и цены"
+                    className="text-[10px] text-slate-400 hover:text-emerald-500 font-medium hover:underline flex items-center gap-0.5"
+                  >
+                    <Calculator className="w-2.5 h-2.5" />
+                  </button>
+                )}
+              </div>
               <input
-                type="number"
-                step="any"
-                min="1"
+                type="text"
+                inputMode="decimal"
                 required
-                value={formData.total_cost}
-                onChange={(e) => handleTotalCostChange(parseFloat(e.target.value) || 0)}
-                className="w-full bg-white dark:bg-dark-850 border border-emerald-500/50 rounded-xl px-2.5 py-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-bold focus:outline-none focus:border-emerald-500 font-mono"
+                value={totalCostInput}
+                onChange={(e) => handleFieldChange('total', e.target.value)}
+                className={`w-full bg-white dark:bg-dark-850 border rounded-xl px-2.5 py-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-bold focus:outline-none font-mono transition ${
+                  calculatedTarget === 'total'
+                    ? 'border-emerald-500 ring-1 ring-emerald-500/30'
+                    : 'border-emerald-500/50 focus:border-emerald-500'
+                }`}
               />
             </div>
           </div>
