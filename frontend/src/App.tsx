@@ -79,11 +79,14 @@ export function App() {
       const data = await api.getVehicles();
       setVehicles(data);
 
-      // Senior UX: If user has exactly 1 vehicle on initial landing/login, immediately open that vehicle!
-      if ((isInitialLanding || !isInitialVehicleRoutedRef.current) && data.length === 1 && !selectedVehicle) {
+      // Senior UX: Filter by vehicles owned by current user (or all vehicles in standalone mode)
+      const myVehicles = data.filter((v) => v.is_owner !== false);
+
+      // If user has exactly 1 vehicle of their own on initial landing/login, immediately open that vehicle!
+      if ((isInitialLanding || !isInitialVehicleRoutedRef.current) && myVehicles.length === 1 && !selectedVehicle) {
         isInitialVehicleRoutedRef.current = true;
-        setSelectedVehicle(data[0]);
-      } else if (!isInitialVehicleRoutedRef.current) {
+        setSelectedVehicle(myVehicles[0]);
+      } else if (myVehicles.length > 1) {
         isInitialVehicleRoutedRef.current = true;
       }
 
