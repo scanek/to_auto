@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Vehicle, ServiceRecord, FuelLog, MaintenancePlan, DocumentNote, TyreSet, User, SystemAnnouncement } from './types';
 import { api, removeAuthToken } from './services/api';
 import { localDB } from './services/localDatabase';
@@ -33,6 +33,7 @@ export function App() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [loading, setLoading] = useState(true);
+  const isInitialVehicleRoutedRef = useRef<boolean>(false);
 
   // Authentication state (Multi-User)
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -73,10 +74,19 @@ export function App() {
     }
   }, []);
 
-  const loadVehicles = async () => {
+  const loadVehicles = async (isInitialLanding: boolean = false) => {
     try {
       const data = await api.getVehicles();
       setVehicles(data);
+
+      // Senior UX: If user has exactly 1 vehicle on initial landing/login, immediately open that vehicle!
+      if ((isInitialLanding || !isInitialVehicleRoutedRef.current) && data.length === 1 && !selectedVehicle) {
+        isInitialVehicleRoutedRef.current = true;
+        setSelectedVehicle(data[0]);
+      } else if (!isInitialVehicleRoutedRef.current) {
+        isInitialVehicleRoutedRef.current = true;
+      }
+
       if (selectedVehicle) {
         const updated = data.find((v) => v.id === selectedVehicle.id);
         if (updated) {
@@ -97,7 +107,7 @@ export function App() {
         const user = await api.getMe();
         setCurrentUser(user);
         setIsAuthenticated(true);
-        await Promise.all([loadVehicles(), loadAnnouncement()]);
+        await Promise.all([loadVehicles(true), loadAnnouncement()]);
       } catch (err) {
         console.error('Failed to init local user', err);
       } finally {
@@ -112,7 +122,7 @@ export function App() {
         const user = await api.getMe();
         setCurrentUser(user);
         setIsAuthenticated(true);
-        await Promise.all([loadVehicles(), loadAnnouncement()]);
+        await Promise.all([loadVehicles(true), loadAnnouncement()]);
         return;
       } catch (err) {
         console.warn('Invalid or expired token', err);
@@ -122,7 +132,7 @@ export function App() {
 
     setCurrentUser(null);
     setIsAuthenticated(false);
-    await Promise.all([loadVehicles(), loadAnnouncement()]);
+    await Promise.all([loadVehicles(true), loadAnnouncement()]);
     setLoading(false);
   }, [loadAnnouncement]);
 
@@ -324,7 +334,8 @@ export function App() {
   const handleAuthSuccess = (user: User) => {
     setCurrentUser(user);
     setIsAuthenticated(true);
-    loadVehicles();
+    isInitialVehicleRoutedRef.current = false;
+    loadVehicles(true);
   };
 
   const handleLogout = () => {
@@ -336,6 +347,7 @@ export function App() {
     setIsAuthenticated(false);
     setVehicles([]);
     setSelectedVehicle(null);
+    isInitialVehicleRoutedRef.current = false;
     setIsAuthModalOpen(true);
   };
 
