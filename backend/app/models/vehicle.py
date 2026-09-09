@@ -61,6 +61,7 @@ class Vehicle(Base):
     starline_last_error = Column(String(500), nullable=True) # Последняя ошибка авторизации/синхронизации
     starline_consecutive_errors = Column(Integer, default=0, nullable=False) # Количество последовательных ошибок
     telematics_webhook_key = Column(String(100), nullable=True, unique=True, index=True)
+    starline_last_track_time = Column(DateTime, nullable=True) # Время окончания последней учтенной поездки/трека StarLine
     
     created_at = Column(DateTime, default=utc_now_naive)
     updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)

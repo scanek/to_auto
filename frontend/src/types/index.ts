@@ -68,6 +68,7 @@ export interface Vehicle {
   starline_is_spoofed?: boolean;
   telematics_auto_sync?: boolean;
   starline_auto_sync_interval_minutes?: number;
+  starline_last_track_time?: string;
   telematics_webhook_key?: string;
   drive_type?: 'fwd' | 'awd' | 'rwd';
   public_booklet_token?: string | null;

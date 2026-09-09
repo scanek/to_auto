@@ -78,6 +78,7 @@ async def auto_migrate_sqlite(conn):
             ("starline_last_error", "VARCHAR(500)"),
             ("starline_consecutive_errors", "INTEGER DEFAULT 0"),
             ("telematics_webhook_key", "VARCHAR(100)"),
+            ("starline_last_track_time", "DATETIME"),
             ("drive_type", "VARCHAR(20) DEFAULT 'fwd'"),
             ("public_booklet_token", "VARCHAR(64)"),
             ("public_booklet_enabled", "BOOLEAN DEFAULT 0"),

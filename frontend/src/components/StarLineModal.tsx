@@ -285,8 +285,11 @@ export const StarLineModal: React.FC<StarLineModalProps> = ({
                   </div>
                 </div>
 
-                <div className="bg-white/80 dark:bg-dark-800/80 p-2.5 rounded-xl border border-slate-200 dark:border-dark-700 text-center">
-                  <div className="text-[10px] text-slate-400 font-semibold">Моточасы</div>
+                <div className="bg-white/80 dark:bg-dark-800/80 p-2.5 rounded-xl border border-slate-200 dark:border-dark-700 text-center" title="Автоматический точный расчет по поездкам и прогревам StarLine">
+                  <div className="text-[10px] text-slate-400 font-semibold flex items-center justify-center gap-1">
+                    <span>Моточасы</span>
+                    <span className="text-[9px] px-1 py-0.2 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold">авто</span>
+                  </div>
                   <div className="text-xs font-extrabold text-amber-500 mt-0.5">
                     {vehicle.current_engine_hours ? `${vehicle.current_engine_hours} м/ч` : '—'}
                   </div>
@@ -340,8 +343,8 @@ export const StarLineModal: React.FC<StarLineModalProps> = ({
 
               <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
                 {syncInterval > 0
-                  ? `💡 Сервер автоматически запрашивает свежий уровень топлива, пробег и заряд АКБ каждые ${syncInterval >= 60 ? `${syncInterval / 60} ч.` : `${syncInterval} мин.`}`
-                  : '💡 Фоновый опрос отключен. Данные будут обновляться только по кнопке «Синхронизировать».'}
+                  ? `💡 Сервер автоматически опрашивает StarLine каждые ${syncInterval >= 60 ? `${syncInterval / 60} ч.` : `${syncInterval} мин.`}, собирая свежий пробег, уровень топлива, заряд АКБ и точно рассчитывая моточасы по поездкам и прогревам.`
+                  : '💡 Фоновый опрос отключен. Пробег, топливо, АКБ и моточасы будут обновляться по кнопке «Синхронизировать».'}
               </p>
             </div>
 

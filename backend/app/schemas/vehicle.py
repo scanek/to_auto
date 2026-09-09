@@ -47,6 +47,7 @@ class VehicleBase(BaseModel):
     starline_gps_type: Optional[str] = "gps"
     starline_is_spoofed: Optional[bool] = False
     telematics_webhook_key: Optional[str] = None
+    starline_last_track_time: Optional[datetime] = None
     telematics_auto_sync: bool = False
     starline_auto_sync_interval_minutes: Optional[int] = 60
     starline_last_error: Optional[str] = None
