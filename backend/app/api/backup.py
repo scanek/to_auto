@@ -6,11 +6,11 @@ import json
 import urllib.parse
 import traceback
 from typing import Any, Dict, Optional
-from fastapi import APIRouter, Depends, HTTPException, Body, Response, Header, Query
+from fastapi import APIRouter, Depends, HTTPException, Body, Response, Header, Query, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 from sqlalchemy.orm import selectinload
-from app.db.session import get_db
+from app.db.session import get_db, engine, init_db
 from app.models import (
     User,
     UserRole,
@@ -537,6 +537,112 @@ async def download_database_backup(
             "Content-Disposition": f'attachment; filename="{encoded_filename}"; filename*=UTF-8\'\'{encoded_filename}'
         },
     )
+
+@router.post("/database/restore")
+async def restore_database_backup(
+    file: UploadFile = File(...),
+    token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Administrator-only: restores a complete SQLite database from an uploaded .db snapshot file.
+    Validates SQLite magic header, runs PRAGMA integrity_check, creates a pre-restore safety copy,
+    safely replaces the database file using SQLite online backup API, and reloads connections.
+    """
+    user = await resolve_user_from_header_or_query(authorization, token, db)
+    if not user:
+        raise HTTPException(status_code=401, detail="Требуется авторизация")
+    if user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Восстановление базы данных доступно только администратору")
+
+    content = await file.read()
+    if len(content) < 100:
+        raise HTTPException(status_code=400, detail="Файл поврежден или пуст")
+
+    if not content.startswith(b"SQLite format 3\x00"):
+        raise HTTPException(status_code=400, detail="Файл не является корректной базой данных SQLite 3")
+
+    temp_uploaded = tempfile.NamedTemporaryFile(delete=False, suffix=".db")
+    try:
+        temp_uploaded.write(content)
+        temp_uploaded.close()
+
+        # 1. Integrity check & schema check
+        try:
+            test_conn = sqlite3.connect(temp_uploaded.name)
+            cursor = test_conn.cursor()
+            check = cursor.execute("PRAGMA integrity_check").fetchone()
+            if not check or check[0] != "ok":
+                test_conn.close()
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Ошибка целостности файла базы данных: {check[0] if check else 'неизвестно'}"
+                )
+
+            tables = [r[0] for r in cursor.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()]
+            if "vehicles" not in tables or "users" not in tables:
+                test_conn.close()
+                raise HTTPException(
+                    status_code=400,
+                    detail="В загруженном файле отсутствуют основные таблицы приложения (users, vehicles)"
+                )
+
+            user_count = cursor.execute("SELECT count(*) FROM users").fetchone()[0]
+            vehicle_count = cursor.execute("SELECT count(*) FROM vehicles").fetchone()[0]
+            test_conn.close()
+        except sqlite3.Error as err:
+            raise HTTPException(status_code=400, detail=f"Ошибка чтения файла SQLite: {err}")
+
+        # 2. Safety copy of current database
+        db_path = DATA_DIR / "autotracker.db"
+        if db_path.exists():
+            backup_timestamp = datetime.datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+            safety_backup = DATA_DIR / f"autotracker_pre_restore_{backup_timestamp}.db"
+            try:
+                curr = sqlite3.connect(str(db_path))
+                safe = sqlite3.connect(str(safety_backup))
+                curr.backup(safe)
+                safe.close()
+                curr.close()
+            except Exception as e:
+                print(f"Safety backup note: {e}")
+
+        # 3. Dispose active connections and perform online backup restore
+        await engine.dispose()
+
+        src = sqlite3.connect(temp_uploaded.name)
+        dst = sqlite3.connect(str(db_path))
+        src.backup(dst)
+        dst.close()
+        src.close()
+
+        # Clean lingering WAL / SHM files if any
+        wal_path = DATA_DIR / "autotracker.db-wal"
+        shm_path = DATA_DIR / "autotracker.db-shm"
+        for p in (wal_path, shm_path):
+            if p.exists():
+                try:
+                    os.remove(p)
+                except Exception:
+                    pass
+
+        # 4. Reconnect and run any pending migrations
+        await engine.dispose()
+        await init_db()
+
+        return {
+            "status": "ok",
+            "message": f"База данных успешно восстановлена! Пользователей: {user_count}, автомобилей: {vehicle_count}.",
+            "users_count": user_count,
+            "vehicles_count": vehicle_count,
+        }
+    finally:
+        if os.path.exists(temp_uploaded.name):
+            try:
+                os.remove(temp_uploaded.name)
+            except Exception:
+                pass
 
 def safe_parse_datetime(val: Any) -> Optional[datetime.datetime]:
     if not val:

@@ -970,6 +970,27 @@ export const api = {
     const token = getAuthToken();
     return `${API_BASE}/backup/database${token ? `?token=${encodeURIComponent(token)}` : ''}`;
   },
+  restoreDatabaseBackup: async (file: File): Promise<{ status: string; message: string; users_count?: number; vehicles_count?: number }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const token = getAuthToken();
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${getApiBase()}/backup/database/restore`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Ошибка восстановления базы данных' }));
+      throw new Error(err.detail || 'Не удалось восстановить базу данных');
+    }
+
+    return res.json();
+  },
   sendBackupToTelegram: (scope?: string) =>
     request<{ status: string; message: string }>(
       `${API_BASE}/backup/send-telegram${scope ? `?scope=${encodeURIComponent(scope)}` : ''}`,

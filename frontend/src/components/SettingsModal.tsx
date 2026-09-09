@@ -33,6 +33,7 @@ import {
   Loader2,
   ExternalLink,
   Database,
+  Upload,
 } from 'lucide-react';
 import { User, AdminUser, Vehicle, TelegramBotConfig } from '../types';
 import { api, removeAuthToken } from '../services/api';
@@ -222,6 +223,55 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setTgBackupMsg({ text: errMsg, type: 'error' });
     } finally {
       setIsSendingTgBackup(false);
+    }
+  };
+
+  const [isRestoringDb, setIsRestoringDb] = useState(false);
+  const [dbRestoreMsg, setDbRestoreMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const dbFileInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const handleTriggerDbRestore = () => {
+    if (dbFileInputRef.current) {
+      dbFileInputRef.current.value = '';
+      dbFileInputRef.current.click();
+    }
+  };
+
+  const handleDbFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const confirmed = window.confirm(
+      `⚠️ ВНИМАНИЕ! Вы собираетесь восстановить базу данных из файла "${file.name}".\n\n` +
+      `Это ПОЛНОСТЬЮ заменит текущую базу данных autotracker.db на сервере.\n` +
+      `Перед заменой сервер автоматически сохранит резервную копию текущей базы.\n\n` +
+      `Вы уверены, что хотите продолжить восстановление?`
+    );
+
+    if (!confirmed) {
+      if (dbFileInputRef.current) dbFileInputRef.current.value = '';
+      return;
+    }
+
+    setIsRestoringDb(true);
+    setDbRestoreMsg(null);
+    try {
+      const res = await api.restoreDatabaseBackup(file);
+      setDbRestoreMsg({
+        text: res.message || 'База данных успешно восстановлена! Страница перезагрузится через 2 секунды...',
+        type: 'success',
+      });
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+    } catch (err: any) {
+      setDbRestoreMsg({
+        text: err?.message || 'Ошибка восстановления базы данных',
+        type: 'error',
+      });
+    } finally {
+      setIsRestoringDb(false);
+      if (dbFileInputRef.current) dbFileInputRef.current.value = '';
     }
   };
 
@@ -1475,13 +1525,49 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           </p>
                         </div>
 
-                        <a
-                          href={api.exportDatabaseUrl()}
-                          className="w-full flex items-center justify-center space-x-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition shadow-md shadow-emerald-600/20"
-                        >
-                          <Download className="w-4 h-4" />
-                          <span>Скачать файл autotracker.db</span>
-                        </a>
+                        <div className="space-y-2 pt-1">
+                          <a
+                            href={api.exportDatabaseUrl()}
+                            className="w-full flex items-center justify-center space-x-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition shadow-md shadow-emerald-600/20"
+                          >
+                            <Download className="w-4 h-4" />
+                            <span>Скачать файл autotracker.db</span>
+                          </a>
+
+                          <button
+                            type="button"
+                            onClick={handleTriggerDbRestore}
+                            disabled={isRestoringDb}
+                            className="w-full flex items-center justify-center space-x-2 bg-white dark:bg-dark-750 hover:bg-slate-100 dark:hover:bg-dark-700 active:scale-95 text-emerald-700 dark:text-emerald-400 border border-emerald-500/40 font-bold py-2.5 px-4 rounded-xl text-xs transition disabled:opacity-50"
+                          >
+                            <Upload className="w-4 h-4" />
+                            <span>{isRestoringDb ? 'Восстановление базы...' : 'Восстановить из файла .db'}</span>
+                          </button>
+                          <input
+                            ref={dbFileInputRef}
+                            type="file"
+                            accept=".db,.sqlite,.sqlite3"
+                            className="hidden"
+                            onChange={handleDbFileSelected}
+                          />
+
+                          {dbRestoreMsg && (
+                            <div
+                              className={`p-3 rounded-xl border text-xs flex items-center space-x-2 animate-fadeIn ${
+                                dbRestoreMsg.type === 'success'
+                                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
+                                  : 'bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-300'
+                              }`}
+                            >
+                              {dbRestoreMsg.type === 'success' ? (
+                                <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                              ) : (
+                                <AlertTriangle className="w-4 h-4 text-rose-500 flex-shrink-0" />
+                              )}
+                              <span>{dbRestoreMsg.text}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       {/* Card 2: JSON Dump */}
