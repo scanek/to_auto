@@ -2,6 +2,7 @@ version: '3.8'
 
 services:
   autotracker:
+    image: ghcr.io/scanek/to_auto:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -17,6 +18,19 @@ services:
       - DATABASE_URL=sqlite+aiosqlite:////app/data/autotracker.db
     volumes:
       - autotracker_data:/app/data
+
+  # Automatic updater: checks GitHub Container Registry and restarts container when a new image is pushed
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: autotracker-watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_POLL_INTERVAL=300 # Check for new image every 5 minutes (300 sec)
+      - WATCHTOWER_CLEANUP=true      # Automatically delete old images to save disk space
+      - WATCHTOWER_INCLUDE_RESTARTING=true
+    command: autotracker
 
 volumes:
   autotracker_data:

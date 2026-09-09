@@ -1,5 +1,20 @@
 # ==========================================
-# Fast & Robust Python FastAPI + Static Build
+# Step 1: Build Production Frontend (Vite)
+# ==========================================
+FROM node:20-alpine AS frontend-builder
+
+WORKDIR /frontend
+
+# Cache npm dependencies
+COPY frontend/package.json frontend/package-lock.json* ./
+RUN npm ci --prefer-offline --no-audit || npm install
+
+# Copy frontend source and compile static bundle
+COPY frontend/ ./
+RUN npm run build
+
+# ==========================================
+# Step 2: Production Python FastAPI Image
 # ==========================================
 FROM python:3.11-slim
 
@@ -10,24 +25,27 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Install system dependencies (curl for healthcheck)
+# Install system dependencies (curl for container healthcheck)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
+# Install Python backend dependencies
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy Backend app & Pre-compiled production frontend
+# Copy Backend app
 COPY backend/app ./app
-COPY backend/static ./static
 
+# Copy compiled frontend from Step 1 into /app/static
+COPY --from=frontend-builder /frontend/dist ./static
+
+# Ensure upload directory exists
 RUN mkdir -p /app/data/uploads
 
 EXPOSE 8000
 
-# Docker Healthcheck
+# Container Healthcheck
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
