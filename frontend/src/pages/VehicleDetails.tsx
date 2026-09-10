@@ -8,6 +8,7 @@ import { TyreRotationWidget } from '../components/TyreRotationWidget';
 import { PublicShareModal } from '../components/PublicShareModal';
 import { ReceiptScanModal } from '../components/ReceiptScanModal';
 import { KnowledgeBaseTab } from '../components/KnowledgeBaseTab';
+import { StoreBadge } from '../components/StoreBadge';
 import { CHANGAN_CS55_PLUS_SCHEDULE } from '../data/factorySchedulesData';
 import { parseDotCode } from '../utils/tyreAnalytics';
 import { downloadIcsReminder } from '../utils/qrcodeHelper';
@@ -1336,39 +1337,39 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
 
                           {/* Title & Tags */}
                           <div className="min-w-0 flex-1">
-                            <div className="flex flex-wrap items-center gap-1.5">
+                            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                               {rec.to_tag ? (
                                 String(rec.to_tag).trim().toLowerCase() === 'вне то' ? (
-                                  <span className="inline-flex items-center gap-1 text-[9.5px] sm:text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-dark-750 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-dark-700">
+                                  <span className="inline-flex items-center gap-1 text-[9.5px] sm:text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-dark-750 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-dark-700 shrink-0">
                                     Вне ТО
                                   </span>
                                 ) : rec.record_type === 'upgrade' ? (
-                                  <span className="inline-flex items-center gap-1 text-[9.5px] sm:text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/25">
+                                  <span className="inline-flex items-center gap-1 text-[9.5px] sm:text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/25 shrink-0">
                                     <Sparkles className="w-2.5 h-2.5" />
                                     <span>{String(rec.to_tag)}</span>
                                   </span>
                                 ) : rec.record_type === 'repair' ? (
-                                  <span className="inline-flex items-center gap-1 text-[9.5px] sm:text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/25">
+                                  <span className="inline-flex items-center gap-1 text-[9.5px] sm:text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/25 shrink-0">
                                     <span>{String(rec.to_tag)}</span>
                                   </span>
                                 ) : (
-                                  <span className="inline-flex items-center gap-1 text-[9.5px] sm:text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-md bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/25">
+                                  <span className="inline-flex items-center gap-1 text-[9.5px] sm:text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-md bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/25 shrink-0">
                                     <span>{String(rec.to_tag)}</span>
                                   </span>
                                 )
                               ) : null}
-                              <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">{rec.title}</h4>
+                              <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white break-words leading-snug">
+                                {rec.title}
+                              </h4>
                             </div>
-                            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-mono">
+                            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-1 font-mono">
                               <span>📅 {new Date(rec.date).toLocaleDateString('ru-RU')}</span>
                               <span>• 🛣️ {Math.round(rec.odometer).toLocaleString('ru-RU')} {vehicle.distance_unit || 'км'}</span>
                               {rec.engine_hours ? (
                                 <span>• ⏱️ {rec.engine_hours} м/ч</span>
                               ) : null}
-                              {rec.store ? (
-                                <span className="font-sans font-medium text-slate-600 dark:text-slate-400 truncate max-w-[140px] sm:max-w-none">
-                                  • 🏢 {rec.store}
-                                </span>
+                              {(rec.store || rec.url) ? (
+                                <StoreBadge store={rec.store} url={rec.url} size="xs" />
                               ) : null}
                             </div>
                           </div>
@@ -1457,40 +1458,38 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                                 {rec.items.map((it, idx) => (
                                   <div
                                     key={idx}
-                                    className="flex items-center justify-between text-xs bg-slate-50 dark:bg-dark-900 p-2 sm:p-2.5 rounded-xl border border-slate-200 dark:border-dark-750 text-slate-700 dark:text-slate-300"
+                                    className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 text-xs bg-slate-50 dark:bg-dark-900 p-2.5 sm:p-3 rounded-xl border border-slate-200 dark:border-dark-750 text-slate-700 dark:text-slate-300 transition-all hover:border-slate-300 dark:hover:border-dark-700"
                                   >
-                                    <div className="truncate mr-2">
-                                      <div className="flex items-center space-x-1.5">
-                                        <span className="font-medium text-slate-900 dark:text-white truncate">{it.name}</span>
+                                    <div className="min-w-0 flex-1 space-y-1.5">
+                                      <div className="flex flex-wrap items-baseline gap-1.5">
+                                        <span className="font-semibold text-slate-900 dark:text-white break-words leading-snug">
+                                          {it.name}
+                                        </span>
                                         {it.brand && (
-                                          <span className="text-[10px] text-brand-500 font-semibold flex-shrink-0">
+                                          <span className="text-[10px] text-brand-600 dark:text-brand-400 font-semibold shrink-0">
                                             ({it.brand})
                                           </span>
                                         )}
-                                        {it.url && (
-                                          <a
-                                            href={it.url}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className="text-slate-400 hover:text-brand-500 flex-shrink-0"
-                                          >
-                                            <ExternalLink className="w-3 h-3 inline" />
-                                          </a>
+                                      </div>
+
+                                      <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                                        {it.part_number && (
+                                          <span className="text-[10px] text-slate-600 dark:text-slate-300 font-mono bg-white dark:bg-dark-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-dark-700">
+                                            Арт: <strong className="text-slate-800 dark:text-white">{it.part_number}</strong>
+                                          </span>
+                                        )}
+                                        {(it.store || it.url) && (
+                                          <StoreBadge store={it.store} url={it.url} size="xs" />
                                         )}
                                       </div>
-                                      {it.part_number && (
-                                        <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono block truncate">
-                                          Арт: <strong>{it.part_number}</strong>
-                                          {it.store && ` • ${it.store}`}
-                                        </span>
-                                      )}
                                     </div>
-                                    <div className="flex flex-col items-end flex-shrink-0 font-mono text-right pl-2">
-                                      <span className="text-slate-900 dark:text-slate-200 whitespace-nowrap text-[11px] font-bold">
+
+                                    <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start shrink-0 font-mono text-right pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-200/60 dark:border-dark-750">
+                                      <span className="text-slate-900 dark:text-slate-100 whitespace-nowrap text-xs font-bold">
                                         {Math.round(it.total_price || 0).toLocaleString('ru-RU')} {vehicle.currency || '₽'}
                                       </span>
                                       {it.quantity > 1 && it.unit_price > 0 && (
-                                        <span className="text-[9px] text-slate-400 dark:text-slate-500 whitespace-nowrap">
+                                        <span className="text-[9.5px] text-slate-400 dark:text-slate-500 whitespace-nowrap">
                                           {it.quantity} {it.unit || 'шт'} × {Math.round(it.unit_price).toLocaleString('ru-RU')}
                                         </span>
                                       )}

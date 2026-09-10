@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Wrench, Plus, Trash2, Tag, ExternalLink, Sparkles, Camera } from 'lucide-react';
 import { ServiceRecord, ServiceItem, Vehicle } from '../types';
 import { ReceiptScanModal } from './ReceiptScanModal';
+import { detectStoreFromUrl } from './StoreBadge';
 
 interface ServiceModalProps {
   isOpen: boolean;
@@ -176,6 +177,13 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
       next[index].total_price = q * u;
     }
 
+    if (field === 'url' && value && !next[index].store) {
+      const detected = detectStoreFromUrl(String(value));
+      if (detected) {
+        next[index].store = detected;
+      }
+    }
+
     updateItemsAndCosts(next);
   };
 
@@ -326,19 +334,19 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Название / Тема обслуживания *
               </label>
-              <input
-                type="text"
+              <textarea
+                rows={formData.title && formData.title.length > 50 ? 2 : 1}
                 required
                 placeholder={
                   formData.record_type === 'service'
                     ? 'Замена масла ДВС и фильтров, ТО-4...'
                     : formData.record_type === 'repair'
                     ? 'Замена передних тормозных колодок...'
-                    : 'Шумоизоляция дверей, накладки порогов...'
+                    : 'Полочка в подлокотник, шумоизоляция дверей, накладки...'
                 }
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-medium"
+                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-medium resize-none transition-all"
               />
             </div>
             <div>
@@ -449,48 +457,31 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
                 {items.map((item, idx) => (
                   <div
                     key={idx}
-                    className="bg-white dark:bg-dark-850 p-3.5 rounded-xl border border-slate-200 dark:border-dark-750 shadow-sm space-y-2.5 text-xs transition-all hover:border-slate-300 dark:hover:border-dark-700"
+                    className="bg-white dark:bg-dark-850 p-3.5 rounded-xl border border-slate-200 dark:border-dark-750 shadow-sm space-y-3 text-xs transition-all hover:border-slate-300 dark:hover:border-dark-700"
                   >
-                    {/* Line 1: Name, Brand, Part Number, Delete */}
-                    <div className="grid grid-cols-12 gap-2 items-center">
-                      <div className="col-span-12 sm:col-span-5">
-                        <label className="block text-[10px] font-semibold text-slate-400 mb-0.5 sm:hidden">
-                          Наименование детали
-                        </label>
-                        <input
-                          type="text"
+                    {/* Line 1: Item Name (spacious adaptive textarea) + Delete button */}
+                    <div className="flex items-start gap-2">
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                            Наименование запчасти / товара / аксессуара *
+                          </label>
+                          {item.name && item.name.length > 30 && (
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              {item.name.length} симв.
+                            </span>
+                          )}
+                        </div>
+                        <textarea
+                          rows={item.name && item.name.length > 45 ? 2 : 1}
                           required
-                          placeholder="Наименование (Масло, фильтр, колодки...)"
+                          placeholder="Наименование (например: Полочка в подлокотник для Changan CS55Plus...)"
                           value={item.name}
                           onChange={(e) => handleUpdateItem(idx, 'name', e.target.value)}
-                          className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white font-semibold text-xs focus:outline-none focus:border-brand-500"
+                          className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white font-semibold text-xs focus:outline-none focus:border-brand-500 resize-none transition-all leading-relaxed"
                         />
                       </div>
-                      <div className="col-span-6 sm:col-span-3">
-                        <label className="block text-[10px] font-semibold text-slate-400 mb-0.5 sm:hidden">
-                          Бренд
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="Бренд (VIC, Lukoil...)"
-                          value={item.brand || ''}
-                          onChange={(e) => handleUpdateItem(idx, 'brand', e.target.value)}
-                          className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-lg px-2 py-1.5 text-slate-900 dark:text-white text-xs focus:outline-none focus:border-brand-500"
-                        />
-                      </div>
-                      <div className="col-span-5 sm:col-span-3">
-                        <label className="block text-[10px] font-semibold text-slate-400 mb-0.5 sm:hidden">
-                          Артикул / Код
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="Артикул (C-933...)"
-                          value={item.part_number || ''}
-                          onChange={(e) => handleUpdateItem(idx, 'part_number', e.target.value)}
-                          className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-lg px-2 py-1.5 text-slate-900 dark:text-white font-mono text-xs focus:outline-none focus:border-brand-500"
-                        />
-                      </div>
-                      <div className="col-span-1 flex justify-end sm:justify-center">
+                      <div className="pt-5 shrink-0">
                         <button
                           type="button"
                           onClick={() => handleRemoveItem(idx)}
@@ -502,15 +493,44 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
                       </div>
                     </div>
 
-                    {/* Line 2: Store, URL, Quantity + Unit, Unit Price, Total */}
-                    <div className="grid grid-cols-12 gap-2 items-center pt-2 border-t border-slate-100 dark:border-dark-750">
-                      <div className="col-span-12 sm:col-span-4 space-y-1">
+                    {/* Line 2: Brand, Part Number, Store, URL */}
+                    <div className="grid grid-cols-12 gap-2.5 items-start pt-2 border-t border-slate-100 dark:border-dark-750">
+                      <div className="col-span-6 sm:col-span-3">
+                        <label className="block text-[10px] font-semibold text-slate-400 mb-0.5">
+                          Бренд
+                        </label>
                         <input
                           type="text"
-                          placeholder="Магазин (Ozon, Exist, WB...)"
+                          placeholder="Бренд (VIC, Lukoil...)"
+                          value={item.brand || ''}
+                          onChange={(e) => handleUpdateItem(idx, 'brand', e.target.value)}
+                          className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white text-xs focus:outline-none focus:border-brand-500"
+                        />
+                      </div>
+
+                      <div className="col-span-6 sm:col-span-3">
+                        <label className="block text-[10px] font-semibold text-slate-400 mb-0.5">
+                          Артикул / Код
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Артикул (C-933...)"
+                          value={item.part_number || ''}
+                          onChange={(e) => handleUpdateItem(idx, 'part_number', e.target.value)}
+                          className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white font-mono text-xs focus:outline-none focus:border-brand-500"
+                        />
+                      </div>
+
+                      <div className="col-span-12 sm:col-span-3 space-y-1">
+                        <label className="block text-[10px] font-semibold text-slate-400">
+                          Магазин / Сервис
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Ozon, Exist, WB..."
                           value={item.store || ''}
                           onChange={(e) => handleUpdateItem(idx, 'store', e.target.value)}
-                          className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-lg px-2 py-1 text-slate-800 dark:text-slate-200 text-[11px] focus:outline-none focus:border-brand-500"
+                          className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-lg px-2.5 py-1.5 text-slate-800 dark:text-slate-200 text-xs focus:outline-none focus:border-brand-500"
                         />
                         <div className="flex flex-wrap gap-1">
                           {POPULAR_STORES.slice(0, 5).map((st) => (
@@ -518,7 +538,7 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
                               key={st}
                               type="button"
                               onClick={() => handleUpdateItem(idx, 'store', st)}
-                              className="text-[9px] px-1.5 py-0.2 rounded bg-slate-100 dark:bg-dark-800 hover:bg-brand-500 hover:text-white text-slate-500 dark:text-slate-400 transition"
+                              className="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-dark-800 hover:bg-brand-500 hover:text-white text-slate-600 dark:text-slate-400 transition"
                             >
                               {st}
                             </button>
@@ -526,28 +546,38 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
                         </div>
                       </div>
 
-                      <div className="col-span-12 sm:col-span-3 flex items-center space-x-1">
+                      <div className="col-span-12 sm:col-span-3 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <label className="block text-[10px] font-semibold text-slate-400">
+                            Ссылка на товар (URL)
+                          </label>
+                          {item.url && (
+                            <a
+                              href={item.url.startsWith('http') ? item.url : `https://${item.url}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-[10px] text-brand-500 hover:underline flex items-center gap-0.5"
+                              title="Открыть ссылку в новой вкладке"
+                            >
+                              <span>Открыть</span>
+                              <ExternalLink className="w-2.5 h-2.5 inline" />
+                            </a>
+                          )}
+                        </div>
                         <input
                           type="url"
-                          placeholder="Ссылка на товар (URL)..."
+                          placeholder="https://..."
                           value={item.url || ''}
                           onChange={(e) => handleUpdateItem(idx, 'url', e.target.value)}
-                          className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-lg px-2 py-1 text-slate-700 dark:text-slate-300 font-mono text-[11px] focus:outline-none focus:border-brand-500"
+                          className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-lg px-2.5 py-1.5 text-slate-700 dark:text-slate-300 font-mono text-xs focus:outline-none focus:border-brand-500"
                         />
-                        {item.url && (
-                          <a
-                            href={item.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="p-1 text-brand-500 hover:text-brand-600 flex-shrink-0"
-                            title="Открыть ссылку"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </a>
-                        )}
                       </div>
+                    </div>
 
-                      <div className="col-span-5 sm:col-span-2 flex items-center space-x-1">
+                    {/* Line 3: Quantity, Unit, Price, Total */}
+                    <div className="grid grid-cols-12 gap-2 items-center pt-2 border-t border-slate-100 dark:border-dark-750">
+                      <div className="col-span-6 sm:col-span-4 flex items-center space-x-1.5">
+                        <span className="text-[10px] font-semibold text-slate-400 shrink-0">Кол-во:</span>
                         <input
                           type="number"
                           min="0.01"
@@ -557,13 +587,13 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
                           onChange={(e) =>
                             handleUpdateItem(idx, 'quantity', parseFloat(e.target.value) || 0)
                           }
-                          className="w-14 bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-lg px-1.5 py-1 text-slate-900 dark:text-white text-[11px] text-center font-mono focus:outline-none focus:border-brand-500"
+                          className="w-16 bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-lg px-2 py-1 text-slate-900 dark:text-white text-xs text-center font-mono focus:outline-none focus:border-brand-500"
                           title="Количество"
                         />
                         <select
                           value={item.unit || 'шт'}
                           onChange={(e) => handleUpdateItem(idx, 'unit', e.target.value)}
-                          className="bg-slate-100 dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-lg px-1 py-1 text-slate-700 dark:text-slate-300 text-[11px] font-semibold focus:outline-none focus:border-brand-500 cursor-pointer"
+                          className="bg-slate-100 dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-lg px-2 py-1 text-slate-700 dark:text-slate-300 text-xs font-semibold focus:outline-none focus:border-brand-500 cursor-pointer"
                           title="Единица измерения"
                         >
                           {ITEM_UNITS.map((u) => (
@@ -574,29 +604,33 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
                         </select>
                       </div>
 
-                      <div className="col-span-4 sm:col-span-2">
+                      <div className="col-span-6 sm:col-span-4 flex items-center space-x-1.5">
+                        <span className="text-[10px] font-semibold text-slate-400 shrink-0">Цена/{item.unit || 'ед'}:</span>
                         <input
                           type="number"
                           step="any"
-                          placeholder={`Цена/${item.unit || 'ед'}`}
+                          placeholder="0"
                           value={item.unit_price}
                           onChange={(e) =>
                             handleUpdateItem(idx, 'unit_price', parseFloat(e.target.value) || 0)
                           }
-                          className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-lg px-1.5 py-1 text-slate-900 dark:text-white text-[11px] text-right font-mono focus:outline-none focus:border-brand-500"
+                          className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-lg px-2 py-1 text-slate-900 dark:text-white text-xs text-right font-mono focus:outline-none focus:border-brand-500"
                           title={`Цена за 1 ${item.unit || 'ед.'}`}
                         />
                       </div>
 
-                      <div className="col-span-3 sm:col-span-1 text-right">
-                        <span className="font-mono font-bold text-brand-600 dark:text-brand-400 text-xs block truncate" title={`${item.quantity} ${item.unit || 'шт'} × ${item.unit_price} ₽ = ${Math.round(item.total_price || 0)} ₽`}>
-                          {Math.round(item.total_price || 0).toLocaleString('ru-RU')} ₽
-                        </span>
-                        {item.quantity > 1 && item.unit_price > 0 && (
-                          <span className="text-[9px] text-slate-400 font-mono block truncate">
-                            {item.quantity} × {Math.round(item.unit_price)}
+                      <div className="col-span-12 sm:col-span-4 flex items-center justify-between sm:justify-end text-right">
+                        <span className="text-[10px] font-semibold text-slate-400 sm:hidden">Итого за позицию:</span>
+                        <div>
+                          <span className="font-mono font-bold text-brand-600 dark:text-brand-400 text-xs sm:text-sm block" title={`${item.quantity} ${item.unit || 'шт'} × ${item.unit_price} ₽ = ${Math.round(item.total_price || 0)} ₽`}>
+                            {Math.round(item.total_price || 0).toLocaleString('ru-RU')} ₽
                           </span>
-                        )}
+                          {item.quantity > 1 && item.unit_price > 0 && (
+                            <span className="text-[9.5px] text-slate-400 font-mono block">
+                              {item.quantity} × {Math.round(item.unit_price)} ₽
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -683,28 +717,69 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Автосервис / СТО / Место
+                  {formData.record_type === 'upgrade'
+                    ? 'Магазин / Сервис / Место установки'
+                    : 'Автосервис / СТО / Место'}
                 </label>
                 <input
                   type="text"
-                  placeholder="Дилер Changan, Гараж, FIT Service..."
+                  placeholder={
+                    formData.record_type === 'upgrade'
+                      ? 'Ozon, AliExpress, Дилер, Гараж...'
+                      : 'Дилер Changan, Гараж, FIT Service...'
+                  }
                   value={formData.store}
                   onChange={(e) => setFormData({ ...formData, store: e.target.value })}
                   className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Заметки / Номер заказ-наряда
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Ссылка на страницу / магазин (URL)
+                  </label>
+                  {formData.url && (
+                    <a
+                      href={formData.url.startsWith('http') ? formData.url : `https://${formData.url}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] text-brand-500 hover:underline flex items-center gap-0.5"
+                      title="Открыть ссылку в новой вкладке"
+                    >
+                      <span>Открыть</span>
+                      <ExternalLink className="w-2.5 h-2.5 inline" />
+                    </a>
+                  )}
+                </div>
                 <input
-                  type="text"
-                  placeholder="Заказ-наряд №4512, гарантия 6 мес..."
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
+                  type="url"
+                  placeholder="https://..."
+                  value={formData.url}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const detected = detectStoreFromUrl(val);
+                    setFormData((prev) => ({
+                      ...prev,
+                      url: val,
+                      store: prev.store || detected || '',
+                    }));
+                  }}
+                  className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white font-mono focus:outline-none focus:border-brand-500"
                 />
               </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Заметки / Номер заказ-наряда
+              </label>
+              <input
+                type="text"
+                placeholder="Заказ-наряд №4512, гарантия 6 мес..."
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
+              />
             </div>
           </div>
 

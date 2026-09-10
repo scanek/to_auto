@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { PublicBookletData } from '../types';
 import { api } from '../services/api';
 import { parseDotCode } from '../utils/tyreAnalytics';
+import { StoreBadge } from '../components/StoreBadge';
 import {
   Car,
   ShieldCheck,
@@ -292,20 +293,23 @@ export const PublicServiceBooklet: React.FC = () => {
                       className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3"
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                           <span
-                            className={`px-2 py-0.5 text-[11px] font-bold rounded-md border ${currentType.bg} ${currentType.text}`}
+                            className={`px-2 py-0.5 text-[11px] font-bold rounded-md border ${currentType.bg} ${currentType.text} shrink-0`}
                           >
                             {currentType.label}
                           </span>
                           {r.to_tag && (
-                            <span className="px-2 py-0.5 text-[11px] font-bold rounded-md bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                            <span className="px-2 py-0.5 text-[11px] font-bold rounded-md bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shrink-0">
                               {r.to_tag}
                             </span>
                           )}
-                          <h3 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base">
+                          <h3 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base break-words leading-snug">
                             {r.title}
                           </h3>
+                          {(r.store || r.url) && (
+                            <StoreBadge store={r.store} url={r.url} size="xs" />
+                          )}
                         </div>
 
                         <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
@@ -329,7 +333,7 @@ export const PublicServiceBooklet: React.FC = () => {
 
                       {/* Description / Notes */}
                       {r.description && (
-                        <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                        <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed break-words">
                           {r.description}
                         </p>
                       )}
@@ -344,21 +348,24 @@ export const PublicServiceBooklet: React.FC = () => {
                             {r.items.map((it, itemIdx) => (
                               <div
                                 key={itemIdx}
-                                className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-slate-700 dark:text-slate-300"
+                                className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-slate-700 dark:text-slate-300 py-1 border-b last:border-b-0 border-slate-100 dark:border-slate-800/60"
                               >
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-slate-400">•</span>
-                                  <span className="font-semibold">{it.name}</span>
+                                <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+                                  <span className="text-slate-400 shrink-0">•</span>
+                                  <span className="font-semibold text-slate-900 dark:text-white break-words">{it.name}</span>
                                   {it.brand && (
-                                    <span className="text-slate-400 text-[11px]">({it.brand})</span>
+                                    <span className="text-slate-400 text-[11px] shrink-0">({it.brand})</span>
                                   )}
                                   {it.part_number && (
-                                    <code className="text-[11px] bg-slate-200/70 dark:bg-slate-700 px-1 py-0.5 rounded text-sky-700 dark:text-sky-300">
+                                    <code className="text-[11px] bg-slate-200/70 dark:bg-slate-700 px-1 py-0.5 rounded text-sky-700 dark:text-sky-300 shrink-0 font-mono">
                                       {it.part_number}
                                     </code>
                                   )}
+                                  {(it.store || it.url) && (
+                                    <StoreBadge store={it.store} url={it.url} size="xs" />
+                                  )}
                                 </div>
-                                <div className="text-[11px] text-slate-500 pl-3 sm:pl-0">
+                                <div className="text-[11px] text-slate-500 pl-3 sm:pl-0 shrink-0 font-mono">
                                   {it.quantity > 1 ? `${it.quantity} ${it.unit}` : ''}
                                   {public_show_costs && it.total_price
                                     ? ` — ${it.total_price.toLocaleString()} ${vehicle.currency}`

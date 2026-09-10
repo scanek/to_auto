@@ -362,7 +362,7 @@ export const ConsumablesTab: React.FC<ConsumablesTabProps> = ({
                         {/* Title & Actions */}
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                            <h4 className="text-sm font-bold text-slate-900 dark:text-white break-words leading-tight">
                               {item.name}
                             </h4>
                             {item.specification && (
