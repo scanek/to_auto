@@ -34,8 +34,10 @@ import {
   ExternalLink,
   Database,
   Upload,
+  Activity,
+  BarChart2,
 } from 'lucide-react';
-import { User, AdminUser, Vehicle, TelegramBotConfig } from '../types';
+import { User, AdminUser, Vehicle, TelegramBotConfig, TrafficStats } from '../types';
 import { api, removeAuthToken } from '../services/api';
 import { localDB } from '../services/localDatabase';
 
@@ -94,8 +96,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [adminVehicles, setAdminVehicles] = useState<Vehicle[]>([]);
   const [loadingAdminData, setLoadingAdminData] = useState(false);
-  const [adminSubTab, setAdminSubTab] = useState<'users' | 'vehicles' | 'announcement' | 'telegram' | 'backup'>('users');
+  const [adminSubTab, setAdminSubTab] = useState<'traffic' | 'users' | 'vehicles' | 'announcement' | 'telegram' | 'backup'>('traffic');
   const [adminMsg, setAdminMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  // Admin Traffic Stats state
+  const [trafficStats, setTrafficStats] = useState<TrafficStats | null>(null);
 
   // Admin announcement state
   const [announcementActive, setAnnouncementActive] = useState(false);
@@ -361,6 +366,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         await loadBotConfig();
       } catch (err: any) {
         console.error('Failed to load bot config', err);
+      }
+      try {
+        const stats = await api.getTrafficStats();
+        setTrafficStats(stats);
+      } catch (err: any) {
+        console.error('Failed to load traffic stats', err);
       }
     } finally {
       setLoadingAdminData(false);
@@ -973,7 +984,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <div className="space-y-5">
               {/* Admin subtabs */}
               <div className="flex items-center justify-between">
-                <div className="flex space-x-1.5 bg-slate-100 dark:bg-dark-800 p-1 rounded-xl text-xs font-bold">
+                <div className="flex flex-wrap gap-1.5 bg-slate-100 dark:bg-dark-800 p-1 rounded-xl text-xs font-bold">
+                  <button
+                    onClick={() => setAdminSubTab('traffic')}
+                    className={`px-3 py-1.5 rounded-lg transition ${
+                      adminSubTab === 'traffic'
+                        ? 'bg-white dark:bg-dark-750 text-slate-900 dark:text-white shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                    }`}
+                  >
+                    <Activity className="w-3.5 h-3.5 inline mr-1 text-emerald-500" />
+                    Посещаемость
+                  </button>
                   <button
                     onClick={() => setAdminSubTab('users')}
                     className={`px-3 py-1.5 rounded-lg transition ${
@@ -1050,6 +1072,166 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   }`}
                 >
                   {adminMsg.text}
+                </div>
+              )}
+
+              {/* Subtab: Traffic & Unique Visitors Analytics */}
+              {adminSubTab === 'traffic' && (
+                <div className="space-y-4">
+                  {/* Metric Cards Grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    {/* 1. Online Now */}
+                    <div className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-750 p-3.5 rounded-2xl shadow-2xs space-y-1">
+                      <div className="flex items-center justify-between text-slate-400">
+                        <span className="text-[11px] font-bold uppercase tracking-wider">Онлайн сейчас</span>
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                      </div>
+                      <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
+                        {trafficStats?.online_now ?? 1}
+                      </div>
+                      <div className="text-[10px] text-slate-400">за последние 15 минут</div>
+                    </div>
+
+                    {/* 2. Today Unique */}
+                    <div className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-750 p-3.5 rounded-2xl shadow-2xs space-y-1">
+                      <div className="flex items-center justify-between text-slate-400">
+                        <span className="text-[11px] font-bold uppercase tracking-wider">Сегодня</span>
+                        <Activity className="w-3.5 h-3.5 text-sky-500" />
+                      </div>
+                      <div className="text-2xl font-black text-slate-900 dark:text-white font-mono">
+                        {trafficStats?.today_unique ?? 0}
+                      </div>
+                      <div className="text-[10px] text-slate-400 flex items-center justify-between">
+                        <span>Просмотров: {trafficStats?.today_hits ?? 0}</span>
+                      </div>
+                    </div>
+
+                    {/* 3. 7 Days Unique */}
+                    <div className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-750 p-3.5 rounded-2xl shadow-2xs space-y-1">
+                      <div className="flex items-center justify-between text-slate-400">
+                        <span className="text-[11px] font-bold uppercase tracking-wider">За 7 дней</span>
+                        <BarChart2 className="w-3.5 h-3.5 text-indigo-500" />
+                      </div>
+                      <div className="text-2xl font-black text-slate-900 dark:text-white font-mono">
+                        {trafficStats?.week_unique ?? 0}
+                      </div>
+                      <div className="text-[10px] text-slate-400">уникальных гостей</div>
+                    </div>
+
+                    {/* 4. 30 Days Unique */}
+                    <div className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-750 p-3.5 rounded-2xl shadow-2xs space-y-1">
+                      <div className="flex items-center justify-between text-slate-400">
+                        <span className="text-[11px] font-bold uppercase tracking-wider">За 30 дней</span>
+                        <Users className="w-3.5 h-3.5 text-purple-500" />
+                      </div>
+                      <div className="text-2xl font-black text-slate-900 dark:text-white font-mono">
+                        {trafficStats?.month_unique ?? 0}
+                      </div>
+                      <div className="text-[10px] text-slate-400">посетителей в месяц</div>
+                    </div>
+                  </div>
+
+                  {/* 14-Day Timeline Bar Chart */}
+                  <div className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-750 p-4 rounded-2xl shadow-2xs space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">
+                          Динамика визитов (последние 14 дней)
+                        </h4>
+                        <p className="text-[11px] text-slate-400">Уникальные посетители и просмотры страниц</p>
+                      </div>
+                      <div className="flex items-center space-x-3 text-[11px]">
+                        <span className="inline-flex items-center space-x-1">
+                          <span className="w-2.5 h-2.5 rounded-sm bg-sky-500" />
+                          <span className="text-slate-600 dark:text-slate-400">Уникальные</span>
+                        </span>
+                        <span className="inline-flex items-center space-x-1">
+                          <span className="w-2.5 h-2.5 rounded-sm bg-slate-200 dark:bg-dark-700" />
+                          <span className="text-slate-600 dark:text-slate-400">Хиты</span>
+                        </span>
+                      </div>
+                    </div>
+
+                    {trafficStats?.daily_chart && trafficStats.daily_chart.length > 0 ? (
+                      <div className="flex items-end justify-between gap-1.5 h-32 pt-4 px-1 border-b border-slate-100 dark:border-dark-800">
+                        {trafficStats.daily_chart.map((pt, idx) => {
+                          const maxUniques = Math.max(1, ...trafficStats.daily_chart.map((p) => p.uniques));
+                          const heightPct = Math.min(100, Math.max(8, Math.round((pt.uniques / maxUniques) * 100)));
+                          const isToday = idx === trafficStats.daily_chart.length - 1;
+
+                          return (
+                            <div key={pt.date} className="flex-1 flex flex-col items-center gap-1 group relative">
+                              {/* Hover Tooltip */}
+                              <div className="opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none absolute -top-8 bg-slate-900 text-white text-[9px] font-mono py-0.5 px-1.5 rounded shadow-lg whitespace-nowrap z-10">
+                                {pt.display_date}: {pt.uniques} уник., {pt.hits} хит.
+                              </div>
+                              <div className="w-full flex items-end justify-center h-20">
+                                <div
+                                  style={{ height: `${heightPct}%` }}
+                                  className={`w-full max-w-[18px] rounded-t-md transition-all ${
+                                    isToday
+                                      ? 'bg-gradient-to-t from-sky-600 to-sky-400 shadow-xs'
+                                      : 'bg-sky-500/70 hover:bg-sky-500'
+                                  }`}
+                                />
+                              </div>
+                              <span className={`text-[9px] font-mono ${isToday ? 'font-black text-sky-600 dark:text-sky-400' : 'text-slate-400'}`}>
+                                {pt.display_date.split('-')[1]}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-center py-6 text-xs text-slate-400">Данные о посещаемости собираются...</div>
+                    )}
+                  </div>
+
+                  {/* Two Column Section: Top Visited Pages & Devices */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Top Visited Pages */}
+                    <div className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-750 p-4 rounded-2xl shadow-2xs space-y-2.5">
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                        Популярные страницы (7 дней)
+                      </h4>
+                      <div className="space-y-1.5">
+                        {trafficStats?.top_paths && trafficStats.top_paths.length > 0 ? (
+                          trafficStats.top_paths.map((tp) => (
+                            <div key={tp.path} className="flex items-center justify-between text-xs py-1 px-2 rounded-lg bg-slate-50 dark:bg-dark-800">
+                              <span className="font-mono text-slate-700 dark:text-slate-300 truncate max-w-[190px]">
+                                {tp.path === '/' ? 'Главная (Гараж)' : tp.path}
+                              </span>
+                              <span className="font-bold text-sky-600 dark:text-sky-400 text-[11px] font-mono">
+                                {tp.hits} просмотров
+                              </span>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-slate-400 text-xs py-2 text-center">Нет данных</div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Breakdown by Guests & Devices */}
+                    <div className="bg-white dark:bg-dark-900 border border-slate-200 dark:border-dark-750 p-4 rounded-2xl shadow-2xs space-y-2.5">
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                        Аудитория сегодня
+                      </h4>
+                      <div className="space-y-2 text-xs">
+                        <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-dark-800">
+                          <span className="text-slate-600 dark:text-slate-400">Авторизованные владельцы:</span>
+                          <span className="font-bold text-slate-900 dark:text-white">{trafficStats?.today_auth ?? 0}</span>
+                        </div>
+                        <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-dark-800">
+                          <span className="text-slate-600 dark:text-slate-400">Гости (без аккаунта):</span>
+                          <span className="font-bold text-slate-900 dark:text-white">{trafficStats?.today_guests ?? 0}</span>
+                        </div>
+                        <div className="pt-1 text-[11px] text-slate-400 leading-relaxed italic">
+                          🔒 Приватность: IP-адреса не сохраняются, уникальность считается по одностороннему SHA-256 хешу.
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 

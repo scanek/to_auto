@@ -7,6 +7,7 @@ from fastapi.responses import FileResponse
 
 from app.core.config import settings, UPLOAD_DIR
 from app.db.session import init_db
+import app.models # Register all models to SQLAlchemy Base.metadata
 from app.api import (
     auth,
     vehicles,

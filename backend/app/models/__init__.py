@@ -9,6 +9,7 @@ from app.models.tyre import TyreSet
 from app.models.setting import Setting
 from app.models.consumable import VehicleConsumable
 from app.models.password_reset import PasswordReset
+from app.models.visit import VisitLog
 
 __all__ = [
     "User",
@@ -25,4 +26,5 @@ __all__ = [
     "Setting",
     "VehicleConsumable",
     "PasswordReset",
+    "VisitLog",
 ]

@@ -1212,6 +1212,15 @@ export const api = {
 
     return res.json() as Promise<{ success: boolean; data: any }>;
   },
+
+  recordHit: (path: string = '/') =>
+    request<{ status: string }>(`${API_BASE}/analytics/hit`, {
+      method: 'POST',
+      body: JSON.stringify({ path }),
+    }).catch(() => ({ status: 'error' })),
+
+  getTrafficStats: () =>
+    request<import('../types').TrafficStats>(`${API_BASE}/analytics/admin/traffic-stats`),
 };
 
 export { localDB };

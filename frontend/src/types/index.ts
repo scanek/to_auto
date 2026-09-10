@@ -489,3 +489,24 @@ export interface SchemeItem {
   originalFile: string;
 }
 
+export interface DailyChartPoint {
+  date: string;
+  display_date: string;
+  uniques: number;
+  hits: number;
+}
+
+export interface TrafficStats {
+  online_now: number;
+  today_unique: number;
+  today_hits: number;
+  yesterday_unique: number;
+  week_unique: number;
+  week_hits: number;
+  month_unique: number;
+  today_auth: number;
+  today_guests: number;
+  daily_chart: DailyChartPoint[];
+  top_paths: { path: string; hits: number }[];
+  devices: Record<string, number>;
+}

@@ -52,6 +52,7 @@ export const PublicServiceBooklet: React.FC = () => {
     const fetchBooklet = async () => {
       try {
         setLoading(true);
+        api.recordHit(pathname);
         const res = await api.getPublicBooklet(token);
         setData(res);
       } catch (err: any) {
@@ -62,7 +63,7 @@ export const PublicServiceBooklet: React.FC = () => {
     };
 
     fetchBooklet();
-  }, [token]);
+  }, [token, pathname]);
 
   if (loading) {
     return (

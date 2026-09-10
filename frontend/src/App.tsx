@@ -141,6 +141,8 @@ export function App() {
 
   useEffect(() => {
     checkAuthStatus();
+    // Record privacy-preserving visit
+    api.recordHit(window.location.pathname || '/');
   }, [checkAuthStatus]);
 
   // Listen to custom announcement update event from Admin modal
