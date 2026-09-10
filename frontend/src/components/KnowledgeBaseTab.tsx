@@ -34,6 +34,7 @@ import {
   Gauge
 } from 'lucide-react';
 import { FuseBox, FuseItem, SchemeItem } from '../types';
+import { getAssetUrl } from '../utils/assets';
 import { CHANGAN_CS55_PLUS_FUSE_BOXES } from '../data/fuseBoxesData';
 import { DTC_CODES_DATABASE, SYSTEM_GLOSSARY } from '../data/dtcCodesData';
 import { CHANGAN_CS55_PLUS_SPECS } from '../data/vehicleSpecsData';
@@ -847,7 +848,7 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
                       >
                         <div className="aspect-[4/3] bg-slate-100 dark:bg-dark-900 overflow-hidden relative">
                           <img
-                            src={scheme.image}
+                            src={getAssetUrl(scheme.image)}
                             alt={scheme.title}
                             loading="lazy"
                             className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300"
@@ -1548,7 +1549,7 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
               </div>
               <div className="flex items-center space-x-2">
                 <a
-                  href={viewingSchemeImage}
+                  href={getAssetUrl(viewingSchemeImage)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-dark-750 hover:bg-slate-200 dark:hover:bg-dark-700 text-xs font-bold text-slate-700 dark:text-slate-300 transition"
@@ -1568,7 +1569,7 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
 
             <div className="flex-1 overflow-auto p-4 bg-slate-100 dark:bg-dark-900 flex items-center justify-center">
               <img
-                src={viewingSchemeImage}
+                src={getAssetUrl(viewingSchemeImage)}
                 alt="Схема расположения предохранителей"
                 className="max-w-full max-h-[75vh] object-contain rounded-xl shadow-lg border border-slate-200 dark:border-dark-800"
               />
@@ -1622,7 +1623,7 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
                 <div className="h-5 w-px bg-slate-200 dark:bg-dark-700 mx-1" />
 
                 <a
-                  href={activeModalScheme.image}
+                  href={getAssetUrl(activeModalScheme.image)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 text-xs font-bold transition"
@@ -1648,7 +1649,7 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
                 className="transition-transform duration-200 max-w-full"
               >
                 <img
-                  src={activeModalScheme.image}
+                  src={getAssetUrl(activeModalScheme.image)}
                   alt={activeModalScheme.title}
                   className="rounded-xl shadow-2xl border border-slate-200 dark:border-dark-800 object-contain max-h-[78vh]"
                 />

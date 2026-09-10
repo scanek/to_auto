@@ -33,15 +33,16 @@ async def verify_vehicle_access(
             detail="Автомобиль не найден",
         )
 
-    # Check true ownership
-    is_owner = bool(user and vehicle.user_id == user.id) or (vehicle.user_id is None)
+    # Check true ownership: strictly must match user.id
+    # (Orphaned vehicles without user_id can only be accessed or assigned by Admin)
+    is_owner = bool(user and vehicle.user_id is not None and vehicle.user_id == user.id)
 
     # Admin moderation override (only for specific admin endpoints)
     if allow_admin_override and user and user.role == UserRole.ADMIN:
         return vehicle
 
     if require_owner:
-        if not user or not is_owner:
+        if not user or (not is_owner and user.role != UserRole.ADMIN):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Только владелец автомобиля может вносить или изменять данные",

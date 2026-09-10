@@ -103,6 +103,8 @@ export const QuickMileageModal: React.FC<QuickMileageModalProps> = ({
             <div className="relative">
               <input
                 type="number"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 step="any"
                 required
                 autoFocus
@@ -111,6 +113,19 @@ export const QuickMileageModal: React.FC<QuickMileageModalProps> = ({
                 className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl pl-9 pr-3 py-2.5 text-sm sm:text-base text-slate-900 dark:text-white font-mono font-bold focus:outline-none focus:border-brand-500"
               />
               <Gauge className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" />
+            </div>
+            {/* Quick Add Buttons */}
+            <div className="grid grid-cols-4 gap-1.5 mt-2">
+              {[100, 500, 1000, 5000].map((delta) => (
+                <button
+                  type="button"
+                  key={delta}
+                  onClick={() => setOdometer((prev) => Math.round((prev || 0) + delta))}
+                  className="py-1 px-1 rounded-lg text-xs font-bold border border-slate-200 dark:border-dark-700 bg-slate-100 dark:bg-dark-800 text-slate-700 dark:text-slate-300 hover:border-brand-500 hover:bg-brand-500/10 transition flex items-center justify-center space-x-0.5"
+                >
+                  <span>+{delta >= 1000 ? `${delta / 1000}k` : delta}</span>
+                </button>
+              ))}
             </div>
           </div>
 

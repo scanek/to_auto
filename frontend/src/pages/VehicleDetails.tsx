@@ -857,16 +857,30 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 </div>
 
                 {/* 4. Battery Voltage (Row 2 on mobile: 3 cols) */}
-                <div className="col-span-3 sm:col-span-1 lg:col-span-1 bg-white/80 dark:bg-dark-800/90 backdrop-blur-md p-1.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm">
-                  <div className="text-[9px] sm:text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 flex items-center justify-between">
-                    <span className="truncate">АКБ</span>
-                    <BatteryCharging className="w-3 h-3 text-emerald-500 flex-shrink-0" />
-                  </div>
-                  <div className="text-xs sm:text-base font-black font-mono mt-0.5 sm:mt-1 text-emerald-600 dark:text-emerald-400 flex items-baseline space-x-0.5 sm:space-x-1">
-                    <span>{vehicle.starline_battery ? vehicle.starline_battery.toFixed(1) : '12.4'}</span>
-                    <span className="text-[9px] sm:text-xs font-semibold text-slate-500">В</span>
-                  </div>
-                </div>
+                {(() => {
+                  const volt = vehicle.starline_battery ?? 12.4;
+                  const isGood = volt >= 12.4;
+                  const isWarn = volt >= 11.9 && volt < 12.4;
+                  const isCrit = volt < 11.9;
+                  const voltColor = isCrit
+                    ? 'text-rose-600 dark:text-rose-400'
+                    : isWarn
+                    ? 'text-amber-600 dark:text-amber-400'
+                    : 'text-emerald-600 dark:text-emerald-400';
+
+                  return (
+                    <div className="col-span-3 sm:col-span-1 lg:col-span-1 bg-white/80 dark:bg-dark-800/90 backdrop-blur-md p-1.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm">
+                      <div className="text-[9px] sm:text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 flex items-center justify-between">
+                        <span className="truncate">АКБ</span>
+                        <BatteryCharging className={`w-3 h-3 flex-shrink-0 ${isCrit ? 'text-rose-500 animate-pulse' : isWarn ? 'text-amber-500' : 'text-emerald-500'}`} />
+                      </div>
+                      <div className={`text-xs sm:text-base font-black font-mono mt-0.5 sm:mt-1 flex items-baseline space-x-0.5 sm:space-x-1 ${voltColor}`}>
+                        <span>{volt.toFixed(1)}</span>
+                        <span className="text-[9px] sm:text-xs font-semibold text-slate-500">В</span>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* 5. Engine Temp (Row 2 on mobile: 3 cols) */}
                 <div className="col-span-3 sm:col-span-1 lg:col-span-1 bg-white/80 dark:bg-dark-800/90 backdrop-blur-md p-1.5 sm:p-3 rounded-xl border border-sky-500/20 dark:border-dark-700 flex flex-col justify-between shadow-sm">

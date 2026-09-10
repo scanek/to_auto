@@ -113,6 +113,8 @@ export const QuickOdometerModal: React.FC<QuickOdometerModalProps> = ({
             <div className="relative">
               <input
                 type="number"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 min="0"
                 step="1"
                 required

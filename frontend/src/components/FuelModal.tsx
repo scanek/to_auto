@@ -379,6 +379,42 @@ export const FuelModal: React.FC<FuelModalProps> = ({
             </div>
           </div>
 
+          {/* Quick Volume & Cost Chips for Mobile UX */}
+          <div className="flex flex-wrap items-center justify-between gap-1.5 px-0.5">
+            <div className="flex items-center space-x-1">
+              <span className="text-[10px] font-semibold text-slate-400">Объем:</span>
+              {[10, 20, 30, 40, 50].map((liters) => (
+                <button
+                  key={liters}
+                  type="button"
+                  onClick={() => {
+                    handleFieldChange('amount', String(liters));
+                    handleCalculate('total');
+                  }}
+                  className="px-2 py-0.5 rounded-lg text-[10px] font-bold border border-slate-200 dark:border-dark-700 bg-slate-100 dark:bg-dark-800 text-slate-700 dark:text-slate-300 hover:border-brand-500/50 hover:bg-brand-500/10 transition"
+                >
+                  +{liters}л
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center space-x-1">
+              <span className="text-[10px] font-semibold text-slate-400">Сумма:</span>
+              {[1000, 1500, 2000, 3000].map((rub) => (
+                <button
+                  key={rub}
+                  type="button"
+                  onClick={() => {
+                    handleFieldChange('total', String(rub));
+                    handleCalculate('amount');
+                  }}
+                  className="px-2 py-0.5 rounded-lg text-[10px] font-bold border border-emerald-200 dark:border-emerald-800/40 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-300 hover:border-emerald-500 transition"
+                >
+                  {rub >= 1000 ? `${rub / 1000}k` : rub}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">

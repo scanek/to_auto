@@ -150,5 +150,5 @@ async def get_current_admin(
         )
     return current_user
 
-# Alias for backward compatibility if needed
-require_admin = get_current_user
+# Alias for backward compatibility / dependency injection
+require_admin = get_current_admin

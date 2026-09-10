@@ -627,9 +627,35 @@ export function App() {
         )}
 
         {loading ? (
-          <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-3">
-            <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Загрузка данных гаража...</p>
+          <div className="space-y-4 animate-pulse max-w-5xl mx-auto py-2">
+            {/* Skeleton Header Card */}
+            <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750/80 rounded-3xl p-5 sm:p-6 space-y-4 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 rounded-2xl bg-slate-200 dark:bg-dark-750" />
+                  <div className="space-y-2">
+                    <div className="w-36 sm:w-48 h-5 bg-slate-200 dark:bg-dark-750 rounded-lg" />
+                    <div className="w-24 h-3 bg-slate-100 dark:bg-dark-800 rounded" />
+                  </div>
+                </div>
+                <div className="flex space-x-2">
+                  <div className="w-20 h-9 bg-slate-200 dark:bg-dark-750 rounded-xl" />
+                  <div className="w-20 h-9 bg-slate-200 dark:bg-dark-750 rounded-xl" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                <div className="h-16 bg-slate-100 dark:bg-dark-800 rounded-2xl" />
+                <div className="h-16 bg-slate-100 dark:bg-dark-800 rounded-2xl" />
+                <div className="h-16 bg-slate-100 dark:bg-dark-800 rounded-2xl" />
+                <div className="h-16 bg-slate-100 dark:bg-dark-800 rounded-2xl" />
+              </div>
+            </div>
+
+            {/* Skeleton List Items */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
+              <div className="h-28 bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750/80 rounded-2xl p-4 space-y-2" />
+              <div className="h-28 bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750/80 rounded-2xl p-4 space-y-2" />
+            </div>
           </div>
         ) : selectedVehicle ? (
           <VehicleDetails
