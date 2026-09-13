@@ -38,11 +38,11 @@ export const QuickMileageModal: React.FC<QuickMileageModalProps> = ({
     try {
       await onSave(
         odometer,
-        trackHours && engineHours > 0 ? engineHours : undefined
+        trackHours && !isNaN(engineHours) && engineHours >= 0 ? engineHours : undefined
       );
       onClose();
     } catch (err) {
-      alert('Ошибка при обновлении показателей одометра');
+      alert('Ошибка при обновлении показателей одометра и моточасов');
     } finally {
       setLoading(false);
     }
@@ -59,7 +59,7 @@ export const QuickMileageModal: React.FC<QuickMileageModalProps> = ({
             </div>
             <div>
               <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
-                Быстрое обновление пробега
+                Корректировка пробега и м/ч
               </h2>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate max-w-[240px]">
                 {vehicle.make} {vehicle.model}
@@ -77,11 +77,13 @@ export const QuickMileageModal: React.FC<QuickMileageModalProps> = ({
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           {/* Current Status Baseline */}
           <div className="bg-slate-50 dark:bg-dark-900/90 border border-slate-200 dark:border-dark-750 p-3 rounded-xl flex items-center justify-between text-xs">
-            <span className="text-slate-500 dark:text-slate-400 font-medium">Текущее значение:</span>
+            <span className="text-slate-500 dark:text-slate-400 font-medium">Текущее в системе:</span>
             <div className="flex items-center space-x-2 font-mono font-bold text-slate-900 dark:text-white">
               <span>{Math.round(vehicle.current_odometer || 0).toLocaleString('ru-RU')} {vehicle.distance_unit}</span>
-              {trackHours && vehicle.current_engine_hours ? (
-                <span className="text-slate-400 dark:text-slate-500">• {vehicle.current_engine_hours} м/ч</span>
+              {trackHours ? (
+                <span className="text-amber-500 dark:text-amber-400">
+                  • {vehicle.current_engine_hours || 0} м/ч
+                </span>
               ) : null}
             </div>
           </div>
@@ -134,11 +136,11 @@ export const QuickMileageModal: React.FC<QuickMileageModalProps> = ({
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  Моточасы (м/ч, опция)
+                  Моточасы (м/ч)
                 </label>
                 {hoursDiff !== 0 && (
                   <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${
-                    hoursDiff > 0 ? 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400' : 'bg-rose-500/10 text-rose-600'
+                    hoursDiff > 0 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-rose-500/10 text-rose-600'
                   }`}>
                     {hoursDiff > 0 ? `+${hoursDiff}` : hoursDiff} м/ч
                   </span>
@@ -148,13 +150,43 @@ export const QuickMileageModal: React.FC<QuickMileageModalProps> = ({
                 <input
                   type="number"
                   step="any"
-                  value={engineHours || ''}
+                  value={engineHours}
                   onChange={(e) => setEngineHours(parseFloat(e.target.value) || 0)}
-                  placeholder="Например 850"
-                  className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl pl-9 pr-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white font-mono focus:outline-none focus:border-brand-500"
+                  placeholder="Например 809"
+                  className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl pl-9 pr-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white font-mono font-bold focus:outline-none focus:border-amber-500"
                 />
-                <Clock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                <Clock className="w-4 h-4 text-amber-500 absolute left-3 top-2.5" />
               </div>
+
+              {/* Quick Increment Buttons for Engine Hours */}
+              <div className="grid grid-cols-4 gap-1.5 mt-2">
+                {[1, 5, 10, 50].map((delta) => (
+                  <button
+                    type="button"
+                    key={delta}
+                    onClick={() => setEngineHours((prev) => Math.round(((prev || 0) + delta) * 10) / 10)}
+                    className="py-1 px-1 rounded-lg text-xs font-bold border border-slate-200 dark:border-dark-700 bg-slate-100 dark:bg-dark-800 text-slate-700 dark:text-slate-300 hover:border-amber-500 hover:bg-amber-500/10 transition flex items-center justify-center space-x-0.5"
+                  >
+                    <span>+{delta} ч</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Quick Estimate Helper if hours is 0 and odometer exists */}
+              {engineHours === 0 && odometer > 100 && (
+                <button
+                  type="button"
+                  onClick={() => setEngineHours(Math.round(odometer / 32))}
+                  className="mt-2 w-full py-1.5 px-2.5 rounded-lg border border-dashed border-amber-500/40 hover:border-amber-500 bg-amber-500/5 hover:bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[11px] font-semibold flex items-center justify-center space-x-1.5 transition"
+                >
+                  <TrendingUp className="w-3.5 h-3.5" />
+                  <span>Рассчитать по пробегу (~{Math.round(odometer / 32)} м/ч при ср. скорости 32 км/ч)</span>
+                </button>
+              )}
+
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1.5 leading-tight">
+                💡 При подключении StarLine система автоматически начисляет моточасы по каждой поездке и прогреву.
+              </p>
             </div>
           )}
 
@@ -172,7 +204,7 @@ export const QuickMileageModal: React.FC<QuickMileageModalProps> = ({
               className="px-5 py-2.5 rounded-xl text-xs font-bold bg-brand-500 hover:bg-brand-600 active:scale-95 text-white transition-all shadow-md shadow-brand-500/20 disabled:opacity-50 flex items-center space-x-1.5"
             >
               <CheckCircle2 className="w-4 h-4" />
-              <span>{loading ? 'Сохранение...' : 'Обновить пробег'}</span>
+              <span>{loading ? 'Сохранение...' : 'Сохранить'}</span>
             </button>
           </div>
         </form>

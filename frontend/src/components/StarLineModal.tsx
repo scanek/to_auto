@@ -291,7 +291,7 @@ export const StarLineModal: React.FC<StarLineModalProps> = ({
                     <span className="text-[9px] px-1 py-0.2 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold">авто</span>
                   </div>
                   <div className="text-xs font-extrabold text-amber-500 mt-0.5">
-                    {vehicle.current_engine_hours ? `${vehicle.current_engine_hours} м/ч` : '—'}
+                    {vehicle.current_engine_hours && vehicle.current_engine_hours > 0 ? `${vehicle.current_engine_hours} м/ч` : '0 м/ч'}
                   </div>
                 </div>
 

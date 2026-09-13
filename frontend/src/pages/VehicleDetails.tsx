@@ -195,40 +195,14 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
     }
   };
 
-  const handleQuickChangeOdometer = async (e: React.MouseEvent) => {
+  const handleQuickChangeOdometer = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const current = Math.round(vehicle.current_odometer);
-    const input = prompt(`Введите актуальный общий пробег автомобиля (${vehicle.distance_unit || 'км'}):`, String(current));
-    if (input !== null) {
-      const val = parseFloat(input.trim().replace(/\s/g, '').replace(',', '.'));
-      if (!isNaN(val) && val >= 0) {
-        try {
-          await api.updateVehicle(vehicle.id, { current_odometer: val });
-          await onRefreshVehicle();
-          await loadData();
-        } catch (err: any) {
-          alert('Ошибка при сохранении пробега: ' + (err.message || ''));
-        }
-      }
-    }
+    setIsQuickMileageOpen(true);
   };
 
-  const handleQuickChangeEngineHours = async (e: React.MouseEvent) => {
+  const handleQuickChangeEngineHours = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const current = vehicle.current_engine_hours || 0;
-    const input = prompt('Введите актуальные моточасы двигателя (м/ч):', String(current));
-    if (input !== null) {
-      const val = parseFloat(input.trim().replace(/\s/g, '').replace(',', '.'));
-      if (!isNaN(val) && val >= 0) {
-        try {
-          await api.updateVehicle(vehicle.id, { current_engine_hours: val });
-          await onRefreshVehicle();
-          await loadData();
-        } catch (err: any) {
-          alert('Ошибка при сохранении моточасов: ' + (err.message || ''));
-        }
-      }
-    }
+    setIsQuickMileageOpen(true);
   };
 
   const handleQuickChangeTankCapacity = async (e: React.MouseEvent) => {
@@ -800,13 +774,15 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                     <CalendarClock className="w-3 h-3 text-amber-500 flex-shrink-0 ml-1" />
                   </div>
                   <div className="text-xs sm:text-base font-black text-amber-600 dark:text-amber-400 font-mono mt-0.5 sm:mt-1 flex items-baseline space-x-0.5 sm:space-x-1">
-                    {vehicle.current_engine_hours > 0 ? (
+                    {vehicle.current_engine_hours && vehicle.current_engine_hours > 0 ? (
                       <>
                         <span>{vehicle.current_engine_hours}</span>
                         <span className="text-[9px] sm:text-xs font-semibold text-slate-500">м/ч</span>
                       </>
                     ) : (
-                      <span className="text-[10px] sm:text-xs text-slate-400 font-medium">В норме</span>
+                      <span className="text-[10px] sm:text-xs text-amber-500 dark:text-amber-400 font-semibold group-hover:underline">
+                        0 м/ч (задать)
+                      </span>
                     )}
                   </div>
                 </div>
@@ -2628,10 +2604,11 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
           onClose={() => setIsQuickMileageOpen(false)}
           vehicle={vehicle}
           onSave={async (odo, hours) => {
-            await api.updateVehicle(vehicle.id, {
-              current_odometer: odo,
-              current_engine_hours: hours,
-            });
+            const updatePayload: any = { current_odometer: odo };
+            if (hours !== undefined && !isNaN(hours) && hours >= 0) {
+              updatePayload.current_engine_hours = hours;
+            }
+            await api.updateVehicle(vehicle.id, updatePayload);
             await onRefreshVehicle();
             await loadData();
           }}
