@@ -632,31 +632,21 @@ class StarLineService:
         token: str,
         from_dt: datetime.datetime,
         to_dt: datetime.datetime,
-        last_processed_track_time: Optional[datetime.datetime] = None,
-    ) -> tuple[float, Optional[datetime.datetime]]:
+    ) -> float:
         """
-        Fetches completed tracks and ways from StarLine API within [from_dt, to_dt].
-        Uses the official POST /json/v1/device/{device_id}/ways endpoint.
-        Calculates total driving duration in hours.
+        Queries StarLine /ways API for vehicle motion duration (seconds) strictly
+        within the given [from_dt, to_dt] window (max 24h).
+        Returns: driving duration in hours (float).
         """
         from_ts = int(from_dt.timestamp())
         to_ts = int(to_dt.timestamp())
 
         if to_ts <= from_ts:
-            return 0.0, last_processed_track_time
+            return 0.0
 
-        # StarLine API restricts /ways intervals to a maximum of 24 hours per call.
-        # Split into <= 24h (86400 sec) chunks, up to 7 days in the past.
-        max_lookback = 7 * 86400
-        if to_ts - from_ts > max_lookback:
-            from_ts = to_ts - max_lookback
-
-        chunks = []
-        cur_begin = from_ts
-        while cur_begin < to_ts:
-            cur_end = min(cur_begin + 86400, to_ts)
-            chunks.append((cur_begin, cur_end))
-            cur_begin = cur_end
+        # StarLine restricts /ways to max 24 hours per call
+        if to_ts - from_ts > 86400:
+            from_ts = to_ts - 86400
 
         headers = {
             "Cookie": f"slnet={token.strip()}; slid_token={token.strip()}",
@@ -667,58 +657,33 @@ class StarLineService:
             "Accept": "application/json",
         }
 
-        total_moving_seconds = 0.0
-        max_track_end = last_processed_track_time
         ways_url = f"{STARLINE_DEV_URL}/json/v1/device/{device_id}/ways"
+        body = {
+            "begin": from_ts,
+            "end": to_ts,
+            "split_way": True,
+            "div_days": True,
+        }
 
-        async with httpx.AsyncClient(timeout=25.0) as client:
-            for chunk_begin, chunk_end in chunks:
-                body = {
-                    "begin": chunk_begin,
-                    "end": chunk_end,
-                    "split_way": True,
-                    "div_days": True,
-                }
-                try:
-                    resp = await client.post(ways_url, json=body, headers=headers)
-                    if resp.status_code == 200 and resp.text and resp.text.strip():
-                        data = resp.json()
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                resp = await client.post(ways_url, json=body, headers=headers)
+                if resp.status_code == 200 and resp.text and resp.text.strip():
+                    data = resp.json()
+                    if data.get("code") == 200:
+                        moving_time = float(data.get("moving_time") or 0.0)
+                        if moving_time > 0:
+                            return round(moving_time / 3600.0, 2)
                         ways = data.get("way", [])
                         if isinstance(ways, list) and ways:
-                            for w in ways:
-                                if not isinstance(w, dict):
-                                    continue
-                                w_begin = _parse_ts(w.get("begin") or w.get("start"))
-                                w_end = _parse_ts(w.get("end") or w.get("stop"))
-                                m_sec = float(w.get("moving_time") or 0.0)
+                            sec_sum = sum(float(w.get("moving_time") or 0.0) for w in ways if isinstance(w, dict))
+                            if sec_sum > 0:
+                                return round(sec_sum / 3600.0, 2)
+        except Exception as ex:
+            from app.core.logger import log
+            log.warning(f"[StarLine Ways] Error querying ways for device {device_id}: {ex}")
 
-                                if last_processed_track_time:
-                                    if w_end and w_end <= last_processed_track_time:
-                                        continue
-                                    if not w_end and w_begin and w_begin <= last_processed_track_time:
-                                        continue
-
-                                if m_sec > 0:
-                                    total_moving_seconds += m_sec
-                                    if w_end and (max_track_end is None or w_end > max_track_end):
-                                        max_track_end = w_end
-                                    elif w_begin:
-                                        approx = w_begin + datetime.timedelta(seconds=m_sec)
-                                        if max_track_end is None or approx > max_track_end:
-                                            max_track_end = approx
-                        else:
-                            top_moving = float(data.get("moving_time") or 0.0)
-                            if top_moving > 0:
-                                total_moving_seconds += top_moving
-                                end_dt = datetime.datetime.fromtimestamp(chunk_end, tz=datetime.timezone.utc).replace(tzinfo=None)
-                                if max_track_end is None or end_dt > max_track_end:
-                                    max_track_end = end_dt
-                except Exception as ex:
-                    from app.core.logger import log
-                    log.warning(f"[StarLine Ways] Error querying ways for device {device_id} ({chunk_begin}-{chunk_end}): {ex}")
-
-        delta_hours = round(total_moving_seconds / 3600.0, 2)
-        return delta_hours, max_track_end
+        return 0.0
 
     @staticmethod
     async def sync_vehicle_with_starline(db: AsyncSession, vehicle: Vehicle) -> Dict[str, Any]:
@@ -747,62 +712,56 @@ class StarLineService:
         # 2. Engine Hours Sync:
         starline_hrs = telemetry.get("engine_hours")
         current_hrs = float(vehicle.current_engine_hours or 0.0)
+        is_running = bool(telemetry.get("is_running"))
 
         if vehicle.track_engine_hours:
-            # Check if CAN/OBD telemetry provided absolute lifetime engine hours (>= current hours or plausible initial counter)
+            # Case A: Real CAN/OBD telemetry provided absolute lifetime engine hours
             if starline_hrs is not None and (starline_hrs >= current_hrs or (current_hrs == 0.0 and starline_hrs >= 1.0)):
                 vehicle.current_engine_hours = round(starline_hrs, 1)
                 updated_fields.append(f"моточасы: {vehicle.current_engine_hours:.1f} м/ч (CAN)")
-            else:
-                # Calculate engine hours delta from StarLine completed trips/ways, warmups, and odometer delta
-                if vehicle.starline_last_track_time:
-                    from_dt = vehicle.starline_last_track_time
-                elif vehicle.starline_last_sync:
-                    from_dt = vehicle.starline_last_sync
-                else:
-                    from_dt = now - datetime.timedelta(hours=24)
 
-                min_dt = now - datetime.timedelta(days=7)
-                if from_dt < min_dt:
-                    from_dt = min_dt
-
-                delta_hours = 0.0
-                latest_track_time = None
+            # Case B: The car actually drove (odometer increased)
+            elif delta_odo > 0.0:
+                from_dt = vehicle.starline_last_sync or (now - datetime.timedelta(hours=24))
+                ways_hours = 0.0
                 try:
-                    delta_hours, latest_track_time = await StarLineService.fetch_trips_duration_hours(
+                    ways_hours = await StarLineService.fetch_trips_duration_hours(
                         user_id=vehicle.starline_user_id,
                         device_id=vehicle.starline_device_id,
                         token=vehicle.starline_token,
                         from_dt=from_dt,
                         to_dt=now,
-                        last_processed_track_time=vehicle.starline_last_track_time,
                     )
-                except Exception as ex:
-                    from app.core.logger import log
-                    log.warning(f"[StarLine Engine Hours] Error fetching trips for vehicle #{vehicle.id}: {ex}")
+                except Exception:
+                    pass
 
-                # HYBRID FALLBACK: If StarLine /ways returned 0 (e.g. GPS monitoring off on SIM, or tunnel/no satellite fix),
-                # but the car odometer actually increased (delta_odo > 0):
-                if delta_odo > 0.0:
-                    # Realistic average city/mixed speed is ~28-32 km/h (default 30 km/h)
-                    odo_hours = round(delta_odo / 30.0, 1)
-                    if odo_hours > delta_hours:
-                        delta_hours = odo_hours
-
-                # Also track engine warmup/idling if engine is running (telemetry is_running):
-                if telemetry.get("is_running") and vehicle.starline_last_sync:
-                    elapsed_sec = (now - vehicle.starline_last_sync).total_seconds()
-                    if 60.0 <= elapsed_sec <= 3600.0 and delta_hours == 0.0:
-                        delta_hours = round(elapsed_sec / 3600.0, 1)
+                # If StarLine ways returned a plausible duration, use it; otherwise calculate via average speed ~30 km/h
+                min_plausible = delta_odo / 120.0
+                max_plausible = max(0.5, delta_odo / 10.0)
+                if min_plausible <= ways_hours <= max_plausible:
+                    delta_hours = round(ways_hours, 1)
+                else:
+                    delta_hours = round(delta_odo / 30.0, 1)
 
                 if delta_hours > 0.0:
                     vehicle.current_engine_hours = round(current_hrs + delta_hours, 1)
-                    updated_fields.append(f"моточасы: +{delta_hours:.1f} м/ч (всего: {vehicle.current_engine_hours:.1f})")
+                    updated_fields.append(f"моточасы: +{delta_hours:.1f} м/ч (поездка +{int(delta_odo)} км, всего: {vehicle.current_engine_hours:.1f})")
 
-                if latest_track_time:
-                    vehicle.starline_last_track_time = latest_track_time
-                else:
-                    vehicle.starline_last_track_time = now
+            # Case C: Stationary engine warmup/idling (engine is on right now, vehicle was already running previously)
+            elif is_running and vehicle.starline_is_running and vehicle.starline_last_sync:
+                elapsed_sec = (now - vehicle.starline_last_sync).total_seconds()
+                # Track ongoing warmup between checks (1 min to 30 min)
+                if 60.0 <= elapsed_sec <= 1800.0:
+                    idle_hours = round(elapsed_sec / 3600.0, 2)
+                    if idle_hours >= 0.1:
+                        vehicle.current_engine_hours = round(current_hrs + idle_hours, 1)
+                        updated_fields.append(f"моточасы (прогрев): +{idle_hours:.1f} м/ч (всего: {vehicle.current_engine_hours:.1f})")
+
+            # Case D: Stationary and engine off (or newly synced without movement) -> DO NOTHING!
+            # Engine hours remain strictly untouched when parked.
+
+        # Update last sync and last track time markers to NOW
+        vehicle.starline_last_track_time = now
 
         if telemetry.get("battery") is not None:
             vehicle.starline_battery = telemetry["battery"]
