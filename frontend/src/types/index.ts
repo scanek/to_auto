@@ -70,7 +70,9 @@ export interface Vehicle {
   starline_auto_sync_interval_minutes?: number;
   starline_last_track_time?: string;
   telematics_webhook_key?: string;
-  drive_type?: 'fwd' | 'awd' | 'rwd';
+  drive_type?: 'fwd' | 'awd' | 'rwd' | string;
+  starline_token?: string | null;
+  starline_app_id?: string | null;
   public_booklet_token?: string | null;
   public_booklet_enabled?: boolean;
   public_show_costs?: boolean;
@@ -231,6 +233,7 @@ export interface TyreSet {
   rotation_interval_km?: number;
   is_directional?: boolean;
   created_at: string;
+  updated_at?: string;
 }
 
 export interface DocumentNote {
@@ -357,6 +360,7 @@ export interface PublicBookletData {
     year?: number;
     license_plate?: string;
     vin?: string;
+    engine?: string;
     body_type?: string;
     fuel_type?: string;
     transmission?: string;
@@ -380,6 +384,8 @@ export interface PublicBookletData {
     to_tag?: string | null;
     title: string;
     description?: string | null;
+    store?: string | null;
+    url?: string | null;
     parts_cost?: number | null;
     labor_cost?: number | null;
     total_cost?: number | null;
@@ -391,6 +397,8 @@ export interface PublicBookletData {
       unit: string;
       unit_price?: number | null;
       total_price?: number | null;
+      store?: string | null;
+      url?: string | null;
     }>;
   }>;
   tyres: Array<{
@@ -450,7 +458,7 @@ export interface FuseBox {
   tips?: string[];
 }
 
-export type DtcCategory = 'powertrain' | 'body' | 'chassis' | 'network';
+export type DtcCategory = 'powertrain' | 'body' | 'chassis' | 'network' | string;
 
 export interface DtcCodeItem {
   code: string;

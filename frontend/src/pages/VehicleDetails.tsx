@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { QuickMileageModal } from '../components/QuickMileageModal';
 import { QrBookletModal } from '../components/QrBookletModal';
 import { StarLineModal } from '../components/StarLineModal';
@@ -7,8 +7,11 @@ import { ConsumableModal } from '../components/ConsumableModal';
 import { TyreRotationWidget } from '../components/TyreRotationWidget';
 import { PublicShareModal } from '../components/PublicShareModal';
 import { ReceiptScanModal } from '../components/ReceiptScanModal';
-import { KnowledgeBaseTab } from '../components/KnowledgeBaseTab';
 import { StoreBadge } from '../components/StoreBadge';
+
+const KnowledgeBaseTab = React.lazy(() =>
+  import('../components/KnowledgeBaseTab').then((m) => ({ default: m.KnowledgeBaseTab }))
+);
 import { CHANGAN_CS55_PLUS_SCHEDULE } from '../data/factorySchedulesData';
 import { parseDotCode } from '../utils/tyreAnalytics';
 import { downloadIcsReminder } from '../utils/qrcodeHelper';
@@ -2588,12 +2591,23 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               </div>
             )}
 
-        {/* Knowledge Base / Wiki Tab */}
+        {/* Knowledge Base / Wiki Tab (Lazy Loaded) */}
         {activeTab === 'wiki' && (
-          <KnowledgeBaseTab
-            vehicleMake={vehicle.make}
-            vehicleModel={vehicle.model}
-          />
+          <Suspense
+            fallback={
+              <div className="flex flex-col items-center justify-center p-16 text-slate-400 bg-white dark:bg-dark-900 rounded-2xl border border-slate-200 dark:border-dark-800 shadow-sm">
+                <RefreshCw className="w-8 h-8 animate-spin text-brand-500 mb-3" />
+                <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                  Загрузка базы знаний Changan...
+                </span>
+              </div>
+            }
+          >
+            <KnowledgeBaseTab
+              vehicleMake={vehicle.make}
+              vehicleModel={vehicle.model}
+            />
+          </Suspense>
         )}
       </div>
 

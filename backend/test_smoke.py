@@ -192,6 +192,9 @@ async def run_tests():
 
     print("ALL SMOKE TESTS PASSED SUCCESSFULLY!")
 
+def test_smoke():
+    asyncio.run(run_tests())
+
 if __name__ == "__main__":
     asyncio.run(run_tests())
 

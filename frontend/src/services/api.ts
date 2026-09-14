@@ -57,7 +57,7 @@ async function request<T>(
     cacheKey?: string;
     description?: string;
     entityType?: QueuedAction['entityType'];
-    fallbackMock?: () => T;
+    fallbackMock?: () => T | Promise<T>;
   }
 ): Promise<T> {
   const method = (options?.method || 'GET').toUpperCase();
@@ -123,7 +123,7 @@ async function request<T>(
           return cached;
         }
         if (offlineConfig?.fallbackMock) {
-          return offlineConfig.fallbackMock();
+          return await offlineConfig.fallbackMock();
         }
       }
       throw err;
@@ -193,7 +193,7 @@ async function request<T>(
 
       // Optimistic simulated mock return
       if (offlineConfig?.fallbackMock) {
-        return offlineConfig.fallbackMock();
+        return await offlineConfig.fallbackMock();
       }
       return (bodyData || { id: Date.now(), ...bodyData }) as T;
     }
@@ -1098,6 +1098,8 @@ export const api = {
         method: 'POST',
       }
     ),
+
+  syncVehicleStarLine: (vehicleId: number) => api.syncTelematics(vehicleId),
 
   executeTelematicsCommand: (vehicleId: number, command: string) =>
     request<{ status: string; command: string; message: string }>(

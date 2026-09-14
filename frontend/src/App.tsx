@@ -826,7 +826,7 @@ export function App() {
       />
 
             {/* Single Unified Footer */}
-      <footer className="w-full border-t border-slate-200 dark:border-dark-800 bg-white/60 dark:bg-dark-900/60 backdrop-blur-sm py-3.5 px-3 sm:px-6 mt-auto text-center transition-colors">
+      <footer className="w-full border-t border-slate-200 dark:border-dark-800 bg-white/60 dark:bg-dark-900/60 backdrop-blur-sm pt-4 pb-24 sm:pb-4 px-3 sm:px-6 mt-auto text-center transition-colors">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400 font-medium">
           <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
             <span>Бортовой Журнал</span>

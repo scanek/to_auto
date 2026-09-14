@@ -15,6 +15,7 @@ import {
   VehicleConsumable,
   VehicleAnalytics,
   TyreRotatePayload,
+  FuelEconomyPoint,
 } from '../types';
 import { Capacitor } from '@capacitor/core';
 
@@ -524,14 +525,17 @@ class LocalDatabaseEngine {
       interval_distance: data.interval_distance ?? 10000,
       interval_hours: data.interval_hours ?? null,
       interval_months: data.interval_months ?? 12,
-      last_service_odometer: data.last_service_odometer ?? null,
-      last_service_hours: data.last_service_hours ?? null,
-      last_service_date: data.last_service_date ?? null,
+      last_service_odometer: data.last_service_odometer ?? 0,
+      last_service_hours: data.last_service_hours ?? 0,
+      last_service_date: data.last_service_date || new Date().toISOString(),
       notify_before_distance: data.notify_before_distance ?? 1000,
       notify_before_hours: data.notify_before_hours ?? 20,
       notify_before_days: data.notify_before_days ?? 30,
       is_active: data.is_active ?? true,
       notes: data.notes || '',
+      created_at: data.created_at || new Date().toISOString(),
+      status: data.status || 'ok',
+      progress_percentage: data.progress_percentage ?? 0,
     };
     await this.putItem(STORES.REMINDERS, plan);
     return plan;
@@ -616,7 +620,7 @@ class LocalDatabaseEngine {
       rims_brand_model: data.rims_brand_model || '',
       rims_size: data.rims_size || '',
       rims_price: Number(data.rims_price) || 0,
-      tpms_sensors: data.tpms_sensors ?? false,
+      tpms_sensors: typeof data.tpms_sensors === 'string' ? data.tpms_sensors : (data.tpms_sensors ? 'installed' : 'none'),
       tpms_has_sensors: data.tpms_has_sensors ?? false,
       tpms_frequency: data.tpms_frequency || '433 MHz',
       tpms_brand: data.tpms_brand || '',
@@ -748,6 +752,7 @@ class LocalDatabaseEngine {
       engine_hours: data.engine_hours ? Number(data.engine_hours) : null,
       is_active: data.is_active ?? true,
       notes: data.notes || '',
+      created_at: data.created_at || new Date().toISOString(),
     };
     await this.putItem(STORES.DOCUMENTS, doc);
     return doc;
@@ -812,14 +817,14 @@ class LocalDatabaseEngine {
   }
 
   public async prefillConsumablesTemplate(vehicleId: number): Promise<VehicleConsumable[]> {
-    const templates = [
-      { category: 'Моторное масло', name: 'Спецификация масла двигателя', specification: '5W-30 / 5W-40 ACEA A3/B4', replacement_interval: '8 000 - 10 000 км' },
-      { category: 'Масляный фильтр', name: 'Фильтр очистки масла', oem_part_number: '', replacement_interval: 'С каждой заменой масла' },
-      { category: 'Воздушный фильтр', name: 'Фильтр впускного тракта', oem_part_number: '', replacement_interval: '15 000 км' },
-      { category: 'Салонный фильтр', name: 'Фильтр кондиционера / салона', oem_part_number: '', replacement_interval: '10 000 - 15 000 км' },
-      { category: 'Тормозная жидкость', name: 'DOT 4 / DOT 4 Class 6', specification: 'DOT 4', replacement_interval: '2 года / 40 000 км' },
-      { category: 'Охлаждающая жидкость', name: 'Антифриз (G12+ / G12++)', specification: 'G12+', replacement_interval: '3-5 лет / 60 000 км' },
-      { category: 'Свечи зажигания', name: 'Иридиевые / платиновые свечи', oem_part_number: '', replacement_interval: '30 000 - 60 000 км' },
+    const templates: Array<Partial<VehicleConsumable>> = [
+      { category: 'engine', name: 'Моторное масло', specification: '5W-30 / 5W-40 ACEA A3/B4', replacement_interval: '8 000 - 10 000 км' },
+      { category: 'filters', name: 'Масляный фильтр', oem_part_number: '', replacement_interval: 'С каждой заменой масла' },
+      { category: 'filters', name: 'Воздушный фильтр двигателя', oem_part_number: '', replacement_interval: '15 000 км' },
+      { category: 'filters', name: 'Салонный фильтр', oem_part_number: '', replacement_interval: '10 000 - 15 000 км' },
+      { category: 'brakes', name: 'Тормозная жидкость', specification: 'DOT 4 / DOT 4 Class 6', replacement_interval: '2 года / 40 000 км' },
+      { category: 'cooling', name: 'Охлаждающая жидкость (антифриз)', specification: 'G12+ / G12++', replacement_interval: '3-5 лет / 60 000 км' },
+      { category: 'electrical', name: 'Свечи зажигания', oem_part_number: '', replacement_interval: '30 000 - 60 000 км' },
     ];
     const created: VehicleConsumable[] = [];
     for (let i = 0; i < templates.length; i++) {

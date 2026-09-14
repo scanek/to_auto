@@ -11,7 +11,7 @@ export interface QueuedAction {
   method: 'POST' | 'PUT' | 'DELETE';
   url: string;
   body?: any;
-  entityType?: 'vehicle' | 'service' | 'fuel' | 'reminder' | 'tyre' | 'document';
+  entityType?: 'vehicle' | 'service' | 'fuel' | 'reminder' | 'tyre' | 'document' | 'consumable' | 'other';
 }
 
 const DB_NAME = 'bortovoi_zhurnal_db';
