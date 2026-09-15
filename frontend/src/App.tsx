@@ -557,7 +557,7 @@ export function App() {
 
       {/* Sync Notification Toast */}
       {syncToast && (
-        <div className="fixed bottom-6 right-6 z-50 bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-700 shadow-2xl rounded-2xl p-3.5 flex items-center space-x-2.5 text-xs font-bold animate-slide-up">
+        <div className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-50 bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-700 shadow-2xl rounded-2xl p-3.5 flex items-center space-x-2.5 text-xs font-bold animate-slide-up">
           {syncToast.type === 'success' ? (
             <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
           ) : (

@@ -4,7 +4,7 @@
 
 @layer base {
   body {
-    @apply bg-dark-900 text-slate-100;
+    @apply bg-slate-50 dark:bg-dark-900 text-slate-900 dark:text-slate-100 antialiased selection:bg-brand-500/20 selection:text-brand-400;
   }
 }
 
@@ -14,12 +14,17 @@
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0d1117;
+  background: #090d16;
 }
 ::-webkit-scrollbar-thumb {
-  background: #232b3c;
+  background: #1a243b;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #38bdf8;
+}
+
+/* Safe area inset utilities for mobile notch/home bar */
+.pb-safe {
+  padding-bottom: max(env(safe-area-inset-bottom, 8px), 8px);
 }

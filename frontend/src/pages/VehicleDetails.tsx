@@ -8,6 +8,7 @@ import { TyreRotationWidget } from '../components/TyreRotationWidget';
 import { PublicShareModal } from '../components/PublicShareModal';
 import { ReceiptScanModal } from '../components/ReceiptScanModal';
 import { StoreBadge } from '../components/StoreBadge';
+import { BottomNav, MobileNavSection } from '../components/BottomNav';
 
 const KnowledgeBaseTab = React.lazy(() =>
   import('../components/KnowledgeBaseTab').then((m) => ({ default: m.KnowledgeBaseTab }))
@@ -68,6 +69,9 @@ import {
   Key,
   BookOpen,
   Settings,
+  LayoutDashboard,
+  History,
+  ArrowRight,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -128,6 +132,24 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
     'service' | 'repairs' | 'upgrades' | 'fuel' | 'reminders' | 'analytics' | 'specs' | 'tyres' | 'documents' | 'wiki'
   >('service');
   const [serviceFilter, setServiceFilter] = useState<'all' | 'service' | 'repair' | 'upgrade'>('all');
+  const [mobileSection, setMobileSection] = useState<MobileNavSection>('dashboard');
+
+  const handleSelectMobileSection = (section: MobileNavSection) => {
+    if (section === 'settings') {
+      setIsToolsModalOpen(true);
+    } else {
+      setMobileSection(section);
+      if (section === 'timeline') {
+        if (!['service', 'repairs', 'upgrades', 'fuel', 'analytics', 'documents'].includes(activeTab)) {
+          setActiveTab('service');
+        }
+      } else if (section === 'parts') {
+        if (!['specs', 'tyres', 'reminders', 'wiki'].includes(activeTab)) {
+          setActiveTab('specs');
+        }
+      }
+    }
+  };
 
   const isOwner = isAuthenticated && vehicle.is_owner !== false;
   const isChangan = `${vehicle.make} ${vehicle.model}`.toLowerCase().includes('changan');
@@ -510,9 +532,60 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   }, [navTabs, activeTab]);
 
   return (
-    <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6 animate-fadeIn">
+    <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-4 sm:py-6 pb-24 md:pb-8 space-y-4 sm:space-y-6 animate-fadeIn">
+      {/* Compact Mobile Sub-Header when viewing Timeline or Parts */}
+      {mobileSection !== 'dashboard' && (
+        <div className="md:hidden flex items-center justify-between gap-2 p-3 bg-white dark:bg-dark-850/95 backdrop-blur-xl border border-slate-200/80 dark:border-[#27354f]/80 rounded-2xl shadow-sm">
+          <div className="flex items-center space-x-2.5 min-w-0">
+            <button
+              onClick={() => setMobileSection('dashboard')}
+              className="p-2 bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl transition-colors border border-slate-200 dark:border-dark-700 flex-shrink-0"
+              title="Назад в дашборд"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+            <div className="min-w-0">
+              <h2 className="text-sm font-black text-slate-900 dark:text-white truncate">
+                {vehicle.name || `${vehicle.make} ${vehicle.model}`}
+              </h2>
+              <div className="text-[11px] font-mono text-brand-600 dark:text-brand-400 font-bold">
+                {vehicle.current_odometer.toLocaleString('ru-RU')} {vehicle.distance_unit || 'км'}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-1.5 flex-shrink-0">
+            {mobileSection === 'timeline' && isOwner && (
+              <button
+                onClick={() => onOpenServiceModal('service')}
+                className="px-2.5 py-1.5 bg-gradient-to-r from-brand-500 to-sky-600 text-white font-bold rounded-xl text-xs flex items-center space-x-1 shadow-sm active:scale-95"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Запись</span>
+              </button>
+            )}
+            {mobileSection === 'parts' && isOwner && (
+              <button
+                onClick={() => setIsConsumableModalOpen(true)}
+                className="px-2.5 py-1.5 bg-gradient-to-r from-brand-500 to-sky-600 text-white font-bold rounded-xl text-xs flex items-center space-x-1 shadow-sm active:scale-95"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Деталь</span>
+              </button>
+            )}
+            <button
+              onClick={() => setIsToolsModalOpen(true)}
+              className="p-2 rounded-xl text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-dark-800 border border-slate-200 dark:border-dark-700 active:scale-95"
+              title="Инструменты"
+            >
+              <Settings className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Top Navigation & Vehicle Header */}
-      <div className="relative overflow-hidden bg-white dark:bg-dark-850/95 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] rounded-3xl p-4 sm:p-6 shadow-sm dark:shadow-2xl shadow-slate-900/5 space-y-4 sm:space-y-6 transition-all">
+      <div className={`relative overflow-hidden bg-white dark:bg-dark-850/95 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] rounded-3xl p-4 sm:p-6 shadow-sm dark:shadow-2xl shadow-slate-900/5 space-y-4 sm:space-y-6 transition-all ${mobileSection !== 'dashboard' ? 'hidden md:block' : 'block'}`}>
         {/* Subtle Ambient Decorative Glows */}
         <div className="absolute -top-24 -right-24 w-80 h-80 bg-brand-500/10 dark:bg-brand-500/[0.07] rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-sky-500/10 dark:bg-sky-500/[0.05] rounded-full blur-3xl pointer-events-none" />
@@ -1133,8 +1206,8 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
         </div>
       </div>
 
-      {/* Modern Dynamic Segmented Tab Bar (Adaptive Capsule Design) */}
-      <div className="flex flex-wrap sm:flex-nowrap items-stretch gap-1 sm:gap-1.5 p-1.5 bg-slate-100/90 dark:bg-dark-900/90 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.06] rounded-2xl shadow-inner">
+      {/* Modern Dynamic Segmented Tab Bar (Adaptive Capsule Design) - Desktop Only */}
+      <div className="hidden md:flex flex-wrap sm:flex-nowrap items-stretch gap-1 sm:gap-1.5 p-1.5 bg-slate-100/90 dark:bg-dark-900/90 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.06] rounded-2xl shadow-inner">
         {navTabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id || (tab.id === 'service' && ['service', 'repairs', 'upgrades'].includes(activeTab));
@@ -1157,8 +1230,251 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
         })}
       </div>
 
+      {/* Mobile Sub-Navigation Pill Bar for Timeline */}
+      {mobileSection === 'timeline' && (
+        <div className="md:hidden flex items-center gap-1 p-1 bg-slate-100/90 dark:bg-[#090d16]/90 backdrop-blur-xl border border-slate-200/80 dark:border-[#27354f]/80 rounded-2xl shadow-inner overflow-x-auto scrollbar-none">
+          {[
+            { id: 'service', label: 'ТО и работы', count: serviceRecords.length, icon: Wrench },
+            { id: 'fuel', label: 'Заправки', count: fuelLogs.length, icon: Fuel },
+            { id: 'analytics', label: 'Аналитика', icon: BarChart3 },
+            { id: 'documents', label: 'Документы', count: documents.length, icon: FileText },
+          ].map((subTab) => {
+            const isSubActive = subTab.id === 'service' 
+              ? ['service', 'repairs', 'upgrades'].includes(activeTab)
+              : activeTab === subTab.id;
+            const Icon = subTab.icon;
+            return (
+              <button
+                key={subTab.id}
+                onClick={() => setActiveTab(subTab.id as any)}
+                className={`flex-1 min-w-[72px] py-2 px-2 rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 transition-all whitespace-nowrap active:scale-95 ${
+                  isSubActive
+                    ? 'bg-gradient-to-r from-brand-500 to-sky-600 text-white shadow-md shadow-brand-500/25'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5 flex-shrink-0" />
+                <span>{subTab.label}</span>
+                {subTab.count !== undefined && (
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isSubActive ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-[#1a243b] text-slate-500 dark:text-slate-400'}`}>
+                    {subTab.count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Mobile Sub-Navigation Pill Bar for Parts */}
+      {mobileSection === 'parts' && (
+        <div className="md:hidden flex items-center gap-1 p-1 bg-slate-100/90 dark:bg-[#090d16]/90 backdrop-blur-xl border border-slate-200/80 dark:border-[#27354f]/80 rounded-2xl shadow-inner overflow-x-auto scrollbar-none">
+          {[
+            { id: 'specs', label: 'Расходники', count: consumables.length, icon: BookOpen },
+            { id: 'tyres', label: 'Шины', count: tyres.length, icon: Disc },
+            { id: 'reminders', label: 'Регламент', count: reminders.length, icon: CalendarClock },
+            ...(isChangan || enabledTabsList.includes('wiki') ? [{ id: 'wiki', label: 'База знаний', icon: Zap }] : []),
+          ].map((subTab) => {
+            const isSubActive = activeTab === subTab.id;
+            const Icon = subTab.icon;
+            return (
+              <button
+                key={subTab.id}
+                onClick={() => setActiveTab(subTab.id as any)}
+                className={`flex-1 min-w-[72px] py-2 px-2 rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 transition-all whitespace-nowrap active:scale-95 ${
+                  isSubActive
+                    ? 'bg-gradient-to-r from-brand-500 to-sky-600 text-white shadow-md shadow-brand-500/25'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5 flex-shrink-0" />
+                <span>{subTab.label}</span>
+                {subTab.count !== undefined && (
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isSubActive ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-[#1a243b] text-slate-500 dark:text-slate-400'}`}>
+                    {subTab.count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Mobile Dashboard Overview Section (when mobileSection === 'dashboard') */}
+      {mobileSection === 'dashboard' && (
+        <div className="md:hidden space-y-4">
+          {/* Urgent / Upcoming Maintenance Alert Widget */}
+          {reminders.some((r) => r.status === 'overdue' || r.status === 'due_soon') && (
+            <div className="p-4 rounded-3xl bg-gradient-to-br from-amber-500/10 via-rose-500/5 to-transparent border border-amber-500/30 shadow-sm space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <div className="w-7 h-7 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                    <AlertTriangle className="w-4 h-4 animate-bounce" />
+                  </div>
+                  <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">
+                    Внимание: Требуется ТО ({reminders.filter((r) => r.status === 'overdue' || r.status === 'due_soon').length})
+                  </span>
+                </div>
+                <button
+                  onClick={() => {
+                    setMobileSection('parts');
+                    setActiveTab('reminders');
+                  }}
+                  className="text-[11px] font-bold text-amber-600 dark:text-amber-400 hover:underline flex items-center space-x-0.5"
+                >
+                  <span>Все</span>
+                  <ArrowRight className="w-3 h-3" />
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                {reminders
+                  .filter((r) => r.status === 'overdue' || r.status === 'due_soon')
+                  .slice(0, 3)
+                  .map((rem) => {
+                    const isOverdue = rem.status === 'overdue';
+                    return (
+                      <div
+                        key={rem.id}
+                        onClick={() => {
+                          setMobileSection('parts');
+                          setActiveTab('reminders');
+                        }}
+                        className="flex items-center justify-between p-2.5 rounded-2xl bg-white/80 dark:bg-dark-850/80 border border-slate-200/80 dark:border-white/[0.06] shadow-xs active:scale-[0.98] transition-transform cursor-pointer"
+                      >
+                        <div className="min-w-0 pr-2">
+                          <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                            {rem.title}
+                          </div>
+                          <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                            {rem.remaining_distance !== null && rem.remaining_distance !== undefined ? (
+                              <span className={isOverdue ? 'text-rose-500 font-bold' : 'text-amber-600 dark:text-amber-400 font-bold'}>
+                                {isOverdue
+                                  ? `Просрочено на ${Math.abs(Math.round(rem.remaining_distance)).toLocaleString('ru-RU')} ${vehicle.distance_unit || 'км'}`
+                                  : `Осталось ${Math.round(rem.remaining_distance).toLocaleString('ru-RU')} ${vehicle.distance_unit || 'км'}`}
+                              </span>
+                            ) : (
+                              <span className="text-amber-500 font-medium">По сроку</span>
+                            )}
+                          </div>
+                        </div>
+                        <span
+                          className={`text-[9.5px] font-extrabold uppercase px-2 py-0.5 rounded-lg border flex-shrink-0 ${
+                            isOverdue
+                              ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30'
+                              : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                          }`}
+                        >
+                          {isOverdue ? 'Срочно' : 'Скоро'}
+                        </span>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          )}
+
+          {/* Recent Activity (Timeline Preview) */}
+          <div className="p-4 rounded-3xl bg-white dark:bg-dark-850/90 border border-slate-200/80 dark:border-white/[0.08] shadow-sm space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="w-7 h-7 rounded-xl bg-brand-500/15 text-brand-600 dark:text-brand-400 flex items-center justify-center">
+                  <History className="w-4 h-4" />
+                </div>
+                <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">
+                  Последние события
+                </span>
+              </div>
+              <button
+                onClick={() => {
+                  setMobileSection('timeline');
+                  setActiveTab('service');
+                }}
+                className="text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center space-x-0.5"
+              >
+                <span>Журнал ({serviceRecords.length})</span>
+                <ArrowRight className="w-3 h-3" />
+              </button>
+            </div>
+
+            {serviceRecords.length === 0 && fuelLogs.length === 0 ? (
+              <div className="text-center py-6 text-xs text-slate-400">
+                Записей пока нет. Добавьте первое ТО или заправку!
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {serviceRecords.slice(0, 3).map((rec) => (
+                  <div
+                    key={rec.id}
+                    onClick={() => {
+                      setMobileSection('timeline');
+                      setActiveTab('service');
+                    }}
+                    className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-50 dark:bg-dark-900/60 border border-slate-200/60 dark:border-white/[0.04] active:scale-[0.98] transition-transform cursor-pointer"
+                  >
+                    <div className="flex items-center space-x-2.5 min-w-0 pr-2">
+                      <div className="w-8 h-8 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center flex-shrink-0">
+                        <Wrench className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                          {rec.title}
+                        </div>
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                          {new Date(rec.date).toLocaleDateString('ru-RU')} • {rec.odometer.toLocaleString('ru-RU')} {vehicle.distance_unit || 'км'}
+                        </div>
+                      </div>
+                    </div>
+                    {rec.cost > 0 && (
+                      <div className="text-xs font-mono font-black text-slate-900 dark:text-white flex-shrink-0">
+                        {Math.round(rec.cost).toLocaleString('ru-RU')} {vehicle.currency || '₽'}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Quick Nav Cards 2x2 for Parts & Tyres */}
+          <div className="grid grid-cols-2 gap-2.5">
+            <button
+              onClick={() => {
+                setMobileSection('parts');
+                setActiveTab('specs');
+              }}
+              className="p-3.5 rounded-2xl bg-white dark:bg-dark-850/90 border border-slate-200/80 dark:border-white/[0.08] shadow-sm text-left space-y-1.5 active:scale-95 transition-all"
+            >
+              <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-500 flex items-center justify-center">
+                <BookOpen className="w-4 h-4" />
+              </div>
+              <div className="text-xs font-black text-slate-900 dark:text-white">Расходники & ТО</div>
+              <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                {consumables.length} позиций деталей
+              </div>
+            </button>
+
+            <button
+              onClick={() => {
+                setMobileSection('parts');
+                setActiveTab('tyres');
+              }}
+              className="p-3.5 rounded-2xl bg-white dark:bg-dark-850/90 border border-slate-200/80 dark:border-white/[0.08] shadow-sm text-left space-y-1.5 active:scale-95 transition-all"
+            >
+              <div className="w-8 h-8 rounded-xl bg-sky-500/15 text-sky-500 flex items-center justify-center">
+                <Disc className="w-4 h-4" />
+              </div>
+              <div className="text-xs font-black text-slate-900 dark:text-white">Шины & Давление</div>
+              <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                {tyres.length} комплектов колес
+              </div>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Tab Content */}
-      <div className="space-y-4">
+      <div className={`space-y-4 ${mobileSection === 'dashboard' ? 'hidden md:block' : 'block'}`}>
         {/* Service / Repairs / Upgrades Combined Tab */}
         {['service', 'repairs', 'upgrades'].includes(activeTab) && (
           <div className="space-y-3.5">
@@ -2717,6 +3033,13 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
         onExportVehicleBackup={handleExportVehicleBackup}
         onDownloadExcel={() => api.downloadExcelFile(vehicle.id)}
         onDownloadPdf={() => api.downloadServiceBooklet(vehicle.id)}
+      />
+
+      {/* Mobile Fixed Bottom Navigation Bar (4 non-scrolling items) */}
+      <BottomNav
+        activeSection={isToolsModalOpen ? 'settings' : mobileSection}
+        onSelectSection={handleSelectMobileSection}
+        attentionCount={reminders.filter((r) => r.status === 'overdue' || r.status === 'due_soon').length}
       />
     </div>
   );

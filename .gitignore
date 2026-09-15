@@ -25,7 +25,7 @@ ENV/
 .env
 
 # SQLite Database & Local Data
-backend/data/*.db
+backend/data/*.db*
 backend/data/.jwt_secret
 backend/data/uploads/*
 !backend/data/uploads/.gitkeep
