@@ -37,8 +37,8 @@ export const QuickActionFab: React.FC<QuickActionFabProps> = ({
         />
       )}
 
-      {/* FAB Container - high z-index (z-50) so it's strictly above backdrops and bottom bars */}
-      <div className="fixed bottom-6 right-4 sm:bottom-8 sm:right-6 z-50 flex flex-col items-end print:hidden select-none touch-manipulation pb-[env(safe-area-inset-bottom)] pr-[env(safe-area-inset-right)]">
+      {/* FAB Container - desktop only (on mobile the central + button in BottomNav is used) */}
+      <div className="hidden md:flex fixed bottom-8 right-6 z-50 flex-col items-end print:hidden select-none touch-manipulation pb-[env(safe-area-inset-bottom)] pr-[env(safe-area-inset-right)]">
         {/* Speed-dial items stack */}
         {isOpen && (
           <div className="flex flex-col items-end space-y-3 mb-3 animate-slide-up">

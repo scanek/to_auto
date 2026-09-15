@@ -253,8 +253,45 @@ export const ConsumablesTab: React.FC<ConsumablesTabProps> = ({
             />
           </div>
 
-          {/* Category Filter Pills */}
-          <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 scrollbar-none">
+          {/* Mobile Category Dropdown Selector (No scrolling required) */}
+          <div className="sm:hidden relative">
+            <div className="flex items-center justify-between p-2.5 bg-slate-100/90 dark:bg-[#0f1626] border border-slate-200 dark:border-[#27354f] rounded-2xl shadow-sm">
+              <div className="flex items-center space-x-2 text-xs font-bold text-slate-800 dark:text-white min-w-0">
+                <span className="text-sm flex-shrink-0">
+                  {selectedCategory === 'all' ? '📦' : CATEGORY_META[selectedCategory]?.icon || '🔧'}
+                </span>
+                <span className="truncate">
+                  {selectedCategory === 'all' ? 'Все категории' : CATEGORY_META[selectedCategory]?.label || 'Категория'}
+                </span>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-brand-500/15 text-brand-600 dark:text-brand-400">
+                  {selectedCategory === 'all'
+                    ? consumables.length
+                    : consumables.filter((c) => c.category === selectedCategory).length}
+                </span>
+              </div>
+              <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0 pointer-events-none" />
+              {/* Overlay Native Select for 100% native mobile feel */}
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                aria-label="Фильтр по категории"
+              >
+                <option value="all">📦 Все категории ({consumables.length})</option>
+                {Object.entries(CATEGORY_META).map(([catId, meta]) => {
+                  const count = consumables.filter((c) => c.category === catId).length;
+                  return (
+                    <option key={catId} value={catId}>
+                      {meta.icon} {meta.label} ({count})
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+          </div>
+
+          {/* Desktop Category Filter Pills */}
+          <div className="hidden sm:flex items-center space-x-1.5 overflow-x-auto pb-1 scrollbar-none">
             <button
               type="button"
               onClick={() => setSelectedCategory('all')}

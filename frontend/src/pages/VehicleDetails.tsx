@@ -1230,13 +1230,13 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
         })}
       </div>
 
-      {/* Mobile Sub-Navigation Pill Bar for Timeline */}
+      {/* Mobile Sub-Navigation Grid for Timeline */}
       {mobileSection === 'timeline' && (
-        <div className="md:hidden flex items-center gap-1 p-1 bg-slate-100/90 dark:bg-[#090d16]/90 backdrop-blur-xl border border-slate-200/80 dark:border-[#27354f]/80 rounded-2xl shadow-inner overflow-x-auto scrollbar-none">
+        <div className="md:hidden grid grid-cols-4 gap-1 p-1 bg-slate-100/90 dark:bg-[#090d16]/90 backdrop-blur-xl border border-slate-200/80 dark:border-[#27354f]/80 rounded-2xl shadow-inner w-full">
           {[
-            { id: 'service', label: 'ТО и работы', count: serviceRecords.length, icon: Wrench },
+            { id: 'service', label: 'ТО', count: serviceRecords.length, icon: Wrench },
             { id: 'fuel', label: 'Заправки', count: fuelLogs.length, icon: Fuel },
-            { id: 'analytics', label: 'Аналитика', icon: BarChart3 },
+            { id: 'analytics', label: 'Отчет', icon: BarChart3 },
             { id: 'documents', label: 'Документы', count: documents.length, icon: FileText },
           ].map((subTab) => {
             const isSubActive = subTab.id === 'service' 
@@ -1247,33 +1247,39 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               <button
                 key={subTab.id}
                 onClick={() => setActiveTab(subTab.id as any)}
-                className={`flex-1 min-w-[72px] py-2 px-2 rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 transition-all whitespace-nowrap active:scale-95 ${
+                className={`w-full min-w-0 py-1.5 px-0.5 rounded-xl flex flex-col items-center justify-center transition-all select-none active:scale-95 ${
                   isSubActive
-                    ? 'bg-gradient-to-r from-brand-500 to-sky-600 text-white shadow-md shadow-brand-500/25'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    ? 'bg-gradient-to-b from-brand-500 to-sky-600 text-white shadow-md shadow-brand-500/25'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04]'
                 }`}
               >
-                <Icon className="w-3.5 h-3.5 flex-shrink-0" />
-                <span>{subTab.label}</span>
-                {subTab.count !== undefined && (
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isSubActive ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-[#1a243b] text-slate-500 dark:text-slate-400'}`}>
-                    {subTab.count}
-                  </span>
-                )}
+                <div className="relative flex items-center justify-center">
+                  <Icon className="w-4 h-4 flex-shrink-0" />
+                  {subTab.count !== undefined && subTab.count > 0 && (
+                    <span className={`absolute -top-1.5 -right-3 text-[8.5px] font-bold px-1 rounded-full ${
+                      isSubActive ? 'bg-white text-brand-600' : 'bg-slate-200 dark:bg-[#1a243b] text-slate-500 dark:text-slate-300'
+                    }`}>
+                      {subTab.count > 99 ? '99+' : subTab.count}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px] font-bold tracking-tight truncate max-w-full text-center mt-1 leading-none">
+                  {subTab.label}
+                </span>
               </button>
             );
           })}
         </div>
       )}
 
-      {/* Mobile Sub-Navigation Pill Bar for Parts */}
+      {/* Mobile Sub-Navigation Grid for Parts */}
       {mobileSection === 'parts' && (
-        <div className="md:hidden flex items-center gap-1 p-1 bg-slate-100/90 dark:bg-[#090d16]/90 backdrop-blur-xl border border-slate-200/80 dark:border-[#27354f]/80 rounded-2xl shadow-inner overflow-x-auto scrollbar-none">
+        <div className="md:hidden grid grid-cols-4 gap-1 p-1 bg-slate-100/90 dark:bg-[#090d16]/90 backdrop-blur-xl border border-slate-200/80 dark:border-[#27354f]/80 rounded-2xl shadow-inner w-full">
           {[
-            { id: 'specs', label: 'Расходники', count: consumables.length, icon: BookOpen },
+            { id: 'specs', label: 'Детали', count: consumables.length, icon: BookOpen },
             { id: 'tyres', label: 'Шины', count: tyres.length, icon: Disc },
             { id: 'reminders', label: 'Регламент', count: reminders.length, icon: CalendarClock },
-            ...(isChangan || enabledTabsList.includes('wiki') ? [{ id: 'wiki', label: 'База знаний', icon: Zap }] : []),
+            ...(isChangan || enabledTabsList.includes('wiki') ? [{ id: 'wiki', label: 'Wiki', icon: Zap }] : []),
           ].map((subTab) => {
             const isSubActive = activeTab === subTab.id;
             const Icon = subTab.icon;
@@ -1281,19 +1287,25 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               <button
                 key={subTab.id}
                 onClick={() => setActiveTab(subTab.id as any)}
-                className={`flex-1 min-w-[72px] py-2 px-2 rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 transition-all whitespace-nowrap active:scale-95 ${
+                className={`w-full min-w-0 py-1.5 px-0.5 rounded-xl flex flex-col items-center justify-center transition-all select-none active:scale-95 ${
                   isSubActive
-                    ? 'bg-gradient-to-r from-brand-500 to-sky-600 text-white shadow-md shadow-brand-500/25'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    ? 'bg-gradient-to-b from-brand-500 to-sky-600 text-white shadow-md shadow-brand-500/25'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04]'
                 }`}
               >
-                <Icon className="w-3.5 h-3.5 flex-shrink-0" />
-                <span>{subTab.label}</span>
-                {subTab.count !== undefined && (
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isSubActive ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-[#1a243b] text-slate-500 dark:text-slate-400'}`}>
-                    {subTab.count}
-                  </span>
-                )}
+                <div className="relative flex items-center justify-center">
+                  <Icon className="w-4 h-4 flex-shrink-0" />
+                  {subTab.count !== undefined && subTab.count > 0 && (
+                    <span className={`absolute -top-1.5 -right-3 text-[8.5px] font-bold px-1 rounded-full ${
+                      isSubActive ? 'bg-white text-brand-600' : 'bg-slate-200 dark:bg-[#1a243b] text-slate-500 dark:text-slate-300'
+                    }`}>
+                      {subTab.count > 99 ? '99+' : subTab.count}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px] font-bold tracking-tight truncate max-w-full text-center mt-1 leading-none">
+                  {subTab.label}
+                </span>
               </button>
             );
           })}
@@ -3035,11 +3047,15 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
         onDownloadPdf={() => api.downloadServiceBooklet(vehicle.id)}
       />
 
-      {/* Mobile Fixed Bottom Navigation Bar (4 non-scrolling items) */}
+      {/* Mobile Fixed Bottom Navigation Bar (5 columns with central raised + button) */}
       <BottomNav
         activeSection={isToolsModalOpen ? 'settings' : mobileSection}
         onSelectSection={handleSelectMobileSection}
         attentionCount={reminders.filter((r) => r.status === 'overdue' || r.status === 'due_soon').length}
+        onAddFuel={() => onOpenFuelModal()}
+        onAddService={() => onOpenServiceModal('service')}
+        onUpdateOdometer={() => setIsQuickMileageOpen(true)}
+        onScanReceipt={() => setIsReceiptScanOpen(true)}
       />
     </div>
   );
