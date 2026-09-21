@@ -1,12 +1,13 @@
 {
   "name": "autotracker-frontend",
   "private": true,
-  "version": "3.6.1",
+  "version": "3.6.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.1",

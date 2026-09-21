@@ -26,11 +26,18 @@ import packageJson from '../package.json';
 
 export function App() {
   // Public service booklet route (Avito / Auto.ru sharing)
-  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/booklet/')) {
+  const isBookletRoute = typeof window !== 'undefined' && (
+    window.location.pathname.includes('/booklet/') ||
+    window.location.hash.includes('/booklet/') ||
+    new URLSearchParams(window.location.search).has('booklet') ||
+    Boolean(new URLSearchParams(window.location.search).get('p')?.includes('/booklet/'))
+  );
+  if (isBookletRoute) {
     return <PublicServiceBooklet />;
   }
 
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [vehiclesError, setVehiclesError] = useState<string | null>(null);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [loading, setLoading] = useState(true);
   const isInitialVehicleRoutedRef = useRef<boolean>(false);
@@ -76,6 +83,7 @@ export function App() {
 
   const loadVehicles = async (isInitialLanding: boolean = false) => {
     try {
+      setVehiclesError(null);
       const data = await api.getVehicles();
       setVehicles(data);
 
@@ -96,8 +104,9 @@ export function App() {
           setSelectedVehicle({ ...updated, updated_at: new Date().toISOString() });
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load vehicles', err);
+      setVehiclesError(err?.message || 'Не удалось связаться с сервером для загрузки автомобилей');
     } finally {
       setLoading(false);
     }
@@ -130,6 +139,8 @@ export function App() {
       } catch (err) {
         console.warn('Invalid or expired token', err);
         removeAuthToken();
+        await offlineStorage.clearAllCache().catch(() => {});
+        await localDB.clearDatabase().catch(() => {});
       }
     }
 
@@ -343,7 +354,7 @@ export function App() {
     loadVehicles(true);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (localDB.isStandalone()) {
       return; // No-op in standalone mode
     }
@@ -351,8 +362,11 @@ export function App() {
     setCurrentUser(null);
     setIsAuthenticated(false);
     setVehicles([]);
+    setVehiclesError(null);
     setSelectedVehicle(null);
     isInitialVehicleRoutedRef.current = false;
+    await offlineStorage.clearAllCache().catch(() => {});
+    await localDB.clearDatabase().catch(() => {});
     setIsAuthModalOpen(true);
   };
 
@@ -620,6 +634,7 @@ export function App() {
                 setIsAnnouncementDismissed(true);
                 sessionStorage.setItem('dismissed_announcement_time', announcement.updated_at || 'dismissed');
               }}
+              aria-label="Закрыть объявление"
               className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition flex-shrink-0"
               title="Скрыть объявление на время сессии"
             >
@@ -681,6 +696,8 @@ export function App() {
             onEditVehicle={handleOpenEditVehicle}
             onDeleteVehicle={handleDeleteVehicle}
             onOpenImportModal={() => setIsImportModalOpen(true)}
+            error={vehiclesError}
+            onRetry={() => loadVehicles()}
             onOpenServiceModal={(type) => {
               if (vehicles.length > 0) {
                 setSelectedVehicle(vehicles[0]);

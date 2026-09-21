@@ -41,9 +41,40 @@ export const PublicServiceBooklet: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'service' | 'tyres' | 'consumables'>('service');
 
-  // Extract token from URL path (/booklet/:token)
-  const pathname = window.location.pathname;
-  const token = pathname.split('/booklet/')[1]?.replace(/[^a-zA-Z0-9_-]/g, '') || '';
+  // Extract token from URL path (/booklet/:token), hash, or query parameter
+  const getToken = (): string => {
+    if (typeof window === 'undefined') return '';
+    // 1. Direct path check (e.g. /booklet/:token or /subpath/booklet/:token)
+    if (window.location.pathname.includes('/booklet/')) {
+      const parts = window.location.pathname.split('/booklet/');
+      if (parts[1]) {
+        return parts[1].split('/')[0].replace(/[^a-zA-Z0-9_-]/g, '');
+      }
+    }
+    // 2. Hash check (e.g. #/booklet/:token)
+    if (window.location.hash.includes('/booklet/')) {
+      const parts = window.location.hash.split('/booklet/');
+      if (parts[1]) {
+        return parts[1].split('/')[0].split('?')[0].replace(/[^a-zA-Z0-9_-]/g, '');
+      }
+    }
+    // 3. Search query check (e.g. ?booklet=:token or SPA redirect ?p=/booklet/:token)
+    const searchParams = new URLSearchParams(window.location.search);
+    const queryToken = searchParams.get('booklet');
+    if (queryToken) {
+      return queryToken.replace(/[^a-zA-Z0-9_-]/g, '');
+    }
+    const pParam = searchParams.get('p');
+    if (pParam && pParam.includes('/booklet/')) {
+      const parts = pParam.split('/booklet/');
+      if (parts[1]) {
+        return parts[1].split('/')[0].replace(/[^a-zA-Z0-9_-]/g, '');
+      }
+    }
+    return '';
+  };
+
+  const token = getToken();
 
   useEffect(() => {
     if (!token) {
@@ -55,7 +86,7 @@ export const PublicServiceBooklet: React.FC = () => {
     const fetchBooklet = async () => {
       try {
         setLoading(true);
-        api.recordHit(pathname);
+        api.recordHit(window.location.pathname);
         const res = await api.getPublicBooklet(token);
         setData(res);
       } catch (err: any) {
@@ -66,7 +97,7 @@ export const PublicServiceBooklet: React.FC = () => {
     };
 
     fetchBooklet();
-  }, [token, pathname]);
+  }, [token]);
 
   if (loading) {
     return (

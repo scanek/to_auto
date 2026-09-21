@@ -44,7 +44,8 @@ export const PublicShareModal: React.FC<PublicShareModalProps> = ({
 
   if (!isOpen) return null;
 
-  const publicUrl = token ? `${window.location.origin}/booklet/${token}` : '';
+  const basePath = window.location.pathname.replace(/\/booklet\/.*$/, '').replace(/\/+$/, '');
+  const publicUrl = token ? `${window.location.origin}${basePath}/booklet/${token}` : '';
   const qrCodeUrl = token
     ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(publicUrl)}`
     : '';

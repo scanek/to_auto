@@ -254,6 +254,26 @@ class OfflineStorageEngine {
     this.notifyListeners();
     return { processed, failed };
   }
+
+  // -----------------------------------------------------------------
+  // 4. Clear Cache & Queue (e.g. on User Logout for Data Isolation)
+  // -----------------------------------------------------------------
+  public async clearAllCache(): Promise<void> {
+    try {
+      const db = await this.getDB();
+      await new Promise<void>((resolve, reject) => {
+        const tx = db.transaction([STORE_CACHE, STORE_QUEUE], 'readwrite');
+        tx.objectStore(STORE_CACHE).clear();
+        tx.objectStore(STORE_QUEUE).clear();
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch {
+      localStorage.removeItem('offline_cache');
+      localStorage.removeItem('sync_queue');
+    }
+    this.notifyListeners();
+  }
 }
 
 export const offlineStorage = new OfflineStorageEngine();

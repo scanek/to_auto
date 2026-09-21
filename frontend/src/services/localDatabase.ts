@@ -1279,6 +1279,26 @@ class LocalDatabaseEngine {
 
     return JSON.stringify(payload, null, 2);
   }
+
+  public async clearDatabase(): Promise<void> {
+    try {
+      const db = await this.getDB();
+      await new Promise<void>((resolve, reject) => {
+        const storeNames = Object.values(STORES);
+        const tx = db.transaction(storeNames, 'readwrite');
+        storeNames.forEach((s) => {
+          if (db.objectStoreNames.contains(s)) {
+            tx.objectStore(s).clear();
+          }
+        });
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch (e) {
+      console.error('Failed to clear localDatabase:', e);
+    }
+  }
 }
 
 export const localDB = new LocalDatabaseEngine();
+

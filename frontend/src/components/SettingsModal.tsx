@@ -86,6 +86,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }, [initialTab, isOpen]);
 
+  // Handle Escape key to close modal
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   // Password change state
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [oldPassword, setOldPassword] = useState('');
@@ -180,7 +192,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     } else {
-      window.location.href = api.exportVehicleBackupUrl(targetId);
+      await api.downloadVehicleBackup(targetId, filename);
     }
   };
 
@@ -199,12 +211,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     } else {
-      window.location.href = api.exportMyGarageBackupUrl();
+      await api.downloadMyGarageBackup();
     }
   };
 
   const handleExportFullServerJson = async () => {
-    window.location.href = api.exportAllBackupUrl();
+    await api.downloadAllBackup();
   };
 
   const [isSendingTgBackup, setIsSendingTgBackup] = useState(false);
@@ -494,7 +506,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 animate-fadeIn">
-      <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 w-full max-w-2xl rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[85vh]">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="settings-modal-title"
+        className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 w-full max-w-2xl rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[85vh]"
+      >
         {/* Header */}
         <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-100 dark:border-dark-750 flex items-center justify-between bg-slate-50/70 dark:bg-dark-900/50 flex-shrink-0">
           <div className="flex items-center space-x-2.5">
@@ -502,7 +519,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <Settings className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+              <h2 id="settings-modal-title" className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
                 Настройки и инструменты
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -512,6 +529,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
           <button
             onClick={onClose}
+            aria-label="Закрыть настройки"
             className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-dark-750 rounded-xl transition"
           >
             <X className="w-5 h-5" />
@@ -713,7 +731,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       <p className="text-[11px] text-slate-500 dark:text-slate-400">
                         {isStandalone
                           ? 'Данные хранятся локально на этом устройстве без отправки в интернет'
-                          : `Синхронизация с сервером: ${localDB.getServerUrl()}`}
+                          : `Синхронизация с сервером: ${localDB.getServerUrl() || 'Текущий хост (по умолчанию)'}`}
                       </p>
                     </div>
                   </div>
@@ -1708,13 +1726,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         </div>
 
                         <div className="space-y-2 pt-1">
-                          <a
-                            href={api.exportDatabaseUrl()}
+                          <button
+                            type="button"
+                            onClick={() => api.downloadDatabaseBackup('autotracker.db')}
                             className="w-full flex items-center justify-center space-x-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition shadow-md shadow-emerald-600/20"
                           >
                             <Download className="w-4 h-4" />
                             <span>Скачать файл autotracker.db</span>
-                          </a>
+                          </button>
 
                           <button
                             type="button"

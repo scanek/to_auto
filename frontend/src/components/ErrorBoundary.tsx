@@ -47,7 +47,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <p className="text-xs text-slate-400 leading-relaxed">
               Компонент страницы вызвал непредвиденное исключение.
             </p>
-            {this.state.error && (
+            {import.meta.env.DEV && this.state.error && (
               <div className="bg-slate-950/80 p-3.5 rounded-xl text-left font-mono text-[11px] text-rose-300 border border-rose-500/20 overflow-x-auto max-h-40">
                 <div className="font-bold">{this.state.error.toString()}</div>
                 {this.state.errorInfo?.componentStack && (

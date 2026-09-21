@@ -265,7 +265,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
       } else {
-        window.location.href = api.exportVehicleBackupUrl(vehicle.id);
+        await api.downloadVehicleBackup(vehicle.id, filename);
       }
     } catch (err: any) {
       alert('Ошибка при экспорте бэкапа: ' + (err.message || ''));
@@ -1437,9 +1437,9 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                         </div>
                       </div>
                     </div>
-                    {rec.cost > 0 && (
+                    {((rec.total_cost ?? 0) > 0 || ((rec.cost_parts || 0) + (rec.cost_labor || 0)) > 0) && (
                       <div className="text-xs font-mono font-black text-slate-900 dark:text-white flex-shrink-0">
-                        {Math.round(rec.cost).toLocaleString('ru-RU')} {vehicle.currency || '₽'}
+                        {Math.round(rec.total_cost ?? ((rec.cost_parts || 0) + (rec.cost_labor || 0))).toLocaleString('ru-RU')} {vehicle.currency || '₽'}
                       </div>
                     )}
                   </div>

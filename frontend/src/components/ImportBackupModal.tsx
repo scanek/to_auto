@@ -61,9 +61,21 @@ export const ImportBackupModal: React.FC<ImportBackupModalProps> = ({
     }
   };
 
+  const MAX_BACKUP_SIZE_BYTES = 25 * 1024 * 1024; // 25 MB
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith('.json')) {
+      setError('Поддерживаются только файлы резервных копий в формате .json');
+      return;
+    }
+
+    if (file.size > MAX_BACKUP_SIZE_BYTES) {
+      setError(`Размер файла превышает допустимый предел (максимум 25 МБ). Размер выбранного файла: ${(file.size / (1024 * 1024)).toFixed(1)} МБ`);
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -86,15 +98,6 @@ export const ImportBackupModal: React.FC<ImportBackupModalProps> = ({
     } finally {
       setLoading(false);
     }
-  };
-
-  const downloadJson = (url: string) => {
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = '';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
   const triggerExport = async (type: 'all' | 'garage' | 'vehicle' | 'db', vehicleId?: number) => {
@@ -122,13 +125,13 @@ export const ImportBackupModal: React.FC<ImportBackupModalProps> = ({
       URL.revokeObjectURL(blobUrl);
     } else {
       if (type === 'all') {
-        downloadJson(api.exportAllBackupUrl());
+        await api.downloadAllBackup();
       } else if (type === 'garage') {
-        downloadJson(api.exportMyGarageBackupUrl());
+        await api.downloadMyGarageBackup();
       } else if (type === 'db') {
-        downloadJson(api.exportDatabaseUrl());
+        await api.downloadDatabaseBackup('autotracker.db');
       } else if (vehicleId) {
-        downloadJson(api.exportVehicleBackupUrl(vehicleId));
+        await api.downloadVehicleBackup(vehicleId);
       }
     }
   };

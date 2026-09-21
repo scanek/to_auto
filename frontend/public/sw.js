@@ -1,11 +1,13 @@
-const CACHE_NAME = 'autotracker-cache-v24';
+const CACHE_NAME = 'autotracker-cache-v25';
 
 // Assets to pre-cache on install
 const PRECACHE_ASSETS = [
-  '/manifest.json',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
-  '/icons/icon.svg'
+  './',
+  './index.html',
+  './manifest.json',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './icons/icon.svg'
 ];
 
 self.addEventListener('install', (event) => {
@@ -36,15 +38,15 @@ self.addEventListener('fetch', (event) => {
 
   // 1. Never cache API, uploads or non-GET requests
   if (
-    url.pathname.startsWith('/api/') ||
-    url.pathname.startsWith('/uploads/') ||
+    url.pathname.includes('/api/') ||
+    url.pathname.includes('/uploads/') ||
     event.request.method !== 'GET'
   ) {
     return;
   }
 
   // 2. Navigation / HTML requests: NETWORK FIRST, fallback to cached index.html
-  if (event.request.mode === 'navigate' || url.pathname === '/' || url.pathname === '/index.html') {
+  if (event.request.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('/index.html')) {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
@@ -54,8 +56,14 @@ self.addEventListener('fetch', (event) => {
           }
           return response;
         })
-        .catch(() => {
-          return caches.match('/index.html') || caches.match('/');
+        .catch(async () => {
+          return (
+            (await caches.match(event.request)) ||
+            (await caches.match('./index.html')) ||
+            (await caches.match('./')) ||
+            (await caches.match('/index.html')) ||
+            (await caches.match('/'))
+          );
         })
     );
     return;

@@ -36,6 +36,8 @@ interface GarageProps {
   onOpenServiceModal?: (type: 'service' | 'repair' | 'upgrade') => void;
   onOpenFuelModal?: () => void;
   onOpenReminderModal?: () => void;
+  error?: string | null;
+  onRetry?: () => void;
 }
 
 export const Garage: React.FC<GarageProps> = ({
@@ -49,6 +51,8 @@ export const Garage: React.FC<GarageProps> = ({
   onOpenServiceModal,
   onOpenFuelModal,
   onOpenReminderModal,
+  error,
+  onRetry,
 }) => {
   const [filterTab, setFilterTab] = useState<'all' | 'my' | 'shared'>('all');
 
@@ -244,7 +248,33 @@ export const Garage: React.FC<GarageProps> = ({
           </div>
         )}
 
-        {displayedVehicles.length === 0 ? (
+        {error ? (
+          <div className="bg-white dark:bg-dark-850 border border-rose-200 dark:border-rose-900/40 rounded-2xl p-8 sm:p-10 text-center space-y-4 shadow-sm">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mx-auto text-rose-500">
+              <AlertTriangle className="w-8 h-8" />
+            </div>
+            <div>
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+                Не удалось загрузить список автомобилей
+              </h3>
+              <p className="text-xs text-rose-600 dark:text-rose-400 max-w-md mx-auto mt-1">
+                {error}
+              </p>
+            </div>
+            {onRetry && (
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={onRetry}
+                  className="inline-flex items-center space-x-2 bg-brand-500 hover:bg-brand-600 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-lg shadow-brand-500/25 active:scale-95"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  <span>Повторить попытку</span>
+                </button>
+              </div>
+            )}
+          </div>
+        ) : displayedVehicles.length === 0 ? (
           <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-8 sm:p-10 text-center space-y-4 shadow-sm">
             <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-slate-100 dark:bg-dark-800 border border-slate-200 dark:border-dark-700 flex items-center justify-center mx-auto text-slate-400">
               <Car className="w-8 h-8" />
@@ -289,8 +319,16 @@ export const Garage: React.FC<GarageProps> = ({
             return (
               <div className="max-w-4xl mx-auto animate-fadeIn w-full">
                 <div
+                  role="button"
+                  tabIndex={0}
                   onClick={() => onSelectVehicle(v)}
-                  className="bg-white dark:bg-dark-850 border border-slate-200/90 dark:border-dark-750 hover:border-brand-500/50 dark:hover:border-brand-500/50 rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col md:flex-row cursor-pointer group relative"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      onSelectVehicle(v);
+                    }
+                  }}
+                  className="bg-white dark:bg-dark-850 border border-slate-200/90 dark:border-dark-750 hover:border-brand-500/50 dark:hover:border-brand-500/50 rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col md:flex-row cursor-pointer group relative focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                 >
                   {/* Subtle Ambient Glow */}
                   <div className="absolute -top-24 -right-24 w-72 h-72 bg-brand-500/10 dark:bg-brand-500/[0.07] rounded-full blur-3xl pointer-events-none" />
@@ -525,8 +563,16 @@ export const Garage: React.FC<GarageProps> = ({
               return (
                 <div
                   key={v.id}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => onSelectVehicle(v)}
-                  className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 hover:border-brand-500/50 dark:hover:border-brand-500/50 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-200 flex flex-col cursor-pointer group"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      onSelectVehicle(v);
+                    }
+                  }}
+                  className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 hover:border-brand-500/50 dark:hover:border-brand-500/50 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-200 flex flex-col cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                 >
                   {/* Vehicle Image */}
                   <div className="h-36 sm:h-40 relative bg-slate-100 dark:bg-dark-800 overflow-hidden">

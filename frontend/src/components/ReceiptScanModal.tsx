@@ -51,7 +51,18 @@ export const ReceiptScanModal: React.FC<ReceiptScanModalProps> = ({
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
+  useEffect(() => {
     if (!isOpen) {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
       setSelectedFile(null);
       setPreviewUrl(null);
       setExtractedData(null);
@@ -63,6 +74,9 @@ export const ReceiptScanModal: React.FC<ReceiptScanModalProps> = ({
   if (!isOpen) return null;
 
   const handleFileChange = (file: File) => {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
     setSelectedFile(file);
     setErrorMsg(null);
     setExtractedData(null);

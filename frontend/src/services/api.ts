@@ -26,9 +26,22 @@ export const isNativeApp = (): boolean => {
 export const getApiBase = (): string => {
   const custom = localDB.getServerUrl();
   if (custom && !localDB.isStandalone()) {
-    return `${custom}/api/v1`;
+    return `${custom.replace(/\/+$/, '')}/api/v1`;
   }
   return '/api/v1';
+};
+
+export const resolveApiUrl = (url: string): string => {
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  const srvUrl = localDB.getServerUrl();
+  if (srvUrl && !localDB.isStandalone()) {
+    const cleanSrv = srvUrl.replace(/\/+$/, '');
+    const cleanPath = url.startsWith('/') ? url : `/${url}`;
+    return `${cleanSrv}${cleanPath}`;
+  }
+  return url;
 };
 
 const API_BASE = {
@@ -80,11 +93,7 @@ async function request<T>(
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 4500);
 
-      let fetchUrl = url;
-      const srvUrl = localDB.getServerUrl();
-      if (srvUrl && !localDB.isStandalone() && url.startsWith('/api/v1')) {
-        fetchUrl = `${srvUrl}${url}`;
-      }
+      const fetchUrl = resolveApiUrl(url);
 
       const res = await fetch(fetchUrl, {
         ...options,
@@ -135,11 +144,7 @@ async function request<T>(
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 6000);
 
-    let postFetchUrl = url;
-    const postSrvUrl = localDB.getServerUrl();
-    if (postSrvUrl && !localDB.isStandalone() && url.startsWith('/api/v1')) {
-      postFetchUrl = `${postSrvUrl}${url}`;
-    }
+    const postFetchUrl = resolveApiUrl(url);
 
     const res = await fetch(postFetchUrl, {
       ...options,
@@ -520,9 +525,7 @@ export const api = {
     if (localDB.isStandalone()) {
       return localDB.getReminders(vehicleId);
     }
-    const url = new URL(`${window.location.origin}${API_BASE}/reminders`);
-    url.searchParams.set('vehicle_id', String(vehicleId));
-    return request<MaintenancePlan[]>(url.pathname + url.search, undefined, {
+    return request<MaintenancePlan[]>(`${API_BASE}/reminders?vehicle_id=${vehicleId}`, undefined, {
       cacheKey: `reminders_${vehicleId}`,
       fallbackMock: () => localDB.getReminders(vehicleId),
     });
@@ -594,11 +597,12 @@ export const api = {
     if (localDB.isStandalone()) {
       return localDB.markReminderDone(id, odo, hours);
     }
-    const url = new URL(`${window.location.origin}${API_BASE}/reminders/${id}/mark-done`);
-    if (odo !== undefined) url.searchParams.set('odometer', String(odo));
-    if (hours !== undefined) url.searchParams.set('hours', String(hours));
+    const params = new URLSearchParams();
+    if (odo !== undefined) params.set('odometer', String(odo));
+    if (hours !== undefined) params.set('hours', String(hours));
+    const qs = params.toString() ? `?${params.toString()}` : '';
     const res = await request<MaintenancePlan>(
-      url.pathname + url.search,
+      `${API_BASE}/reminders/${id}/mark-done${qs}`,
       { method: 'POST' },
       {
         description: `Выполнение регламента #${id}`,
@@ -743,10 +747,9 @@ export const api = {
     if (localDB.isStandalone()) {
       return localDB.activateTyreSet(id, mileage);
     }
-    const url = new URL(`${window.location.origin}${API_BASE}/tyres/${id}/activate`);
-    if (mileage !== undefined) url.searchParams.set('mileage', String(mileage));
+    const qs = mileage !== undefined ? `?mileage=${encodeURIComponent(String(mileage))}` : '';
     const res = await request<TyreSet>(
-      url.pathname + url.search,
+      `${API_BASE}/tyres/${id}/activate${qs}`,
       { method: 'POST' },
       {
         description: `Смена комплекта шин #${id}`,
@@ -784,9 +787,7 @@ export const api = {
     if (localDB.isStandalone()) {
       return localDB.getConsumables(vehicleId);
     }
-    const url = new URL(`${window.location.origin}${API_BASE}/consumables`);
-    url.searchParams.set('vehicle_id', String(vehicleId));
-    return request<VehicleConsumable[]>(url.pathname + url.search, undefined, {
+    return request<VehicleConsumable[]>(`${API_BASE}/consumables?vehicle_id=${vehicleId}`, undefined, {
       cacheKey: `consumables_${vehicleId}`,
       fallbackMock: () => localDB.getConsumables(vehicleId),
     });
@@ -910,12 +911,13 @@ export const api = {
   ) => {
     const formData = new FormData();
     formData.append('file', file);
-    const url = new URL(`${window.location.origin}${API_BASE}/uploads`);
-    if (params?.vehicleId) url.searchParams.set('vehicle_id', String(params.vehicleId));
-    if (params?.serviceRecordId)
-      url.searchParams.set('service_record_id', String(params.serviceRecordId));
-    if (params?.fuelLogId) url.searchParams.set('fuel_log_id', String(params.fuelLogId));
-    if (params?.documentId) url.searchParams.set('document_id', String(params.documentId));
+    const paramsQuery = new URLSearchParams();
+    if (params?.vehicleId) paramsQuery.set('vehicle_id', String(params.vehicleId));
+    if (params?.serviceRecordId) paramsQuery.set('service_record_id', String(params.serviceRecordId));
+    if (params?.fuelLogId) paramsQuery.set('fuel_log_id', String(params.fuelLogId));
+    if (params?.documentId) paramsQuery.set('document_id', String(params.documentId));
+    const qs = paramsQuery.toString() ? `?${paramsQuery.toString()}` : '';
+    const targetUrl = resolveApiUrl(`${API_BASE}/uploads${qs}`);
 
     const token = getAuthToken();
     const headers: Record<string, string> = {};
@@ -923,7 +925,7 @@ export const api = {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const res = await fetch(url.pathname + url.search, {
+    const res = await fetch(targetUrl, {
       method: 'POST',
       body: formData,
       headers,
@@ -954,22 +956,53 @@ export const api = {
       return localDB.importBackup(data);
     }
   },
-  exportVehicleBackupUrl: (vehicleId: number) => {
+
+  downloadFileWithAuth: async (url: string, defaultFilename?: string): Promise<void> => {
     const token = getAuthToken();
-    return `${API_BASE}/backup/export/${vehicleId}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    const targetUrl = resolveApiUrl(url);
+    const res = await fetch(targetUrl, { headers });
+    if (!res.ok) {
+      throw new Error(`Ошибка загрузки (${res.status}): ${res.statusText}`);
+    }
+    const blob = await res.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    let filename = defaultFilename;
+    if (!filename) {
+      const disposition = res.headers.get('content-disposition');
+      if (disposition && disposition.includes('filename=')) {
+        const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (match && match[1]) {
+          filename = match[1].replace(/['"]/g, '');
+        }
+      }
+    }
+    a.download = filename || 'download';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(blobUrl);
   },
-  exportMyGarageBackupUrl: () => {
-    const token = getAuthToken();
-    return `${API_BASE}/backup/export-all?scope=mine${token ? `&token=${encodeURIComponent(token)}` : ''}`;
-  },
-  exportAllBackupUrl: () => {
-    const token = getAuthToken();
-    return `${API_BASE}/backup/export-all${token ? `?token=${encodeURIComponent(token)}` : ''}`;
-  },
-  exportDatabaseUrl: () => {
-    const token = getAuthToken();
-    return `${API_BASE}/backup/database${token ? `?token=${encodeURIComponent(token)}` : ''}`;
-  },
+
+  downloadVehicleBackup: (vehicleId: number, filename?: string) =>
+    api.downloadFileWithAuth(`${API_BASE}/backup/export/${vehicleId}`, filename),
+  downloadMyGarageBackup: (filename?: string) =>
+    api.downloadFileWithAuth(`${API_BASE}/backup/export-all?scope=mine`, filename),
+  downloadAllBackup: (filename?: string) =>
+    api.downloadFileWithAuth(`${API_BASE}/backup/export-all`, filename),
+  downloadDatabaseBackup: (filename?: string) =>
+    api.downloadFileWithAuth(`${API_BASE}/backup/database`, filename || 'autotracker.db'),
+
+  exportVehicleBackupUrl: (vehicleId: number) => `${API_BASE}/backup/export/${vehicleId}`,
+  exportMyGarageBackupUrl: () => `${API_BASE}/backup/export-all?scope=mine`,
+  exportAllBackupUrl: () => `${API_BASE}/backup/export-all`,
+  exportDatabaseUrl: () => `${API_BASE}/backup/database`,
+
   restoreDatabaseBackup: async (file: File): Promise<{ status: string; message: string; users_count?: number; vehicles_count?: number }> => {
     const formData = new FormData();
     formData.append('file', file);
@@ -978,7 +1011,7 @@ export const api = {
     const headers: Record<string, string> = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    const res = await fetch(`${getApiBase()}/backup/database/restore`, {
+    const res = await fetch(resolveApiUrl(`${API_BASE}/backup/database/restore`), {
       method: 'POST',
       headers,
       body: formData,
@@ -996,30 +1029,22 @@ export const api = {
       `${API_BASE}/backup/send-telegram${scope ? `?scope=${encodeURIComponent(scope)}` : ''}`,
       { method: 'POST' }
     ),
-  exportServiceBookletUrl: (vehicleId: number) => {
-    const token = getAuthToken();
-    return `${API_BASE}/export/service-booklet/${vehicleId}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
-  },
-  exportExcelUrl: (vehicleId: number) => {
-    const token = getAuthToken();
-    return `${API_BASE}/export/excel/${vehicleId}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
-  },
+  exportServiceBookletUrl: (vehicleId: number) => `${API_BASE}/export/service-booklet/${vehicleId}`,
+  exportExcelUrl: (vehicleId: number) => `${API_BASE}/export/excel/${vehicleId}`,
   downloadServiceBooklet: async (vehicleId: number) => {
     try {
       const ticketRes = await request<{ ticket: string }>(`${API_BASE}/export/ticket/${vehicleId}`, { method: 'POST' });
-      window.open(`${API_BASE}/export/service-booklet/${vehicleId}?ticket=${encodeURIComponent(ticketRes.ticket)}`, '_blank');
+      window.open(resolveApiUrl(`${API_BASE}/export/service-booklet/${vehicleId}?ticket=${encodeURIComponent(ticketRes.ticket)}`), '_blank');
     } catch {
-      const token = getAuthToken();
-      window.open(`${API_BASE}/export/service-booklet/${vehicleId}${token ? `?token=${encodeURIComponent(token)}` : ''}`, '_blank');
+      await api.downloadFileWithAuth(`${API_BASE}/export/service-booklet/${vehicleId}`);
     }
   },
   downloadExcelFile: async (vehicleId: number) => {
     try {
       const ticketRes = await request<{ ticket: string }>(`${API_BASE}/export/ticket/${vehicleId}`, { method: 'POST' });
-      window.location.href = `${API_BASE}/export/excel/${vehicleId}?ticket=${encodeURIComponent(ticketRes.ticket)}`;
+      window.location.href = resolveApiUrl(`${API_BASE}/export/excel/${vehicleId}?ticket=${encodeURIComponent(ticketRes.ticket)}`);
     } catch {
-      const token = getAuthToken();
-      window.location.href = `${API_BASE}/export/excel/${vehicleId}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+      await api.downloadFileWithAuth(`${API_BASE}/export/excel/${vehicleId}`);
     }
   },
 
@@ -1054,7 +1079,7 @@ export const api = {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      const res = await fetch(action.url, {
+      const res = await fetch(resolveApiUrl(action.url), {
         method: action.method,
         headers,
         body: action.body ? JSON.stringify(action.body) : undefined,

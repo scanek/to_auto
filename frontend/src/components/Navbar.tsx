@@ -52,10 +52,12 @@ export const Navbar: React.FC<NavbarProps> = ({
     <header className="sticky top-0 z-40 bg-white/95 dark:bg-dark-900/95 backdrop-blur-md border-b border-slate-200 dark:border-dark-800 transition-colors shadow-sm dark:shadow-none">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-2">
         {/* Logo & Dynamic Brand Name */}
-        <div
-          className="flex items-center space-x-2 sm:space-x-3 cursor-pointer min-w-0 flex-1 sm:flex-initial"
+        <button
+          type="button"
+          className="flex items-center space-x-2 sm:space-x-3 cursor-pointer min-w-0 flex-1 sm:flex-initial text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded-xl"
           onClick={() => onSelectVehicle(null)}
           title="На главную в гараж"
+          aria-label="Вернуться в гараж"
         >
           <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-brand-400 flex items-center justify-center shadow-md shadow-brand-500/20 text-white font-bold text-base sm:text-xl flex-shrink-0">
             <BookOpen className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -76,7 +78,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </span>
             )}
           </div>
-        </div>
+        </button>
 
         {/* Actions */}
         <div className="flex items-center space-x-1.5 sm:space-x-2 flex-shrink-0">
