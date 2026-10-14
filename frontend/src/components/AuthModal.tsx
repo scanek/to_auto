@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { api, setAuthToken } from '../services/api';
 import { User as UserType } from '../types';
+import { useModalA11y } from '../utils/useModalA11y';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -33,6 +34,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onSuccess,
   initialMode = 'login',
 }) => {
+  useModalA11y({ isOpen, onClose });
+
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>(initialMode);
   const [hasUsers, setHasUsers] = useState<boolean | null>(null);
   const [allowRegistration, setAllowRegistration] = useState<boolean>(true);
@@ -160,7 +163,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const isFirstSetup = hasUsers === false;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm animate-fade-in">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="auth-modal-title"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm animate-fade-in"
+    >
       <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col">
         {/* Header */}
         <div className="relative px-6 pt-6 pb-4 border-b border-slate-100 dark:border-dark-750 bg-slate-50/50 dark:bg-dark-800/50">
@@ -177,7 +185,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               )}
             </div>
             <div>
-              <h2 className="text-base font-extrabold text-slate-900 dark:text-white">
+              <h2 id="auth-modal-title" className="text-base font-extrabold text-slate-900 dark:text-white">
                 {isFirstSetup
                   ? 'Первоначальная настройка'
                   : mode === 'forgot'
@@ -202,6 +210,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
           <button
             onClick={onClose}
+            aria-label="Закрыть"
             className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-white p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-dark-700 transition-colors"
           >
             <X className="w-5 h-5" />

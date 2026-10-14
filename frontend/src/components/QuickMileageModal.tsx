@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Gauge, Clock, CheckCircle2, TrendingUp } from 'lucide-react';
 import { Vehicle } from '../types';
+import { useModalA11y } from '../utils/useModalA11y';
 
 interface QuickMileageModalProps {
   isOpen: boolean;
@@ -15,6 +16,8 @@ export const QuickMileageModal: React.FC<QuickMileageModalProps> = ({
   vehicle,
   onSave,
 }) => {
+  useModalA11y({ isOpen, onClose });
+
   const [odometer, setOdometer] = useState<number>(vehicle.current_odometer || 0);
   const [engineHours, setEngineHours] = useState<number>(vehicle.current_engine_hours || 0);
   const [loading, setLoading] = useState(false);
@@ -49,7 +52,12 @@ export const QuickMileageModal: React.FC<QuickMileageModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="quick-mileage-title"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-fadeIn"
+    >
       <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl transition-colors">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-dark-750 bg-slate-50 dark:bg-dark-900/60">
@@ -58,7 +66,7 @@ export const QuickMileageModal: React.FC<QuickMileageModalProps> = ({
               <Gauge className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+              <h2 id="quick-mileage-title" className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
                 Корректировка пробега и м/ч
               </h2>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate max-w-[240px]">
@@ -68,6 +76,7 @@ export const QuickMileageModal: React.FC<QuickMileageModalProps> = ({
           </div>
           <button
             onClick={onClose}
+            aria-label="Закрыть"
             className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-dark-800 transition-colors"
           >
             <X className="w-4 h-4" />

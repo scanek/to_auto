@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, Download, Share, PlusSquare, Smartphone, Check, MoreVertical, Monitor } from 'lucide-react';
+import { useModalA11y } from '../utils/useModalA11y';
 
 interface InstallAppModalProps {
   isOpen: boolean;
@@ -16,10 +17,17 @@ export const InstallAppModal: React.FC<InstallAppModalProps> = ({
   hasNativePrompt,
   onNativeInstall,
 }) => {
+  useModalA11y({ isOpen, onClose });
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="install-app-title"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-sm animate-fadeIn"
+    >
       <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 w-full max-w-md rounded-2xl p-5 sm:p-6 shadow-2xl space-y-4 transition-colors">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -28,7 +36,7 @@ export const InstallAppModal: React.FC<InstallAppModalProps> = ({
               <Smartphone className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white">
+              <h3 id="install-app-title" className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white">
                 Установка: Бортовой Журнал
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
@@ -38,6 +46,7 @@ export const InstallAppModal: React.FC<InstallAppModalProps> = ({
           </div>
           <button
             onClick={onClose}
+            aria-label="Закрыть"
             className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-dark-750 transition-colors"
           >
             <X className="w-4 h-4" />

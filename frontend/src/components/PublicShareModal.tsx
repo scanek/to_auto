@@ -15,6 +15,7 @@ import {
   X,
   Printer,
 } from 'lucide-react';
+import { useModalA11y } from '../utils/useModalA11y';
 
 interface PublicShareModalProps {
   vehicle: Vehicle;
@@ -29,6 +30,8 @@ export const PublicShareModal: React.FC<PublicShareModalProps> = ({
   onClose,
   onUpdateVehicle,
 }) => {
+  useModalA11y({ isOpen, onClose });
+
   const [enabled, setEnabled] = useState<boolean>(vehicle.public_booklet_enabled ?? false);
   const [showCosts, setShowCosts] = useState<boolean>(vehicle.public_show_costs ?? false);
   const [token, setToken] = useState<string>(vehicle.public_booklet_token ?? '');
@@ -126,7 +129,12 @@ export const PublicShareModal: React.FC<PublicShareModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="public-share-title"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs"
+    >
       <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-5 max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-3">
@@ -135,7 +143,7 @@ export const PublicShareModal: React.FC<PublicShareModalProps> = ({
               <Share2 className="w-5 h-5" />
             </span>
             <div>
-              <h3 className="font-bold text-slate-900 dark:text-white text-base">
+              <h3 id="public-share-title" className="font-bold text-slate-900 dark:text-white text-base">
                 Публичная сервисная книжка
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -146,6 +154,7 @@ export const PublicShareModal: React.FC<PublicShareModalProps> = ({
           <button
             type="button"
             onClick={onClose}
+            aria-label="Закрыть"
             className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg"
           >
             <X className="w-5 h-5" />

@@ -13,6 +13,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { Vehicle } from '../types';
+import { useModalA11y } from '../utils/useModalA11y';
 
 interface VehicleToolsModalProps {
   isOpen: boolean;
@@ -45,10 +46,17 @@ export const VehicleToolsModal: React.FC<VehicleToolsModalProps> = ({
   onDownloadExcel,
   onDownloadPdf,
 }) => {
+  useModalA11y({ isOpen, onClose });
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 animate-fadeIn">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="vehicle-tools-title"
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 animate-fadeIn"
+    >
       <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 w-full max-w-2xl rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[88vh]">
         {/* Header */}
         <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-100 dark:border-dark-750 flex items-center justify-between bg-slate-50/70 dark:bg-dark-900/50 flex-shrink-0">
@@ -57,7 +65,7 @@ export const VehicleToolsModal: React.FC<VehicleToolsModalProps> = ({
               <Settings className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+              <h2 id="vehicle-tools-title" className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
                 Инструменты и опции
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[280px] sm:max-w-md">
@@ -67,6 +75,7 @@ export const VehicleToolsModal: React.FC<VehicleToolsModalProps> = ({
           </div>
           <button
             onClick={onClose}
+            aria-label="Закрыть"
             className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-dark-750 rounded-xl transition"
           >
             <X className="w-5 h-5" />

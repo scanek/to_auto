@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Wrench, Sparkles, Tag, ShieldCheck, Clock, FileText, Check } from 'lucide-react';
 import { VehicleConsumable, Vehicle } from '../types';
+import { useModalA11y } from '../utils/useModalA11y';
 
 interface ConsumableModalProps {
   isOpen: boolean;
@@ -39,6 +40,8 @@ export const ConsumableModal: React.FC<ConsumableModalProps> = ({
   consumable,
   vehicle,
 }) => {
+  useModalA11y({ isOpen, onClose });
+
   const [formData, setFormData] = useState({
     category: 'engine' as VehicleConsumable['category'],
     name: '',
@@ -106,7 +109,12 @@ export const ConsumableModal: React.FC<ConsumableModalProps> = ({
   const currentSuggestions = SUGGESTIONS[formData.category] || [];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="consumable-modal-title"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+    >
       <div className="bg-white dark:bg-dark-850 w-full max-w-lg rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 dark:border-dark-750 overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-dark-750">
@@ -115,7 +123,7 @@ export const ConsumableModal: React.FC<ConsumableModalProps> = ({
               <Wrench className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+              <h3 id="consumable-modal-title" className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
                 {consumable ? 'Редактировать расходник' : 'Добавить расходник в паспорт'}
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
@@ -125,6 +133,7 @@ export const ConsumableModal: React.FC<ConsumableModalProps> = ({
           </div>
           <button
             onClick={onClose}
+            aria-label="Закрыть"
             className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-dark-750 transition"
           >
             <X className="w-5 h-5" />

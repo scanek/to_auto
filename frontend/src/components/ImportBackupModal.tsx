@@ -14,6 +14,7 @@ import {
 import { Vehicle, User } from '../types';
 import { api } from '../services/api';
 import { localDB } from '../services/localDatabase';
+import { useModalA11y } from '../utils/useModalA11y';
 
 interface ImportBackupModalProps {
   isOpen: boolean;
@@ -34,6 +35,8 @@ export const ImportBackupModal: React.FC<ImportBackupModalProps> = ({
   initialTab = 'import',
   currentUser,
 }) => {
+  useModalA11y({ isOpen, onClose });
+
   const [activeTab, setActiveTab] = useState<'import' | 'export'>(initialTab);
   const [jsonText, setJsonText] = useState('');
   const [parsedData, setParsedData] = useState<any | null>(null);
@@ -177,7 +180,12 @@ export const ImportBackupModal: React.FC<ImportBackupModalProps> = ({
   ) || (parsedData?.consumables?.length || 0);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm animate-fade-in">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="import-backup-title"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm animate-fade-in"
+    >
       <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-dark-750 bg-slate-50 dark:bg-dark-800">
@@ -187,12 +195,13 @@ export const ImportBackupModal: React.FC<ImportBackupModalProps> = ({
             ) : (
               <DownloadCloud className="w-5 h-5 text-emerald-500" />
             )}
-            <h2 className="text-base font-bold text-slate-900 dark:text-white">
+            <h2 id="import-backup-title" className="text-base font-bold text-slate-900 dark:text-white">
               Резервное копирование (JSON)
             </h2>
           </div>
           <button
             onClick={onClose}
+            aria-label="Закрыть"
             className="text-slate-400 hover:text-slate-600 dark:hover:text-white p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-dark-700 transition-colors"
           >
             <X className="w-5 h-5" />

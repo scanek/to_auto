@@ -28,3 +28,13 @@
 .pb-safe {
   padding-bottom: max(env(safe-area-inset-bottom, 8px), 8px);
 }
+
+/* Touch-safe field text on mobile (prevents iOS Safari auto-zoom on field focus) */
+@media screen and (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="file"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+

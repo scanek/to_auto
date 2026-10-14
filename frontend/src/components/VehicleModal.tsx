@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Car, Upload, Image as ImageIcon, Globe, Lock, Calendar, Gauge, Fuel, Sparkles, Search, CheckCircle2, AlertCircle, RefreshCw, Wrench, CalendarClock, BarChart3, BookOpen, Disc, FileText, Zap, Sliders, Check } from 'lucide-react';
 import { Vehicle } from '../types';
 import { api } from '../services/api';
+import { useModalA11y } from '../utils/useModalA11y';
 
 interface VehicleModalProps {
   isOpen: boolean;
@@ -76,6 +77,8 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
   onSave,
   vehicle,
 }) => {
+  useModalA11y({ isOpen, onClose });
+
   const [formData, setFormData] = useState({
     name: '',
     make: '',
@@ -283,17 +286,23 @@ export const VehicleModal: React.FC<VehicleModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="vehicle-modal-title"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn"
+    >
       <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl transition-colors">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-dark-750">
           <div className="flex items-center space-x-2">
             <Car className="w-5 h-5 text-brand-500" />
-            <h2 className="text-base font-bold text-slate-900 dark:text-white">
+            <h2 id="vehicle-modal-title" className="text-base font-bold text-slate-900 dark:text-white">
               {vehicle ? 'Редактировать автомобиль' : 'Добавить автомобиль в гараж'}
             </h2>
           </div>
           <button
             onClick={onClose}
+            aria-label="Закрыть"
             className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-dark-800 transition-colors"
           >
             <X className="w-5 h-5" />

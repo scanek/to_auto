@@ -3,6 +3,7 @@ import { X, Wrench, Plus, Trash2, Tag, ExternalLink, Sparkles, Camera } from 'lu
 import { ServiceRecord, ServiceItem, Vehicle } from '../types';
 import { ReceiptScanModal } from './ReceiptScanModal';
 import { detectStoreFromUrl } from './StoreBadge';
+import { useModalA11y } from '../utils/useModalA11y';
 
 interface ServiceModalProps {
   isOpen: boolean;
@@ -52,6 +53,8 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
   const [items, setItems] = useState<ServiceItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+
+  useModalA11y({ isOpen, onClose });
 
   useEffect(() => {
     if (record) {
@@ -234,13 +237,18 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="service-modal-title"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-sm animate-fadeIn"
+    >
       <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl transition-colors">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-dark-750">
           <div className="flex items-center space-x-2">
             <Wrench className="w-5 h-5 text-brand-500" />
-            <h2 className="text-base font-bold text-slate-900 dark:text-white">
+            <h2 id="service-modal-title" className="text-base font-bold text-slate-900 dark:text-white">
               {record ? 'Редактировать запись' : `Новая запись: ${typeLabels[formData.record_type]}`}
             </h2>
           </div>
@@ -256,6 +264,7 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
             </button>
             <button
               onClick={onClose}
+              aria-label="Закрыть"
               className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-dark-800 transition-colors"
             >
               <X className="w-5 h-5" />

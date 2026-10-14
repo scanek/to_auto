@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Gauge, Plus, Check, RefreshCw } from 'lucide-react';
 import { Vehicle } from '../types';
 import { api } from '../services/api';
+import { useModalA11y } from '../utils/useModalA11y';
 
 interface QuickOdometerModalProps {
   isOpen: boolean;
@@ -16,6 +17,8 @@ export const QuickOdometerModal: React.FC<QuickOdometerModalProps> = ({
   vehicle,
   onSuccess,
 }) => {
+  useModalA11y({ isOpen: isOpen && !!vehicle, onClose });
+
   if (!isOpen || !vehicle) return null;
 
   const [odometer, setOdometer] = useState<number>(Math.round(vehicle.current_odometer || 0));
@@ -70,7 +73,12 @@ export const QuickOdometerModal: React.FC<QuickOdometerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-fade-in">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="quick-odometer-title"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-fade-in"
+    >
       <div
         className="bg-white dark:bg-dark-850 rounded-3xl border border-slate-200 dark:border-dark-750 shadow-2xl max-w-sm w-full overflow-hidden animate-scale-up"
         onClick={(e) => e.stopPropagation()}
@@ -82,7 +90,7 @@ export const QuickOdometerModal: React.FC<QuickOdometerModalProps> = ({
               <Gauge className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-black text-slate-900 dark:text-white">
+              <h3 id="quick-odometer-title" className="text-sm font-black text-slate-900 dark:text-white">
                 Обновить пробег
               </h3>
               <p className="text-[11px] text-slate-500 truncate max-w-[190px]">
@@ -92,6 +100,7 @@ export const QuickOdometerModal: React.FC<QuickOdometerModalProps> = ({
           </div>
           <button
             onClick={onClose}
+            aria-label="Закрыть"
             className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-dark-800 transition"
           >
             <X className="w-5 h-5" />

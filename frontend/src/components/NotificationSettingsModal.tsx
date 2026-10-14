@@ -23,6 +23,7 @@ import {
 import { notificationService, NotificationSettings } from '../services/notificationService';
 import { api } from '../services/api';
 import { TelegramStatus, TelegramBotConfig, User } from '../types';
+import { useModalA11y } from '../utils/useModalA11y';
 
 interface NotificationSettingsModalProps {
   isOpen: boolean;
@@ -35,6 +36,8 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
   onClose,
   currentUser,
 }) => {
+  useModalA11y({ isOpen, onClose });
+
   const [settings, setSettings] = useState<NotificationSettings>(notificationService.getSettings());
   const [permission, setPermission] = useState<NotificationPermission>('default');
   const [testResult, setTestResult] = useState<string | null>(null);
@@ -197,7 +200,12 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm animate-fade-in">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="notification-settings-title"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm animate-fade-in"
+    >
       <div className="bg-white dark:bg-dark-850 rounded-2xl max-w-md w-full border border-slate-200 dark:border-dark-700 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="px-5 py-4 border-b border-slate-200 dark:border-dark-700 flex items-center justify-between bg-slate-50 dark:bg-dark-800">
@@ -206,7 +214,7 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
               <Bell className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+              <h3 id="notification-settings-title" className="text-sm font-bold text-slate-900 dark:text-white">
                 Настройки Push-уведомлений
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
@@ -216,6 +224,7 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
           </div>
           <button
             onClick={onClose}
+            aria-label="Закрыть"
             className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-dark-700 transition-colors"
           >
             <X className="w-4 h-4" />

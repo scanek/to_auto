@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { Vehicle } from '../types';
 import { api } from '../services/api';
+import { useModalA11y } from '../utils/useModalA11y';
 
 interface ReceiptScanModalProps {
   isOpen: boolean;
@@ -38,6 +39,8 @@ export const ReceiptScanModal: React.FC<ReceiptScanModalProps> = ({
   onApplyToService,
   onApplyToFuel,
 }) => {
+  useModalA11y({ isOpen, onClose });
+
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [apiKey, setApiKey] = useState<string>(() => localStorage.getItem('gemini_api_key') || '');
@@ -156,7 +159,12 @@ export const ReceiptScanModal: React.FC<ReceiptScanModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="receipt-scan-title"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-fadeIn"
+    >
       <div className="bg-white dark:bg-dark-850 rounded-2xl max-w-2xl w-full p-4 sm:p-6 shadow-2xl border border-slate-200 dark:border-dark-750 space-y-4 max-h-[92vh] overflow-y-auto">
         {/* Modal Header */}
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-dark-750 pb-3">
@@ -165,7 +173,7 @@ export const ReceiptScanModal: React.FC<ReceiptScanModalProps> = ({
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-1.5">
+              <h3 id="receipt-scan-title" className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-1.5">
                 <span>Распознавание заказ-нарядов и чеков</span>
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
                   AI Vision
@@ -178,6 +186,7 @@ export const ReceiptScanModal: React.FC<ReceiptScanModalProps> = ({
           </div>
           <button
             onClick={onClose}
+            aria-label="Закрыть"
             className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-dark-800 transition"
           >
             <X className="w-5 h-5" />

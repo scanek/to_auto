@@ -644,7 +644,7 @@ export const KnowledgeBaseTab: React.FC<KnowledgeBaseTabProps> = ({ vehicleMake 
                         else if (fuse.ratingValue === 10) ratingBadgeBg = 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30';
                         else if (fuse.ratingValue === 15) ratingBadgeBg = 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30';
                         else if (fuse.ratingValue === 20) ratingBadgeBg = 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border border-yellow-500/30';
-                        else if (fuse.ratingValue === 25) ratingBadgeBg = 'bg-white text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-600';
+                        else if (fuse.ratingValue === 25) ratingBadgeBg = 'bg-slate-100 dark:bg-dark-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-dark-600';
                         else if (fuse.ratingValue === 30) ratingBadgeBg = 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30';
                         else if (fuse.ratingValue >= 40) ratingBadgeBg = 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/30';
                       }

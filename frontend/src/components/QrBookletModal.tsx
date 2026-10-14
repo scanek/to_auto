@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { Vehicle, MaintenancePlan, ServiceRecord } from '../types';
 import { generateQrUrl, downloadIcsReminder } from '../utils/qrcodeHelper';
+import { useModalA11y } from '../utils/useModalA11y';
 
 interface QrBookletModalProps {
   isOpen: boolean;
@@ -35,6 +36,8 @@ export const QrBookletModal: React.FC<QrBookletModalProps> = ({
   reminders,
   records = [],
 }) => {
+  useModalA11y({ isOpen, onClose });
+
   const [activeTab, setActiveTab] = useState<'qr' | 'sticker'>('sticker');
   const [stickerTemplate, setStickerTemplate] = useState<'dealer' | 'compact'>('dealer');
   const [copied, setCopied] = useState(false);
@@ -288,7 +291,12 @@ export const QrBookletModal: React.FC<QrBookletModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="qr-booklet-title"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-fadeIn"
+    >
       {/* Dedicated Print Stylesheet for Sticker (Strict 1-Page Output) */}
       <style>{`
         @media print {
@@ -339,7 +347,7 @@ export const QrBookletModal: React.FC<QrBookletModalProps> = ({
               <QrCode className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+              <h2 id="qr-booklet-title" className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
                 Сервисная Бирка и QR-код ТО
               </h2>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
@@ -349,6 +357,7 @@ export const QrBookletModal: React.FC<QrBookletModalProps> = ({
           </div>
           <button
             onClick={onClose}
+            aria-label="Закрыть"
             className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-dark-800 transition-colors"
           >
             <X className="w-4 h-4" />
