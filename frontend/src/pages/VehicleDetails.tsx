@@ -8,6 +8,8 @@ import { TyreRotationWidget } from '../components/TyreRotationWidget';
 import { PublicShareModal } from '../components/PublicShareModal';
 import { ReceiptScanModal } from '../components/ReceiptScanModal';
 import { StoreBadge } from '../components/StoreBadge';
+import { PartArticleBadge } from '../components/PartArticleBadge';
+import { calculateDailyMileage, getPredictiveDueDate } from '../utils/predictiveMaintenance';
 import { BottomNav, MobileNavSection } from '../components/BottomNav';
 
 const KnowledgeBaseTab = React.lazy(() =>
@@ -187,6 +189,10 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
     return localStorage.getItem(`collapse_telematics_${vehicle.id}`) === 'true';
   });
   const [copiedTpmsId, setCopiedTpmsId] = useState<number | null>(null);
+
+  const dailyMileage = useMemo(() => {
+    return calculateDailyMileage(vehicle, fuelLogs, serviceRecords);
+  }, [vehicle, fuelLogs, serviceRecords]);
 
   const formatSyncTime = (timestamp?: string | null) => {
     if (!timestamp) return 'Только что';
@@ -1781,9 +1787,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
 
                                       <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
                                         {it.part_number && (
-                                          <span className="text-[10px] text-slate-600 dark:text-slate-300 font-mono bg-white dark:bg-dark-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-dark-700">
-                                            Арт: <strong className="text-slate-800 dark:text-white">{it.part_number}</strong>
-                                          </span>
+                                          <PartArticleBadge article={it.part_number} brand={it.brand} name={it.name} />
                                         )}
                                         {(it.store || it.url) && (
                                           <StoreBadge store={it.store} url={it.url} size="xs" />
@@ -1820,9 +1824,17 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
         {activeTab === 'reminders' && (
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                План регламентов ТО и износа ({reminders.length})
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  План регламентов ТО и износа ({reminders.length})
+                </span>
+                <span
+                  className="text-[10px] px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 font-bold border border-brand-500/20"
+                  title="Расчетный средний пробег автомобиля для прогноза ТО"
+                >
+                  ~{dailyMileage} км/день
+                </span>
+              </div>
               {isOwner && (
                 <div className="flex items-center space-x-2">
                   {isChangan && (
@@ -1949,6 +1961,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 {reminders.map((rem) => {
                   const isOverdue = rem.status === 'overdue';
                   const isDueSoon = rem.status === 'due_soon';
+                  const prediction = getPredictiveDueDate(rem, dailyMileage);
 
                   return (
                     <div
@@ -1987,9 +2000,10 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                           </div>
 
                           {(rem.brand || rem.article || rem.spec) && (
-                            <div className="text-[11px] text-slate-500 mt-0.5 font-mono truncate">
-                              {rem.brand && <span>{rem.brand} </span>}
-                              {rem.article && <span className="text-slate-400">[арт: {rem.article}]</span>}
+                            <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500 mt-1.5 font-mono">
+                              {rem.brand && <span className="font-semibold text-slate-700 dark:text-slate-300">{rem.brand}</span>}
+                              {rem.spec && <span className="text-slate-400">({rem.spec})</span>}
+                              {rem.article && <PartArticleBadge article={rem.article} brand={rem.brand} />}
                             </div>
                           )}
                         </div>
@@ -2051,6 +2065,13 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                           </span>
                         </div>
                         <ProgressBar percentage={rem.progress_percentage} status={rem.status} />
+
+                        {prediction && (
+                          <div className="flex items-center space-x-1.5 text-[11px] font-semibold text-brand-600 dark:text-brand-400 pt-0.5">
+                            <Sparkles className="w-3.5 h-3.5 flex-shrink-0 animate-pulse text-brand-500" />
+                            <span>Прогноз ТО: {prediction.humanDescription}</span>
+                          </div>
+                        )}
                       </div>
 
                       {/* Last done baseline, Calendar and Mark Done button */}
