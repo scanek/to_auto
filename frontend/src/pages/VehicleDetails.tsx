@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import { App } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
 import { QuickMileageModal } from '../components/QuickMileageModal';
 import { QrBookletModal } from '../components/QrBookletModal';
 import { StarLineModal } from '../components/StarLineModal';
@@ -142,25 +144,30 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
     } else if (section === 'dashboard') {
       setMobileSection('dashboard');
     } else if (section === 'timeline') {
+      window.history.pushState({ section: 'timeline' }, '');
       setMobileSection('timeline');
       if (!['service', 'repairs', 'upgrades', 'fuel'].includes(activeTab)) {
         setActiveTab('service');
       }
     } else if (section === 'analytics') {
+      window.history.pushState({ section: 'analytics' }, '');
       setMobileSection('analytics');
       setActiveTab('analytics');
     } else if (section === 'parts') {
+      window.history.pushState({ section: 'parts' }, '');
       setMobileSection('parts');
       if (!['specs', 'tyres', 'reminders', 'wiki'].includes(activeTab)) {
         setActiveTab('specs');
       }
     } else {
+      window.history.pushState({ section }, '');
       setMobileSection(section);
     }
   };
 
   const handleOpenMobileSection = (tab: typeof activeTab) => {
     setActiveTab(tab);
+    window.history.pushState({ section: tab }, '');
     if (tab === 'analytics') {
       setMobileSection('analytics');
     } else if (['service', 'repairs', 'upgrades', 'fuel'].includes(tab)) {
@@ -206,6 +213,74 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
     return localStorage.getItem(`collapse_telematics_${vehicle.id}`) === 'true';
   });
   const [copiedTpmsId, setCopiedTpmsId] = useState<number | null>(null);
+  const [expandedTpmsId, setExpandedTpmsId] = useState<number | null>(null);
+  const [isRotationWidgetOpen, setIsRotationWidgetOpen] = useState<boolean>(false);
+
+  // Intercept physical / browser Back Button: returns to car hub instead of exiting the app
+  useEffect(() => {
+    const onPopState = () => {
+      // 1. Close modals if any are open
+      if (isToolsModalOpen) { setIsToolsModalOpen(false); return; }
+      if (isQuickMileageOpen) { setIsQuickMileageOpen(false); return; }
+      if (isQrModalOpen) { setIsQrModalOpen(false); return; }
+      if (isPublicShareModalOpen) { setIsPublicShareModalOpen(false); return; }
+      if (isStarLineModalOpen) { setIsStarLineModalOpen(false); return; }
+      if (isReceiptScanOpen) { setIsReceiptScanOpen(false); return; }
+      if (isConsumableModalOpen) { setIsConsumableModalOpen(false); return; }
+
+      // 2. If in a sub-section on mobile, return to the car's dashboard hub
+      if (mobileSection !== 'dashboard') {
+        setMobileSection('dashboard');
+      } else {
+        // 3. If already on dashboard, return to garage
+        onBack();
+      }
+    };
+
+    window.addEventListener('popstate', onPopState);
+
+    let backListenerHandle: any = null;
+    try {
+      if (Capacitor.isPluginAvailable('App')) {
+        App.addListener('backButton', () => {
+          if (isToolsModalOpen) { setIsToolsModalOpen(false); return; }
+          if (isQuickMileageOpen) { setIsQuickMileageOpen(false); return; }
+          if (isQrModalOpen) { setIsQrModalOpen(false); return; }
+          if (isPublicShareModalOpen) { setIsPublicShareModalOpen(false); return; }
+          if (isStarLineModalOpen) { setIsStarLineModalOpen(false); return; }
+          if (isReceiptScanOpen) { setIsReceiptScanOpen(false); return; }
+          if (isConsumableModalOpen) { setIsConsumableModalOpen(false); return; }
+
+          if (mobileSection !== 'dashboard') {
+            setMobileSection('dashboard');
+          } else {
+            onBack();
+          }
+        }).then((handle) => {
+          backListenerHandle = handle;
+        }).catch(() => {});
+      }
+    } catch {
+      // fallback
+    }
+
+    return () => {
+      window.removeEventListener('popstate', onPopState);
+      if (backListenerHandle && typeof backListenerHandle.remove === 'function') {
+        backListenerHandle.remove();
+      }
+    };
+  }, [
+    mobileSection,
+    isToolsModalOpen,
+    isQuickMileageOpen,
+    isQrModalOpen,
+    isPublicShareModalOpen,
+    isStarLineModalOpen,
+    isReceiptScanOpen,
+    isConsumableModalOpen,
+    onBack,
+  ]);
 
   const dailyMileage = useMemo(() => {
     return calculateDailyMileage(vehicle, fuelLogs, serviceRecords);
@@ -1379,92 +1454,50 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
       {/* Mobile Dashboard App Hub (when mobileSection === 'dashboard') */}
       {mobileSection === 'dashboard' && (
         <div className="md:hidden space-y-4 animate-fadeIn pb-6">
-          {/* 1. Smart Car Hero Card */}
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-dark-900 text-white shadow-xl border border-slate-800/80">
-            {/* If vehicle has a photo, display with overlay; otherwise render modern automotive mesh gradient */}
-            {vehicle.photo_url ? (
-              <div className="relative h-44 w-full overflow-hidden">
-                <img
-                  src={vehicle.photo_url}
-                  alt={vehicle.name || `${vehicle.make} ${vehicle.model}`}
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/60 to-black/40" />
-              </div>
-            ) : (
-              <div className="relative h-28 w-full overflow-hidden bg-gradient-to-tr from-brand-950/60 via-slate-900 to-sky-950/60">
-                <div className="absolute -top-12 -right-12 w-48 h-48 bg-brand-500/15 rounded-full blur-2xl pointer-events-none" />
-                <div className="absolute -bottom-12 -left-12 w-48 h-48 bg-sky-500/15 rounded-full blur-2xl pointer-events-none" />
-              </div>
-            )}
+          {/* 1. Native Vehicle AppBar (Ultra-compact, takes ~48px) */}
+          <div className="flex items-center justify-between gap-2 p-2.5 bg-white dark:bg-dark-850 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-xs">
+            <button
+              type="button"
+              onClick={onBack}
+              className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-dark-800 hover:bg-slate-200 dark:hover:bg-dark-750 text-slate-700 dark:text-slate-200 text-xs font-bold active:scale-95 transition flex-shrink-0"
+              title="Назад в гараж"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>В гараж</span>
+            </button>
 
-            {/* Floating Top Header on Card */}
-            <div className="absolute top-3 inset-x-3 flex items-center justify-between z-10">
-              <button
-                type="button"
-                onClick={onBack}
-                className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-full bg-black/50 hover:bg-black/70 backdrop-blur-md text-white text-xs font-bold border border-white/10 active:scale-95 transition shadow-sm"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                <span>В гараж</span>
-              </button>
-
-              <div className="flex items-center space-x-1.5">
-                {vehicle.telematics_provider === 'starline' && (
-                  <button
-                    type="button"
-                    onClick={handleSyncStarLine}
-                    disabled={isSyncingStarLine}
-                    className="p-1.5 rounded-full bg-black/50 hover:bg-black/70 backdrop-blur-md text-sky-400 border border-sky-400/20 active:scale-95 transition shadow-sm disabled:opacity-50"
-                    title="Синхронизировать со StarLine"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 ${isSyncingStarLine ? 'animate-spin' : ''}`} />
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setIsToolsModalOpen(true)}
-                  className="p-1.5 rounded-full bg-black/50 hover:bg-black/70 backdrop-blur-md text-white border border-white/10 active:scale-95 transition shadow-sm"
-                  title="Опции и инструменты"
-                >
-                  <Settings className="w-3.5 h-3.5" />
-                </button>
-              </div>
+            <div className="flex items-center space-x-1.5 min-w-0 flex-1 justify-center px-1">
+              <span className="text-sm font-black text-slate-900 dark:text-white truncate text-center">
+                {vehicle.name || `${vehicle.make} ${vehicle.model}`}
+              </span>
+              {vehicle.license_plate && (
+                <span className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-dark-900 text-slate-900 dark:text-white font-mono font-black text-[10px] tracking-wider shadow-2xs flex-shrink-0">
+                  <span className="text-[7.5px] text-slate-400 font-extrabold mr-0.5 tracking-tighter">RUS</span>
+                  <span>{vehicle.license_plate}</span>
+                </span>
+              )}
             </div>
 
-            {/* Vehicle Title & Passport Overlay */}
-            <div className="p-4 pt-1 space-y-2">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <h1 className="text-xl font-black text-white tracking-tight truncate drop-shadow-sm">
-                    {vehicle.name || `${vehicle.make} ${vehicle.model}`}
-                  </h1>
-                  <div className="text-[11px] text-slate-300 font-medium flex items-center gap-1.5 mt-0.5">
-                    {vehicle.year && <span>{vehicle.year} г.</span>}
-                    {vehicle.engine && <span>• {vehicle.engine}</span>}
-                    {vehicle.drive_type && (
-                      <span className="uppercase text-[10px] px-1 rounded bg-white/10">
-                        {vehicle.drive_type}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {vehicle.license_plate && (
-                  <div className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md border border-slate-400/40 bg-white/95 text-slate-900 font-mono font-black text-[11px] tracking-wider shadow-sm flex-shrink-0">
-                    <span className="text-[8px] text-slate-500 font-extrabold mr-0.5 tracking-tighter">RUS</span>
-                    <span>{vehicle.license_plate}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Read-Only Notice on card if foreign vehicle */}
-              {!isOwner && (
-                <div className="inline-flex items-center space-x-1.5 text-[10px] font-bold text-sky-300 bg-sky-500/20 px-2 py-0.5 rounded-lg border border-sky-400/30">
-                  <Eye className="w-3 h-3" />
-                  <span>Просмотр ({vehicle.owner_name || 'Владелец'})</span>
-                </div>
+            <div className="flex items-center space-x-1 flex-shrink-0">
+              {vehicle.telematics_provider === 'starline' && (
+                <button
+                  type="button"
+                  onClick={handleSyncStarLine}
+                  disabled={isSyncingStarLine}
+                  className="p-1.5 rounded-xl bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 border border-sky-500/20 active:scale-95 transition disabled:opacity-50"
+                  title="Синхронизировать со StarLine"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isSyncingStarLine ? 'animate-spin' : ''}`} />
+                </button>
               )}
+              <button
+                type="button"
+                onClick={() => setIsToolsModalOpen(true)}
+                className="p-1.5 rounded-xl bg-slate-100 dark:bg-dark-800 hover:bg-slate-200 dark:hover:bg-dark-750 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-white/[0.08] active:scale-95 transition"
+                title="Опции и инструменты"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
             </div>
           </div>
 
@@ -2037,11 +2070,10 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 {isOwner && (
                   <button
                     onClick={() => onOpenServiceModal(serviceFilter === 'all' ? 'service' : serviceFilter as any)}
-                    className="flex items-center space-x-1.5 text-xs font-bold text-brand-500 hover:text-brand-600 bg-brand-500/10 border border-brand-500/20 px-3 py-1.5 rounded-lg transition-colors flex-shrink-0"
+                    className="hidden md:flex items-center space-x-1.5 text-xs font-bold text-brand-500 hover:text-brand-600 bg-brand-500/10 border border-brand-500/20 px-3 py-1.5 rounded-lg transition-colors flex-shrink-0"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Добавить запись</span>
-                    <span className="sm:hidden">Запись</span>
+                    <span>Добавить запись</span>
                   </button>
                 )}
               </div>
@@ -2272,7 +2304,51 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
         {/* Reminders / Planner Tab */}
         {activeTab === 'reminders' && (
           <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            {/* Mobile Header Toolbar (md:hidden) */}
+            <div className="md:hidden flex items-center justify-between p-2.5 rounded-2xl bg-white dark:bg-dark-850 border border-slate-200/80 dark:border-white/[0.06] shadow-xs text-xs">
+              <div className="flex items-center space-x-1.5 text-slate-600 dark:text-slate-400 font-bold text-[11px]">
+                <span>{reminders.length} регламентов</span>
+                <span>•</span>
+                <span className="text-brand-600 dark:text-brand-400">~{dailyMileage} км/день</span>
+              </div>
+              {isOwner && isChangan && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (window.confirm('Применить заводскую сетку ТО Changan CS55 Plus?')) {
+                      try {
+                        for (const item of CHANGAN_CS55_PLUS_SCHEDULE) {
+                          await api.createReminder(vehicle.id, {
+                            title: item.title,
+                            category: item.category,
+                            icon: item.icon,
+                            interval_distance: item.interval_distance,
+                            interval_months: item.interval_months,
+                            notify_before_distance: item.notify_before_distance,
+                            notify_before_days: item.notify_before_days,
+                            description: `${item.description}\n\nСпецификация: ${item.spec || 'OEM'}\nАртикул: ${item.article || 'OEM'}\nЗаметка: ${item.notes}`,
+                            last_service_odometer: vehicle.current_odometer || 0,
+                            last_service_date: new Date().toISOString(),
+                          });
+                        }
+                        const updated = await api.getReminders(vehicle.id);
+                        setReminders(updated);
+                        await onRefreshVehicle();
+                        alert('Заводской регламент ТО Changan CS55 Plus успешно применен!');
+                      } catch (err) {
+                        alert('Ошибка применения заводских регламентов');
+                      }
+                    }
+                  }}
+                  className="px-2 py-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold rounded-lg text-[10.5px] border border-amber-500/20 active:scale-95"
+                >
+                  ⚡ Сетка ТО
+                </button>
+              )}
+            </div>
+
+            {/* Desktop Toolbar (hidden md:flex) */}
+            <div className="hidden md:flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   План регламентов ТО и износа ({reminders.length})
@@ -2574,7 +2650,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
         {/* Fuel Logs Tab */}
         {activeTab === 'fuel' && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="hidden md:flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Журнал заправок ({fuelLogs.length})
               </span>
@@ -2620,7 +2696,87 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                   </div>
                 )}
 
-                <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl overflow-hidden shadow-sm">
+                {/* Mobile Fuel Cards Feed (md:hidden - no horizontal scroll tables!) */}
+                <div className="md:hidden space-y-2.5">
+                  {fuelLogs.map((f) => (
+                    <div
+                      key={f.id}
+                      className="p-3.5 rounded-2xl bg-white dark:bg-dark-850 border border-slate-200/80 dark:border-white/[0.06] shadow-xs space-y-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2.5 min-w-0 pr-2">
+                          <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
+                            <Fuel className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                              {f.gas_station || 'Заправка'} {f.fuel_grade ? `• ${f.fuel_grade}` : ''}
+                            </div>
+                            <div className="text-[10px] text-slate-400 font-mono">
+                              {new Date(f.date).toLocaleDateString('ru-RU')}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="text-right flex-shrink-0">
+                          <div className="text-sm font-black font-mono text-brand-600 dark:text-brand-400">
+                            {Math.round(f.total_cost || 0).toLocaleString('ru-RU')} {vehicle.currency || '₽'}
+                          </div>
+                          <div className="text-[10px] text-slate-400 font-mono">
+                            {f.unit_price} {vehicle.currency || '₽'}/л
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-white/[0.04] text-[11px] font-mono">
+                        <div className="flex items-center space-x-2.5">
+                          <span className="text-slate-800 dark:text-slate-200 font-bold">
+                            {f.fuel_amount} {vehicle.fuel_unit}
+                          </span>
+                          <span className="text-slate-400">
+                            {Math.round(f.odometer).toLocaleString('ru-RU')} {vehicle.distance_unit || 'км'}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          {f.consumption ? (
+                            <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                              {f.consumption} л/100
+                            </span>
+                          ) : (
+                            <span className="text-[9px] text-slate-400 font-semibold">
+                              Точка отсчета
+                            </span>
+                          )}
+
+                          {isOwner && (
+                            <div className="flex items-center space-x-1 pl-1">
+                              <button
+                                type="button"
+                                onClick={() => onOpenFuelModal(f)}
+                                className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white"
+                                title="Редактировать"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteFuel(f.id)}
+                                className="p-1 text-slate-400 hover:text-rose-500"
+                                title="Удалить"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop Fuel Table (hidden md:block) */}
+                <div className="hidden md:block bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl overflow-hidden shadow-sm">
                 <div className="overflow-x-auto w-full">
                   <table className="w-full text-left text-xs min-w-[620px]">
                     <thead className="bg-slate-100 dark:bg-dark-900 border-b border-slate-200 dark:border-dark-750 text-slate-600 dark:text-slate-400 font-bold uppercase text-[10px]">
@@ -2954,7 +3110,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
         {/* Tyres Tab */}
         {activeTab === 'tyres' && (
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="hidden md:flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                     Комплекты шин и дисков ({tyres.length})
                   </span>
@@ -2971,25 +3127,27 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
 
                 {/* Quick Season Swap Banner */}
                 {isOwner && (
-                  <div className="bg-white dark:bg-dark-850 border border-blue-500/30 rounded-2xl p-3.5 sm:p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                    <div className="flex items-center space-x-2">
-                      <RefreshCw className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                      <span className="text-xs font-bold text-slate-900 dark:text-white">
-                        Сезонная переобувка в 1 клик:
+                  <div className="bg-white dark:bg-dark-850 border border-slate-200/80 dark:border-white/[0.08] rounded-2xl p-2.5 sm:p-3 shadow-xs flex items-center justify-between gap-2">
+                    <div className="flex items-center space-x-2 min-w-0">
+                      <RefreshCw className="w-3.5 h-3.5 text-brand-500 flex-shrink-0" />
+                      <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                        Сезонная переобувка:
                       </span>
                     </div>
-                    <div className="grid grid-cols-2 sm:flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
                       <button
+                        type="button"
                         onClick={() => handleSeasonSwap('summer')}
-                        className="px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex items-center justify-center space-x-1 shadow-sm transition"
+                        className="px-2.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-bold text-xs shadow-2xs transition"
                       >
-                        <span>☀️ Летний комплект</span>
+                        ☀️ Лето
                       </button>
                       <button
+                        type="button"
                         onClick={() => handleSeasonSwap('winter')}
-                        className="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center space-x-1 shadow-sm transition"
+                        className="px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-xs shadow-2xs transition"
                       >
-                        <span>❄️ Зимний комплект</span>
+                        ❄️ Зима
                       </button>
                     </div>
                   </div>
@@ -3086,105 +3244,126 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                           )}
                         </div>
 
-                        {/* Wheel Rims Info (if set) */}
-                        {t.has_separate_rims && (
-                          <div className="bg-slate-100 dark:bg-dark-900/60 p-2 sm:p-2.5 rounded-xl border border-slate-200 dark:border-dark-750 text-xs space-y-1">
-                            <div className="flex items-center justify-between text-slate-800 dark:text-slate-200 font-semibold text-[11px]">
-                              <span className="flex items-center gap-1 truncate mr-2">
-                                <CircleDot className="w-3 h-3 text-amber-500 flex-shrink-0" />
-                                Диски: {t.rims_brand_model || 'Отдельные диски'}
-                                {t.rims_size && <span className="font-mono text-slate-500 font-normal"> ({t.rims_size})</span>}
+                        {/* Wheel Rims & TPMS Block (Collapsible on mobile to eliminate clutter) */}
+                        {(t.has_separate_rims || t.tpms_has_sensors || t.tpms_fl_id || t.tpms_fr_id || t.tpms_rl_id || t.tpms_rr_id || t.tpms_sensors) && (
+                          <div className="space-y-2">
+                            {/* Mobile Toggle Button */}
+                            <button
+                              type="button"
+                              onClick={() => setExpandedTpmsId(expandedTpmsId === t.id ? null : t.id)}
+                              className="md:hidden w-full flex items-center justify-between py-1.5 px-2.5 rounded-xl bg-slate-100/80 dark:bg-dark-800/80 hover:bg-slate-200/80 text-[11px] font-bold text-slate-700 dark:text-slate-300 transition"
+                            >
+                              <span className="flex items-center gap-1.5">
+                                <CircleDot className="w-3.5 h-3.5 text-cyan-500" />
+                                <span>Параметры дисков и датчики TPMS</span>
                               </span>
-                              {t.rims_price > 0 && (
-                                <span className="font-mono font-bold text-amber-600 dark:text-amber-400 flex-shrink-0">
-                                  {(t.rims_price || 0).toLocaleString('ru-RU')} {vehicle.currency || '₽'}
-                                </span>
-                              )}
-                            </div>
-                            {t.rims_purchase_date && (
-                              <div className="text-[10.5px] text-slate-500 dark:text-slate-400">
-                                📅 Покупка: {new Date(t.rims_purchase_date).toLocaleDateString('ru-RU')}
-                              </div>
-                            )}
-                          </div>
-                        )}
+                              {expandedTpmsId === t.id ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                            </button>
 
-                        {/* TPMS Sensors Block (if configured) */}
-                        {(t.tpms_has_sensors || t.tpms_fl_id || t.tpms_fr_id || t.tpms_rl_id || t.tpms_rr_id || t.tpms_sensors) && (
-                          <div className="bg-cyan-500/5 dark:bg-cyan-950/20 p-2.5 rounded-xl border border-cyan-500/20 dark:border-cyan-500/30 text-xs space-y-2">
-                            <div className="flex items-center justify-between text-slate-800 dark:text-slate-200 font-semibold text-[11px]">
-                              <span className="flex items-center gap-1 text-cyan-700 dark:text-cyan-400 font-bold">
-                                <CircleDot className="w-3.5 h-3.5 text-cyan-500 flex-shrink-0" />
-                                <span>Датчики TPMS {t.tpms_frequency ? `(${t.tpms_frequency})` : ''}</span>
-                                {t.tpms_brand && <span className="font-normal text-slate-500 dark:text-slate-400">• {t.tpms_brand}</span>}
-                              </span>
-                              {t.tpms_pressure_bar && (
-                                <span className="font-mono text-[10.5px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 font-bold">
-                                  {t.tpms_pressure_bar} бар
-                                </span>
-                              )}
-                            </div>
-
-                            {/* 4 Wheels IDs */}
-                            {(t.tpms_fl_id || t.tpms_fr_id || t.tpms_rl_id || t.tpms_rr_id) ? (
-                              <div className="space-y-1.5">
-                                <div className="grid grid-cols-2 gap-1.5 text-[10.5px] font-mono">
-                                  <div className="bg-white/90 dark:bg-dark-900/90 px-2 py-1 rounded border border-slate-200 dark:border-dark-750 flex items-center justify-between">
-                                    <span className="text-slate-400 text-[10px]">FL (ПЛ):</span>
-                                    <span className="font-bold text-slate-800 dark:text-slate-200">{t.tpms_fl_id || '—'}</span>
-                                  </div>
-                                  <div className="bg-white/90 dark:bg-dark-900/90 px-2 py-1 rounded border border-slate-200 dark:border-dark-750 flex items-center justify-between">
-                                    <span className="text-slate-400 text-[10px]">FR (ПП):</span>
-                                    <span className="font-bold text-slate-800 dark:text-slate-200">{t.tpms_fr_id || '—'}</span>
-                                  </div>
-                                  <div className="bg-white/90 dark:bg-dark-900/90 px-2 py-1 rounded border border-slate-200 dark:border-dark-750 flex items-center justify-between">
-                                    <span className="text-slate-400 text-[10px]">RL (ЗЛ):</span>
-                                    <span className="font-bold text-slate-800 dark:text-slate-200">{t.tpms_rl_id || '—'}</span>
-                                  </div>
-                                  <div className="bg-white/90 dark:bg-dark-900/90 px-2 py-1 rounded border border-slate-200 dark:border-dark-750 flex items-center justify-between">
-                                    <span className="text-slate-400 text-[10px]">RR (ЗП):</span>
-                                    <span className="font-bold text-slate-800 dark:text-slate-200">{t.tpms_rr_id || '—'}</span>
-                                  </div>
-                                </div>
-                                <div className="flex justify-end">
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const parts = [];
-                                      if (t.tpms_fl_id) parts.push(`FL: ${t.tpms_fl_id}`);
-                                      if (t.tpms_fr_id) parts.push(`FR: ${t.tpms_fr_id}`);
-                                      if (t.tpms_rl_id) parts.push(`RL: ${t.tpms_rl_id}`);
-                                      if (t.tpms_rr_id) parts.push(`RR: ${t.tpms_rr_id}`);
-                                      if (parts.length) {
-                                        navigator.clipboard.writeText(parts.join(' | '));
-                                        setCopiedTpmsId(t.id);
-                                        setTimeout(() => setCopiedTpmsId(null), 1500);
-                                      }
-                                    }}
-                                    className="text-[10px] text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 flex items-center gap-1 font-semibold transition"
-                                    title="Скопировать все 4 ID колес"
-                                  >
-                                    {copiedTpmsId === t.id ? (
-                                      <>
-                                        <Check className="w-3 h-3 text-emerald-500" />
-                                        <span className="text-emerald-500 font-bold">Скопировано!</span>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Copy className="w-3 h-3" />
-                                        <span>Скопировать все ID</span>
-                                      </>
+                            {/* Details (always shown on desktop, toggle on mobile) */}
+                            <div className={`${expandedTpmsId === t.id ? 'block' : 'hidden'} md:block space-y-2`}>
+                              {/* Wheel Rims Info (if set) */}
+                              {t.has_separate_rims && (
+                                <div className="bg-slate-100 dark:bg-dark-900/60 p-2 sm:p-2.5 rounded-xl border border-slate-200 dark:border-dark-750 text-xs space-y-1">
+                                  <div className="flex items-center justify-between text-slate-800 dark:text-slate-200 font-semibold text-[11px]">
+                                    <span className="flex items-center gap-1 truncate mr-2">
+                                      <CircleDot className="w-3 h-3 text-amber-500 flex-shrink-0" />
+                                      Диски: {t.rims_brand_model || 'Отдельные диски'}
+                                      {t.rims_size && <span className="font-mono text-slate-500 font-normal"> ({t.rims_size})</span>}
+                                    </span>
+                                    {t.rims_price > 0 && (
+                                      <span className="font-mono font-bold text-amber-600 dark:text-amber-400 flex-shrink-0">
+                                        {(t.rims_price || 0).toLocaleString('ru-RU')} {vehicle.currency || '₽'}
+                                      </span>
                                     )}
-                                  </button>
+                                  </div>
+                                  {t.rims_purchase_date && (
+                                    <div className="text-[10.5px] text-slate-500 dark:text-slate-400">
+                                      📅 Покупка: {new Date(t.rims_purchase_date).toLocaleDateString('ru-RU')}
+                                    </div>
+                                  )}
                                 </div>
-                              </div>
-                            ) : (
-                              t.tpms_sensors && (
-                                <div className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">
-                                  📡 {t.tpms_sensors}
+                              )}
+
+                              {/* TPMS Sensors Block (if configured) */}
+                              {(t.tpms_has_sensors || t.tpms_fl_id || t.tpms_fr_id || t.tpms_rl_id || t.tpms_rr_id || t.tpms_sensors) && (
+                                <div className="bg-cyan-500/5 dark:bg-cyan-950/20 p-2.5 rounded-xl border border-cyan-500/20 dark:border-cyan-500/30 text-xs space-y-2">
+                                  <div className="flex items-center justify-between text-slate-800 dark:text-slate-200 font-semibold text-[11px]">
+                                    <span className="flex items-center gap-1 text-cyan-700 dark:text-cyan-400 font-bold">
+                                      <CircleDot className="w-3.5 h-3.5 text-cyan-500 flex-shrink-0" />
+                                      <span>Датчики TPMS {t.tpms_frequency ? `(${t.tpms_frequency})` : ''}</span>
+                                      {t.tpms_brand && <span className="font-normal text-slate-500 dark:text-slate-400">• {t.tpms_brand}</span>}
+                                    </span>
+                                    {t.tpms_pressure_bar && (
+                                      <span className="font-mono text-[10.5px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 font-bold">
+                                        {t.tpms_pressure_bar} бар
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {/* 4 Wheels IDs */}
+                                  {(t.tpms_fl_id || t.tpms_fr_id || t.tpms_rl_id || t.tpms_rr_id) ? (
+                                    <div className="space-y-1.5">
+                                      <div className="grid grid-cols-2 gap-1.5 text-[10.5px] font-mono">
+                                        <div className="bg-white/90 dark:bg-dark-900/90 px-2 py-1 rounded border border-slate-200 dark:border-dark-750 flex items-center justify-between">
+                                          <span className="text-slate-400 text-[10px]">FL (ПЛ):</span>
+                                          <span className="font-bold text-slate-800 dark:text-slate-200">{t.tpms_fl_id || '—'}</span>
+                                        </div>
+                                        <div className="bg-white/90 dark:bg-dark-900/90 px-2 py-1 rounded border border-slate-200 dark:border-dark-750 flex items-center justify-between">
+                                          <span className="text-slate-400 text-[10px]">FR (ПП):</span>
+                                          <span className="font-bold text-slate-800 dark:text-slate-200">{t.tpms_fr_id || '—'}</span>
+                                        </div>
+                                        <div className="bg-white/90 dark:bg-dark-900/90 px-2 py-1 rounded border border-slate-200 dark:border-dark-750 flex items-center justify-between">
+                                          <span className="text-slate-400 text-[10px]">RL (ЗЛ):</span>
+                                          <span className="font-bold text-slate-800 dark:text-slate-200">{t.tpms_rl_id || '—'}</span>
+                                        </div>
+                                        <div className="bg-white/90 dark:bg-dark-900/90 px-2 py-1 rounded border border-slate-200 dark:border-dark-750 flex items-center justify-between">
+                                          <span className="text-slate-400 text-[10px]">RR (ЗП):</span>
+                                          <span className="font-bold text-slate-800 dark:text-slate-200">{t.tpms_rr_id || '—'}</span>
+                                        </div>
+                                      </div>
+                                      <div className="flex justify-end">
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            const parts = [];
+                                            if (t.tpms_fl_id) parts.push(`FL: ${t.tpms_fl_id}`);
+                                            if (t.tpms_fr_id) parts.push(`FR: ${t.tpms_fr_id}`);
+                                            if (t.tpms_rl_id) parts.push(`RL: ${t.tpms_rl_id}`);
+                                            if (t.tpms_rr_id) parts.push(`RR: ${t.tpms_rr_id}`);
+                                            if (parts.length) {
+                                              navigator.clipboard.writeText(parts.join(' | '));
+                                              setCopiedTpmsId(t.id);
+                                              setTimeout(() => setCopiedTpmsId(null), 1500);
+                                            }
+                                          }}
+                                          className="text-[10px] text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 flex items-center gap-1 font-semibold transition"
+                                          title="Скопировать все 4 ID колес"
+                                        >
+                                          {copiedTpmsId === t.id ? (
+                                            <>
+                                              <Check className="w-3 h-3 text-emerald-500" />
+                                              <span className="text-emerald-500 font-bold">Скопировано!</span>
+                                            </>
+                                          ) : (
+                                            <>
+                                              <Copy className="w-3 h-3" />
+                                              <span>Скопировать все ID</span>
+                                            </>
+                                          )}
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    t.tpms_sensors && (
+                                      <div className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">
+                                        📡 {t.tpms_sensors}
+                                      </div>
+                                    )
+                                  )}
                                 </div>
-                              )
-                            )}
+                              )}
+                            </div>
                           </div>
                         )}
 
@@ -3245,19 +3424,36 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                   if (!activeTyre) return null;
                   return (
                     <div className="pt-2">
-                      <TyreRotationWidget
-                        tyre={activeTyre}
-                        vehicle={vehicle}
-                        onRotated={async () => {
-                          await loadData();
-                          await onRefreshVehicle();
-                        }}
-                        onUpdateTyre={(updated) => {
-                          setTyres((prev) =>
-                            prev.map((item) => (String(item.id) === String(activeTyre.id) ? { ...item, ...updated } : item))
-                          );
-                        }}
-                      />
+                      <div className="bg-white dark:bg-dark-850 border border-slate-200/80 dark:border-white/[0.08] rounded-2xl p-3 shadow-xs">
+                        <button
+                          type="button"
+                          onClick={() => setIsRotationWidgetOpen(!isRotationWidgetOpen)}
+                          className="w-full flex items-center justify-between text-xs font-bold text-slate-800 dark:text-slate-200"
+                        >
+                          <span className="flex items-center gap-2">
+                            <RotateCcw className="w-4 h-4 text-brand-500" />
+                            <span>Схема ротации и перестановки колёс</span>
+                          </span>
+                          {isRotationWidgetOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                        </button>
+                        {isRotationWidgetOpen && (
+                          <div className="pt-3 border-t border-slate-100 dark:border-white/[0.06] mt-3">
+                            <TyreRotationWidget
+                              tyre={activeTyre}
+                              vehicle={vehicle}
+                              onRotated={async () => {
+                                await loadData();
+                                await onRefreshVehicle();
+                              }}
+                              onUpdateTyre={(updated) => {
+                                setTyres((prev) =>
+                                  prev.map((item) => (String(item.id) === String(activeTyre.id) ? { ...item, ...updated } : item))
+                                );
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
                     </div>
                   );
                 })()}
@@ -3267,7 +3463,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
         {/* Documents Tab */}
         {activeTab === 'documents' && (
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="hidden md:flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                     Документы, страховки и сроки ({documents.length})
                   </span>

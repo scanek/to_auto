@@ -188,8 +188,8 @@ export const ConsumablesTab: React.FC<ConsumablesTabProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Header & Main Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* Header & Main Actions (Desktop only) */}
+      <div className="hidden md:flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <span>📋 Паспорт расходников и спецификаций</span>
