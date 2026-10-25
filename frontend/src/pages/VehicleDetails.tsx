@@ -76,6 +76,8 @@ import {
   LayoutDashboard,
   History,
   ArrowRight,
+  Package,
+  Gauge,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -104,6 +106,8 @@ import { localDB } from '../services/localDatabase';
 import { notificationService } from '../services/notificationService';
 import { ProgressBar } from '../components/ProgressBar';
 import { VehicleToolsModal } from '../components/VehicleToolsModal';
+import TireIcon from '../components/TireIcon';
+import { getConsumableItemIcon } from '../utils/consumableIcons';
 
 interface VehicleDetailsProps {
   vehicle: Vehicle;
@@ -612,10 +616,10 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
     { id: 'fuel', label: 'Топливо', shortLabel: 'Топливо', icon: Fuel, count: Array.isArray(fuelLogs) ? fuelLogs.length : 0 },
     { id: 'reminders', label: 'Регламент', shortLabel: 'План', icon: CalendarClock, count: Array.isArray(reminders) ? reminders.length : 0 },
     { id: 'analytics', label: 'Аналитика', shortLabel: 'Отчет', icon: BarChart3 },
-    { id: 'specs', label: 'Расходники', shortLabel: 'Детали', icon: BookOpen, count: Array.isArray(consumables) ? consumables.length : 0 },
-    { id: 'tyres', label: 'Шины', shortLabel: 'Шины', icon: Disc, count: Array.isArray(tyres) ? tyres.length : 0 },
+    { id: 'specs', label: 'Расходники', shortLabel: 'Детали', icon: Package, count: Array.isArray(consumables) ? consumables.length : 0 },
+    { id: 'tyres', label: 'Шины', shortLabel: 'Шины', icon: TireIcon, count: Array.isArray(tyres) ? tyres.length : 0 },
     { id: 'documents', label: 'Документы', shortLabel: 'Документы', icon: FileText, count: Array.isArray(documents) ? documents.length : 0 },
-    { id: 'wiki', label: 'База знаний', shortLabel: 'Wiki', icon: Zap },
+    { id: 'wiki', label: 'База знаний', shortLabel: 'Wiki', icon: BookOpen },
   ];
 
   const navTabs = useMemo(() => {
@@ -684,7 +688,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
       case 'tyres':
         return {
           title: 'Шины и колёса',
-          icon: <Disc className="w-4 h-4 text-sky-500" />,
+          icon: <TireIcon className="w-4 h-4 text-sky-500" />,
           badge: `${tyres.length}`,
           actionButton: isOwner ? (
             <button
@@ -1052,7 +1056,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 >
                   <div className="text-[9.5px] sm:text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 flex items-center justify-between">
                     <span className="group-hover:text-sky-500 transition-colors truncate">Пробег</span>
-                    <Disc className="w-3 h-3 text-sky-500 flex-shrink-0 ml-1" />
+                    <Gauge className="w-3 h-3 text-sky-500 flex-shrink-0 ml-1" />
                   </div>
                   <div className="text-xs sm:text-base font-black text-slate-900 dark:text-white font-mono mt-0.5 sm:mt-1 flex items-baseline space-x-0.5 sm:space-x-1">
                     <span className="truncate">{Math.round(vehicle.current_odometer).toLocaleString('ru-RU')}</span>
@@ -1305,7 +1309,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
           <div className="bg-slate-50/80 dark:bg-dark-900/60 backdrop-blur-md p-3 sm:p-3.5 rounded-2xl border border-slate-200/70 dark:border-white/[0.05] hover:border-sky-500/30 dark:hover:border-sky-500/30 transition-all group flex flex-col justify-between shadow-sm">
             <div className="flex items-center justify-between text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider">
               <span>Пробег</span>
-              <Disc className="w-3.5 h-3.5 text-sky-500/70 group-hover:text-sky-500 transition-colors" />
+              <Gauge className="w-3.5 h-3.5 text-sky-500/70 group-hover:text-sky-500 transition-colors" />
             </div>
             {editingOdometer && isOwner ? (
               <div className="flex items-center space-x-1 mt-1.5">
@@ -1510,7 +1514,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
             >
               <div className="text-[9.5px] uppercase font-bold text-slate-400 flex items-center justify-between">
                 <span>Пробег</span>
-                <Disc className="w-3 h-3 text-sky-500" />
+                <Gauge className="w-3 h-3 text-sky-500" />
               </div>
               <div className="mt-1">
                 <div className="text-sm font-black text-slate-900 dark:text-white font-mono leading-tight">
@@ -1739,8 +1743,8 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 className="p-3.5 rounded-2xl bg-white dark:bg-dark-850/90 border border-slate-200/80 dark:border-white/[0.08] shadow-xs text-left space-y-2 active:scale-95 transition-all group"
               >
                 <div className="flex items-center justify-between">
-                  <div className="w-9 h-9 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Wrench className="w-5 h-5" />
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-brand-600 to-sky-500 text-white flex items-center justify-center shadow-md shadow-brand-500/25 group-hover:scale-110 transition-transform flex-shrink-0">
+                    <Wrench className="w-5 h-5 stroke-[2.2]" />
                   </div>
                   <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-slate-300">
                     {serviceRecords.length}
@@ -1761,8 +1765,8 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 className="p-3.5 rounded-2xl bg-white dark:bg-dark-850/90 border border-slate-200/80 dark:border-white/[0.08] shadow-xs text-left space-y-2 active:scale-95 transition-all group"
               >
                 <div className="flex items-center justify-between">
-                  <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Fuel className="w-5 h-5" />
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center shadow-md shadow-emerald-500/25 group-hover:scale-110 transition-transform flex-shrink-0">
+                    <Fuel className="w-5 h-5 stroke-[2.2]" />
                   </div>
                   <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-slate-300">
                     {fuelLogs.length}
@@ -1783,8 +1787,8 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 className="p-3.5 rounded-2xl bg-white dark:bg-dark-850/90 border border-slate-200/80 dark:border-white/[0.08] shadow-xs text-left space-y-2 active:scale-95 transition-all group"
               >
                 <div className="flex items-center justify-between">
-                  <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <CalendarClock className="w-5 h-5" />
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-500 text-white flex items-center justify-center shadow-md shadow-amber-500/25 group-hover:scale-110 transition-transform flex-shrink-0">
+                    <CalendarClock className="w-5 h-5 stroke-[2.2]" />
                   </div>
                   <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md ${
                     reminders.some(r => r.status === 'overdue')
@@ -1809,8 +1813,8 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 className="p-3.5 rounded-2xl bg-white dark:bg-dark-850/90 border border-slate-200/80 dark:border-white/[0.08] shadow-xs text-left space-y-2 active:scale-95 transition-all group"
               >
                 <div className="flex items-center justify-between">
-                  <div className="w-9 h-9 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Disc className="w-5 h-5" />
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-500 to-cyan-500 text-white flex items-center justify-center shadow-md shadow-sky-500/25 group-hover:scale-110 transition-transform flex-shrink-0">
+                    <TireIcon className="w-5 h-5 stroke-[2.2]" />
                   </div>
                   <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-slate-300">
                     {tyres.length}
@@ -1831,8 +1835,8 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 className="p-3.5 rounded-2xl bg-white dark:bg-dark-850/90 border border-slate-200/80 dark:border-white/[0.08] shadow-xs text-left space-y-2 active:scale-95 transition-all group"
               >
                 <div className="flex items-center justify-between">
-                  <div className="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <BookOpen className="w-5 h-5" />
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-purple-600 to-violet-500 text-white flex items-center justify-center shadow-md shadow-purple-500/25 group-hover:scale-110 transition-transform flex-shrink-0">
+                    <Package className="w-5 h-5 stroke-[2.2]" />
                   </div>
                   <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-slate-300">
                     {consumables.length}
@@ -1853,8 +1857,8 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 className="p-3.5 rounded-2xl bg-white dark:bg-dark-850/90 border border-slate-200/80 dark:border-white/[0.08] shadow-xs text-left space-y-2 active:scale-95 transition-all group"
               >
                 <div className="flex items-center justify-between">
-                  <div className="w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <BarChart3 className="w-5 h-5" />
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 to-blue-500 text-white flex items-center justify-center shadow-md shadow-indigo-500/25 group-hover:scale-110 transition-transform flex-shrink-0">
+                    <BarChart3 className="w-5 h-5 stroke-[2.2]" />
                   </div>
                   <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-slate-300">
                     {vehicle.currency || '₽'}
@@ -1875,8 +1879,8 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 className="p-3.5 rounded-2xl bg-white dark:bg-dark-850/90 border border-slate-200/80 dark:border-white/[0.08] shadow-xs text-left space-y-2 active:scale-95 transition-all group"
               >
                 <div className="flex items-center justify-between">
-                  <div className="w-9 h-9 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <FileText className="w-5 h-5" />
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-rose-500 to-pink-500 text-white flex items-center justify-center shadow-md shadow-rose-500/25 group-hover:scale-110 transition-transform flex-shrink-0">
+                    <FileText className="w-5 h-5 stroke-[2.2]" />
                   </div>
                   <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-slate-300">
                     {documents.length}
@@ -1897,8 +1901,8 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 className="p-3.5 rounded-2xl bg-white dark:bg-dark-850/90 border border-slate-200/80 dark:border-white/[0.08] shadow-xs text-left space-y-2 active:scale-95 transition-all group"
               >
                 <div className="flex items-center justify-between">
-                  <div className="w-9 h-9 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Sparkles className="w-5 h-5" />
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-teal-600 to-emerald-500 text-white flex items-center justify-center shadow-md shadow-teal-500/25 group-hover:scale-110 transition-transform flex-shrink-0">
+                    <BookOpen className="w-5 h-5 stroke-[2.2]" />
                   </div>
                   <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-slate-300">
                     Wiki
@@ -2499,10 +2503,14 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                           : 'border-slate-200 dark:border-dark-750'
                       }`}
                     >
-                      <div className="flex items-start justify-between">
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <h4 className="text-sm font-bold text-slate-900 dark:text-white">{rem.title}</h4>
+                      <div className="flex items-start justify-between gap-2.5">
+                        <div className="flex items-start space-x-2.5 min-w-0">
+                          <div className={`w-9 h-9 rounded-xl ${getConsumableItemIcon(rem.title, '').bg} flex items-center justify-center text-lg flex-shrink-0 shadow-2xs`}>
+                            {getConsumableItemIcon(rem.title, '').icon}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <h4 className="text-sm font-bold text-slate-900 dark:text-white">{rem.title}</h4>
                             {isOverdue && (
                               <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
                                 Просрочено
@@ -2532,6 +2540,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                             </div>
                           )}
                         </div>
+                      </div>
 
                         {isOwner && (
                           <div className="flex items-center space-x-1 flex-shrink-0">
@@ -3155,7 +3164,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
 
                 {tyres.length === 0 ? (
                   <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-8 sm:p-10 text-center space-y-3">
-                    <Disc className="w-10 h-10 text-slate-400 dark:text-slate-600 mx-auto" />
+                    <TireIcon className="w-10 h-10 text-slate-400 dark:text-slate-600 mx-auto" />
                     <div className="text-sm font-bold text-slate-900 dark:text-white">Комплекты шин не добавлены</div>
                     <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
                       Ведите учет летнего и зимнего комплектов резины, глубины остатка протектора в мм и пробега.

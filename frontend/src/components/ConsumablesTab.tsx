@@ -16,6 +16,7 @@ import {
   ShoppingBag,
 } from 'lucide-react';
 import { VehicleConsumable, Vehicle } from '../types';
+import { getConsumableItemIcon } from '../utils/consumableIcons';
 import { api } from '../services/api';
 
 interface ConsumablesTabProps {
@@ -386,6 +387,7 @@ export const ConsumablesTab: React.FC<ConsumablesTabProps> = ({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {items.map((item) => {
+                    const itemIcon = getConsumableItemIcon(item.name, item.category);
                     const afterList = (item.aftermarket_parts || '')
                       .split(',')
                       .map((s) => s.trim())
@@ -397,16 +399,21 @@ export const ConsumablesTab: React.FC<ConsumablesTabProps> = ({
                         className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl p-3.5 sm:p-4 shadow-sm hover:shadow-md transition space-y-2.5"
                       >
                         {/* Title & Actions */}
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <h4 className="text-sm font-bold text-slate-900 dark:text-white break-words leading-tight">
-                              {item.name}
-                            </h4>
-                            {item.specification && (
-                              <p className="text-xs font-semibold text-brand-600 dark:text-brand-400 mt-0.5">
-                                {item.specification}
-                              </p>
-                            )}
+                        <div className="flex items-start justify-between gap-2.5">
+                          <div className="flex items-start space-x-2.5 min-w-0">
+                            <div className={`w-9 h-9 rounded-xl ${itemIcon.bg} flex items-center justify-center text-lg flex-shrink-0 shadow-2xs`}>
+                              {itemIcon.icon}
+                            </div>
+                            <div className="min-w-0">
+                              <h4 className="text-sm font-bold text-slate-900 dark:text-white break-words leading-tight">
+                                {item.name}
+                              </h4>
+                              {item.specification && (
+                                <p className="text-xs font-semibold text-brand-600 dark:text-brand-400 mt-0.5">
+                                  {item.specification}
+                                </p>
+                              )}
+                            </div>
                           </div>
 
                           {isOwner && (
