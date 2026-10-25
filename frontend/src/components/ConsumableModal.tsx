@@ -180,7 +180,6 @@ export const ConsumableModal: React.FC<ConsumableModalProps> = ({
             <input
               type="text"
               required
-              placeholder="Например: Масляный фильтр ДВС"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-300 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-medium"
@@ -209,7 +208,6 @@ export const ConsumableModal: React.FC<ConsumableModalProps> = ({
               </label>
               <input
                 type="text"
-                placeholder="1017100-M01"
                 value={formData.oem_part_number}
                 onChange={(e) => setFormData({ ...formData, oem_part_number: e.target.value.toUpperCase() })}
                 className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-300 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white font-mono font-bold focus:outline-none focus:border-brand-500 uppercase tracking-wider"
@@ -221,7 +219,6 @@ export const ConsumableModal: React.FC<ConsumableModalProps> = ({
               </label>
               <input
                 type="text"
-                placeholder="SAE 0W-20 SP, 4.2 л..."
                 value={formData.specification}
                 onChange={(e) => setFormData({ ...formData, specification: e.target.value })}
                 className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-300 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-medium"
@@ -236,7 +233,6 @@ export const ConsumableModal: React.FC<ConsumableModalProps> = ({
             </label>
             <input
               type="text"
-              placeholder="Mann W 7053, Filtron OP641/2, Bosch 0451103316..."
               value={formData.aftermarket_parts}
               onChange={(e) => setFormData({ ...formData, aftermarket_parts: e.target.value })}
               className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-300 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-mono"
@@ -253,7 +249,6 @@ export const ConsumableModal: React.FC<ConsumableModalProps> = ({
             </label>
             <input
               type="text"
-              placeholder="Каждые 7 500 км или 250 моточасов"
               value={formData.replacement_interval}
               onChange={(e) => setFormData({ ...formData, replacement_interval: e.target.value })}
               className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-300 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-medium"
@@ -267,7 +262,6 @@ export const ConsumableModal: React.FC<ConsumableModalProps> = ({
             </label>
             <textarea
               rows={2}
-              placeholder="Шайба пробки поддона: 1004104-M01. Затягивать моментом 25 Нм..."
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-300 dark:border-dark-750 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 resize-none"

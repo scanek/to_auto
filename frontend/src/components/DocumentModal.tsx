@@ -130,7 +130,6 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
               </label>
               <input
                 type="text"
-                placeholder="ХХХ 0123456789"
                 value={formData.document_number}
                 onChange={(e) => setFormData({ ...formData, document_number: e.target.value })}
                 className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white font-mono focus:outline-none focus:border-brand-500 font-medium"
@@ -146,7 +145,6 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
               <input
                 type="text"
                 required
-                placeholder="ОСАГО, КАСКО, Техосмотр..."
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-medium"
@@ -158,7 +156,6 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
               </label>
               <input
                 type="text"
-                placeholder="Ингосстрах, АльфаСтрахование..."
                 value={formData.company}
                 onChange={(e) => setFormData({ ...formData, company: e.target.value })}
                 className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
@@ -197,7 +194,6 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
               <input
                 type="number"
                 step="any"
-                placeholder="8500"
                 value={formData.price || ''}
                 onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
                 className="w-full bg-slate-50 dark:bg-dark-900 border border-purple-300 dark:border-purple-500/40 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white font-mono font-semibold focus:outline-none focus:border-purple-500"
@@ -211,7 +207,6 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
             </label>
             <textarea
               rows={2}
-              placeholder="Контакты страхового агента, условия, ссылка..."
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"

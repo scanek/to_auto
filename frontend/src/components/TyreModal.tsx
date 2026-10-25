@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Disc, Calendar, CircleDot, ShieldCheck, DollarSign, Copy, Check } from 'lucide-react';
+import { X, Calendar, CircleDot, ShieldCheck, DollarSign, Copy, Check } from 'lucide-react';
+import { TireIcon } from './TireIcon';
 import { TyreSet, Vehicle } from '../types';
 import { useModalA11y } from '../utils/useModalA11y';
 
@@ -181,7 +182,7 @@ export const TyreModal: React.FC<TyreModalProps> = ({
       <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl transition-colors">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-dark-750">
           <div className="flex items-center space-x-2">
-            <Disc className="w-5 h-5 text-brand-500" />
+            <TireIcon className="w-5 h-5 text-brand-500" />
             <h2 id="tyre-modal-title" className="text-base font-bold text-slate-900 dark:text-white">
               {tyre ? 'Редактировать комплект шин и дисков' : 'Добавить комплект шин и колес'}
             </h2>
@@ -205,7 +206,6 @@ export const TyreModal: React.FC<TyreModalProps> = ({
               <input
                 type="text"
                 required
-                placeholder="Заводской комплект, Зимние шипы..."
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-medium"
@@ -229,7 +229,7 @@ export const TyreModal: React.FC<TyreModalProps> = ({
           {/* Section 1: Tyres (Резина) */}
           <div className="bg-slate-50 dark:bg-dark-900/80 border border-slate-200 dark:border-dark-750 p-3.5 sm:p-4 rounded-2xl space-y-3">
             <div className="flex items-center space-x-2">
-              <Disc className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+              <TireIcon className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
                 Параметры и покупка шин (резины)
               </h3>
@@ -242,7 +242,6 @@ export const TyreModal: React.FC<TyreModalProps> = ({
                 </label>
                 <input
                   type="text"
-                  placeholder="Ikon Tyres Nordman 8, Michelin, Bridgestone..."
                   value={formData.brand_model}
                   onChange={(e) => setFormData({ ...formData, brand_model: e.target.value })}
                   className="w-full bg-white dark:bg-dark-850 border border-slate-300 dark:border-dark-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
@@ -254,7 +253,6 @@ export const TyreModal: React.FC<TyreModalProps> = ({
                 </label>
                 <input
                   type="text"
-                  placeholder="225/55 R19, 215/65 R16..."
                   value={formData.size}
                   onChange={(e) => setFormData({ ...formData, size: e.target.value })}
                   className="w-full bg-white dark:bg-dark-850 border border-slate-300 dark:border-dark-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white font-mono focus:outline-none focus:border-brand-500 font-semibold"
@@ -280,7 +278,6 @@ export const TyreModal: React.FC<TyreModalProps> = ({
                 </label>
                 <input
                   type="text"
-                  placeholder="4223, 2023 г..."
                   value={formData.dot_code}
                   onChange={(e) => setFormData({ ...formData, dot_code: e.target.value })}
                   className="w-full bg-white dark:bg-dark-850 border border-slate-300 dark:border-dark-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white font-mono focus:outline-none focus:border-brand-500"
@@ -293,7 +290,6 @@ export const TyreModal: React.FC<TyreModalProps> = ({
                 <input
                   type="number"
                   step="any"
-                  placeholder="62820"
                   value={formData.total_price || ''}
                   onChange={(e) =>
                     setFormData({ ...formData, total_price: parseFloat(e.target.value) || 0 })
@@ -339,7 +335,6 @@ export const TyreModal: React.FC<TyreModalProps> = ({
                     </label>
                     <input
                       type="text"
-                      placeholder="Литые Skad KL-289, Оригинал Changan..."
                       value={formData.rims_brand_model}
                       onChange={(e) => setFormData({ ...formData, rims_brand_model: e.target.value })}
                       className="w-full bg-white dark:bg-dark-850 border border-slate-300 dark:border-dark-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
@@ -351,7 +346,6 @@ export const TyreModal: React.FC<TyreModalProps> = ({
                     </label>
                     <input
                       type="text"
-                      placeholder="19x7.5J 5x114.3 ET45 DIA67.1..."
                       value={formData.rims_size}
                       onChange={(e) => setFormData({ ...formData, rims_size: e.target.value })}
                       className="w-full bg-white dark:bg-dark-850 border border-slate-300 dark:border-dark-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white font-mono focus:outline-none focus:border-brand-500"
@@ -378,7 +372,6 @@ export const TyreModal: React.FC<TyreModalProps> = ({
                     <input
                       type="number"
                       step="any"
-                      placeholder="48000"
                       value={formData.rims_price || ''}
                       onChange={(e) =>
                         setFormData({ ...formData, rims_price: parseFloat(e.target.value) || 0 })
@@ -453,7 +446,6 @@ export const TyreModal: React.FC<TyreModalProps> = ({
                     </label>
                     <input
                       type="text"
-                      placeholder="Оригинал OEM, Autel MX, Schrader..."
                       value={formData.tpms_brand}
                       onChange={(e) => setFormData({ ...formData, tpms_brand: e.target.value })}
                       className="w-full bg-white dark:bg-dark-850 border border-slate-300 dark:border-dark-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-cyan-500"
@@ -468,7 +460,6 @@ export const TyreModal: React.FC<TyreModalProps> = ({
                       step="0.1"
                       min="1.0"
                       max="4.5"
-                      placeholder="2.3"
                       value={formData.tpms_pressure_bar ?? ''}
                       onChange={(e) =>
                         setFormData({
@@ -511,7 +502,6 @@ export const TyreModal: React.FC<TyreModalProps> = ({
                       </div>
                       <input
                         type="text"
-                        placeholder="Например: 0A1B2C3D"
                         value={formData.tpms_fl_id}
                         onChange={(e) => setFormData({ ...formData, tpms_fl_id: e.target.value.toUpperCase() })}
                         className="w-full bg-white dark:bg-dark-850 border border-slate-300 dark:border-dark-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white font-mono font-bold focus:outline-none focus:border-cyan-500 uppercase tracking-wider"
@@ -538,7 +528,6 @@ export const TyreModal: React.FC<TyreModalProps> = ({
                       </div>
                       <input
                         type="text"
-                        placeholder="Например: 0A1B2C3E"
                         value={formData.tpms_fr_id}
                         onChange={(e) => setFormData({ ...formData, tpms_fr_id: e.target.value.toUpperCase() })}
                         className="w-full bg-white dark:bg-dark-850 border border-slate-300 dark:border-dark-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white font-mono font-bold focus:outline-none focus:border-cyan-500 uppercase tracking-wider"
@@ -565,7 +554,6 @@ export const TyreModal: React.FC<TyreModalProps> = ({
                       </div>
                       <input
                         type="text"
-                        placeholder="Например: 0A1B2C3F"
                         value={formData.tpms_rl_id}
                         onChange={(e) => setFormData({ ...formData, tpms_rl_id: e.target.value.toUpperCase() })}
                         className="w-full bg-white dark:bg-dark-850 border border-slate-300 dark:border-dark-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white font-mono font-bold focus:outline-none focus:border-cyan-500 uppercase tracking-wider"
@@ -592,7 +580,6 @@ export const TyreModal: React.FC<TyreModalProps> = ({
                       </div>
                       <input
                         type="text"
-                        placeholder="Например: 0A1B2C40"
                         value={formData.tpms_rr_id}
                         onChange={(e) => setFormData({ ...formData, tpms_rr_id: e.target.value.toUpperCase() })}
                         className="w-full bg-white dark:bg-dark-850 border border-slate-300 dark:border-dark-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white font-mono font-bold focus:outline-none focus:border-cyan-500 uppercase tracking-wider"
@@ -679,7 +666,6 @@ export const TyreModal: React.FC<TyreModalProps> = ({
               </label>
               <input
                 type="text"
-                placeholder="Гараж, Балкон, Склад..."
                 value={formData.storage_location}
                 onChange={(e) => setFormData({ ...formData, storage_location: e.target.value })}
                 className="w-full bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"

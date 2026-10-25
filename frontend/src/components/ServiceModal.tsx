@@ -9,8 +9,6 @@ import {
   ChevronDown,
   ChevronUp,
   Sparkles,
-  Layers,
-  FileText,
 } from 'lucide-react';
 import { ServiceRecord, ServiceItem, Vehicle } from '../types';
 import { ReceiptScanModal } from './ReceiptScanModal';
@@ -121,7 +119,7 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
         notes: record.notes || '',
       });
       setItems(recordItems);
-      if (record.description || record.notes || record.store || record.url) {
+      if (record.description || record.notes || record.store) {
         setIsNotesExpanded(true);
       }
     } else {
@@ -225,14 +223,6 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
       ...prev,
       cost_labor: labor,
       total_cost: partsSum + labor,
-    }));
-  };
-
-  const handleTotalChange = (val: string) => {
-    const total = parseFloat(val) || 0;
-    setFormData((prev) => ({
-      ...prev,
-      total_cost: total,
     }));
   };
 
@@ -377,7 +367,6 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
               <input
                 type="number"
                 step="any"
-                placeholder="Опция"
                 value={formData.engine_hours || ''}
                 onChange={(e) =>
                   setFormData({ ...formData, engine_hours: parseFloat(e.target.value) || 0 })
@@ -396,7 +385,6 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
                 </label>
                 <input
                   type="text"
-                  placeholder="ТО-1, ТО-2..."
                   value={formData.to_tag}
                   onChange={(e) => setFormData({ ...formData, to_tag: e.target.value })}
                   className="w-full bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-700 rounded-xl px-2.5 py-1.5 text-xs text-brand-600 dark:text-brand-400 font-mono font-black focus:outline-none focus:border-brand-500"
@@ -410,7 +398,6 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
                 <input
                   type="text"
                   required
-                  placeholder="Замена масла и фильтров, ТО..."
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   className="w-full bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-700 rounded-xl px-3 py-1.5 text-xs text-slate-900 dark:text-white font-bold focus:outline-none focus:border-brand-500"
@@ -479,7 +466,7 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
                   key={pIdx}
                   type="button"
                   onClick={() => handleAddItem(preset)}
-                  className="text-[11px] font-bold px-2.5 py-1 rounded-xl bg-white dark:bg-dark-800 hover:bg-brand-50 dark:hover:bg-dark-750 hover:text-brand-600 dark:hover:text-brand-400 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-dark-700 transition flex-shrink-0 whitespace-nowrap shadow-2xs active:scale-95"
+                  className="text-[11px] font-bold px-2.5 py-1 rounded-xl bg-white dark:bg-dark-850 hover:bg-brand-50 dark:hover:bg-dark-750 hover:text-brand-600 dark:hover:text-brand-400 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-dark-700 transition flex-shrink-0 whitespace-nowrap shadow-2xs active:scale-95"
                 >
                   + {preset.name}
                 </button>
@@ -513,7 +500,6 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
                         <input
                           type="text"
                           required
-                          placeholder="Наименование (напр: Масло моторное ZIC 5W-40)"
                           value={item.name}
                           onChange={(e) => handleUpdateItem(idx, 'name', e.target.value)}
                           className="flex-1 min-w-0 bg-transparent text-slate-900 dark:text-white font-bold text-xs sm:text-sm focus:outline-none focus:border-b border-brand-500 py-1"
@@ -539,7 +525,6 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
                             <input
                               type="number"
                               step="any"
-                              placeholder="0"
                               value={item.total_price || ''}
                               onChange={(e) => handleUpdateItem(idx, 'total_price', e.target.value)}
                               className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-xl px-2.5 py-1.5 text-emerald-600 dark:text-emerald-400 font-mono font-black text-xs sm:text-sm focus:outline-none focus:border-emerald-500"
@@ -557,7 +542,6 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
                           </label>
                           <input
                             type="text"
-                            placeholder="Арт: C-933 / VIC"
                             value={item.part_number || item.brand || ''}
                             onChange={(e) => handleUpdateItem(idx, 'part_number', e.target.value)}
                             className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-xl px-2.5 py-1.5 text-slate-900 dark:text-white font-mono text-xs focus:outline-none focus:border-brand-500"
@@ -620,7 +604,6 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
                               <span className="text-[10px] font-bold text-slate-400 w-16 flex-shrink-0">Магазин:</span>
                               <input
                                 type="text"
-                                placeholder="Ozon, Exist, Автодок..."
                                 value={item.store || ''}
                                 onChange={(e) => handleUpdateItem(idx, 'store', e.target.value)}
                                 className="flex-1 bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-700 rounded-lg px-2 py-1 text-xs"
@@ -645,7 +628,6 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
                             <span className="text-[10px] font-bold text-slate-400 w-16 flex-shrink-0">Ссылка:</span>
                             <input
                               type="url"
-                              placeholder="https://..."
                               value={item.url || ''}
                               onChange={(e) => handleUpdateItem(idx, 'url', e.target.value)}
                               className="flex-1 bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-700 rounded-lg px-2 py-1 text-xs font-mono"
@@ -670,7 +652,6 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
                 <input
                   type="number"
                   step="any"
-                  placeholder="0 (если работы бесплатные или делали сами)"
                   value={formData.cost_labor || ''}
                   onChange={(e) => handleLaborChange(e.target.value)}
                   className="w-full bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white font-mono font-bold focus:outline-none focus:border-brand-500"
@@ -688,7 +669,7 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
                 onClick={() => setIsNotesExpanded(!isNotesExpanded)}
                 className="text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-brand-500 flex items-center space-x-1"
               >
-                <span>{isNotesExpanded ? '▲ Скрыть детали СТО и заметки' : '▼ Заказ-наряд, СТО и комментарии (опция)'}</span>
+                <span>{isNotesExpanded ? '▲ Скрыть данные СТО и заметки' : '▼ СТО, заказ-наряд и комментарий (опция)'}</span>
               </button>
 
               {isNotesExpanded && (
@@ -699,7 +680,6 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
                     </label>
                     <input
                       type="text"
-                      placeholder="Дилер, Гараж, FIT Service..."
                       value={formData.store}
                       onChange={(e) => setFormData({ ...formData, store: e.target.value })}
                       className="w-full bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-700 rounded-xl px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
@@ -712,7 +692,6 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
                     </label>
                     <input
                       type="text"
-                      placeholder="Заказ-наряд №4512..."
                       value={formData.notes}
                       onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                       className="w-full bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-700 rounded-xl px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
@@ -725,7 +704,6 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
                     </label>
                     <textarea
                       rows={2}
-                      placeholder="Особенности, зазоры, диагностика..."
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       className="w-full bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-700 rounded-xl px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 resize-none"

@@ -201,7 +201,6 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({
             <input
               type="text"
               required
-              placeholder="Замена моторного масла, фильтра, свечей..."
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-medium"
@@ -215,7 +214,6 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({
               </label>
               <input
                 type="text"
-                placeholder="Лукойл, VIC, Denso, ZIC..."
                 value={formData.brand}
                 onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
                 className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
@@ -227,7 +225,6 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({
               </label>
               <input
                 type="text"
-                placeholder="16510-61A31..."
                 value={formData.article}
                 onChange={(e) => setFormData({ ...formData, article: e.target.value })}
                 className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white font-mono focus:outline-none focus:border-brand-500"
@@ -244,7 +241,6 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({
               <input
                 type="number"
                 step="any"
-                placeholder="7500"
                 value={formData.interval_distance || ''}
                 onChange={(e) =>
                   setFormData({ ...formData, interval_distance: parseFloat(e.target.value) || 0 })
@@ -260,7 +256,6 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({
               <input
                 type="number"
                 step="any"
-                placeholder="250"
                 value={formData.interval_hours || ''}
                 onChange={(e) =>
                   setFormData({ ...formData, interval_hours: parseFloat(e.target.value) || 0 })
@@ -275,7 +270,6 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({
               </label>
               <input
                 type="number"
-                placeholder="12"
                 value={formData.interval_months || ''}
                 onChange={(e) =>
                   setFormData({ ...formData, interval_months: parseInt(e.target.value) || 0 })
@@ -372,7 +366,6 @@ export const ReminderModal: React.FC<ReminderModalProps> = ({
             </label>
             <input
               type="text"
-              placeholder="Объем 4.5 л, допуск SP / C5, допуск DCTF..."
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"

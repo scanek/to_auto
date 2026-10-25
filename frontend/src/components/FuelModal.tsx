@@ -431,7 +431,6 @@ export const FuelModal: React.FC<FuelModalProps> = ({
               </label>
               <input
                 type="text"
-                placeholder="АИ-95, АИ-98, ДТ, 100..."
                 value={formData.fuel_grade}
                 onChange={(e) => setFormData({ ...formData, fuel_grade: e.target.value })}
                 className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-medium"
@@ -459,7 +458,6 @@ export const FuelModal: React.FC<FuelModalProps> = ({
               </label>
               <input
                 type="text"
-                placeholder="Лукойл, Газпромнефть, Teboil..."
                 value={formData.gas_station}
                 onChange={(e) => setFormData({ ...formData, gas_station: e.target.value })}
                 className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
@@ -511,7 +509,6 @@ export const FuelModal: React.FC<FuelModalProps> = ({
             </label>
             <input
               type="text"
-              placeholder="Трасса / Город, кондиционер..."
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
