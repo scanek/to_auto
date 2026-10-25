@@ -6,7 +6,6 @@ import {
   FileSpreadsheet,
   Download,
   QrCode,
-  Camera,
   Share2,
   Satellite,
   Edit2,
@@ -25,7 +24,6 @@ interface VehicleToolsModalProps {
   onOpenStarLineModal: () => void;
   onOpenQrModal: () => void;
   onOpenPublicShareModal: () => void;
-  onOpenReceiptScan: () => void;
   onExportVehicleBackup: () => void;
   onDownloadExcel: () => void;
   onDownloadPdf: () => void;
@@ -41,7 +39,6 @@ export const VehicleToolsModal: React.FC<VehicleToolsModalProps> = ({
   onOpenStarLineModal,
   onOpenQrModal,
   onOpenPublicShareModal,
-  onOpenReceiptScan,
   onExportVehicleBackup,
   onDownloadExcel,
   onDownloadPdf,
@@ -183,29 +180,6 @@ export const VehicleToolsModal: React.FC<VehicleToolsModalProps> = ({
                   </div>
                 </div>
               </button>
-
-              {/* OCR Vision Scan */}
-              {isOwner && (
-                <button
-                  onClick={() => {
-                    onClose();
-                    onOpenReceiptScan();
-                  }}
-                  className="p-3.5 rounded-2xl border border-slate-200 dark:border-dark-750 bg-slate-50/60 dark:bg-dark-800/60 hover:border-purple-500/40 hover:bg-purple-500/5 transition flex items-center space-x-3 text-left group"
-                >
-                  <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-                    <Camera className="w-5 h-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-xs font-bold text-slate-900 dark:text-white">
-                      Распознать заказ-наряд (OCR)
-                    </div>
-                    <div className="text-[11px] text-slate-500">
-                      Сканирование фото чека СТО нейросетью
-                    </div>
-                  </div>
-                </button>
-              )}
 
               {/* Public Share Booklet */}
               {isOwner && (

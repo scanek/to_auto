@@ -8,7 +8,6 @@ import { ConsumablesTab } from '../components/ConsumablesTab';
 import { ConsumableModal } from '../components/ConsumableModal';
 import { TyreRotationWidget } from '../components/TyreRotationWidget';
 import { PublicShareModal } from '../components/PublicShareModal';
-import { ReceiptScanModal } from '../components/ReceiptScanModal';
 import { StoreBadge } from '../components/StoreBadge';
 import { PartArticleBadge } from '../components/PartArticleBadge';
 import { calculateDailyMileage, getPredictiveDueDate } from '../utils/predictiveMaintenance';
@@ -32,7 +31,6 @@ import {
   Plus,
   ArrowLeft,
   Printer,
-  Camera,
   Edit2,
   Trash2,
   CheckCircle2,
@@ -205,7 +203,6 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [isPublicShareModalOpen, setIsPublicShareModalOpen] = useState(false);
   const [isStarLineModalOpen, setIsStarLineModalOpen] = useState(false);
-  const [isReceiptScanOpen, setIsReceiptScanOpen] = useState(false);
   const [isToolsModalOpen, setIsToolsModalOpen] = useState(false);
   const [isSyncingStarLine, setIsSyncingStarLine] = useState(false);
   const [showFuelInLitres, setShowFuelInLitres] = useState(true);
@@ -229,7 +226,6 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
       if (isQrModalOpen) { setIsQrModalOpen(false); return; }
       if (isPublicShareModalOpen) { setIsPublicShareModalOpen(false); return; }
       if (isStarLineModalOpen) { setIsStarLineModalOpen(false); return; }
-      if (isReceiptScanOpen) { setIsReceiptScanOpen(false); return; }
       if (isConsumableModalOpen) { setIsConsumableModalOpen(false); return; }
 
       // 2. If in a sub-section on mobile, return to the car's dashboard hub
@@ -252,7 +248,6 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
           if (isQrModalOpen) { setIsQrModalOpen(false); return; }
           if (isPublicShareModalOpen) { setIsPublicShareModalOpen(false); return; }
           if (isStarLineModalOpen) { setIsStarLineModalOpen(false); return; }
-          if (isReceiptScanOpen) { setIsReceiptScanOpen(false); return; }
           if (isConsumableModalOpen) { setIsConsumableModalOpen(false); return; }
 
           if (mobileSection !== 'dashboard') {
@@ -281,7 +276,6 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
     isQrModalOpen,
     isPublicShareModalOpen,
     isStarLineModalOpen,
-    isReceiptScanOpen,
     isConsumableModalOpen,
     onBack,
   ]);
@@ -1506,7 +1500,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
           </div>
 
           {/* 2. Vital Telemetry Status Strip (3 micro-cards) */}
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {/* Odometer */}
             <div
               onClick={handleQuickChangeOdometer}
@@ -1653,15 +1647,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 <span className="leading-none">Запись ТО</span>
               </button>
 
-              <button
-                type="button"
-                onClick={() => setIsReceiptScanOpen(true)}
-                className="py-2.5 px-2 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 active:scale-95 text-white font-bold text-xs flex flex-col items-center justify-center space-y-1 shadow-sm shadow-indigo-600/20 transition-transform"
-              >
-                <Camera className="w-4 h-4" />
-                <span className="leading-none">Скан чека</span>
-              </button>
-            </div>
+              </div>
           )}
 
           {/* 4. Urgent / Upcoming Maintenance Alert Banner */}
@@ -3684,27 +3670,6 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
         />
       )}
 
-      {/* OCR / Vision Receipt Scan Modal */}
-      {isReceiptScanOpen && (
-        <ReceiptScanModal
-          isOpen={isReceiptScanOpen}
-          onClose={() => setIsReceiptScanOpen(false)}
-          vehicle={vehicle}
-          onApplyToService={(data, attachUrl) => {
-            onOpenServiceModal(data.record_type || 'service', {
-              ...data,
-              vehicle_id: vehicle.id,
-            } as any);
-          }}
-          onApplyToFuel={(data) => {
-            onOpenFuelModal({
-              ...data,
-              vehicle_id: vehicle.id,
-            } as any);
-          }}
-        />
-      )}
-
       {/* Vehicle Tools & Options Modal */}
       <VehicleToolsModal
         isOpen={isToolsModalOpen}
@@ -3716,7 +3681,6 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
         onOpenStarLineModal={() => setIsStarLineModalOpen(true)}
         onOpenQrModal={() => setIsQrModalOpen(true)}
         onOpenPublicShareModal={() => setIsPublicShareModalOpen(true)}
-        onOpenReceiptScan={() => setIsReceiptScanOpen(true)}
         onExportVehicleBackup={handleExportVehicleBackup}
         onDownloadExcel={() => api.downloadExcelFile(vehicle.id)}
         onDownloadPdf={() => api.downloadServiceBooklet(vehicle.id)}
@@ -3740,7 +3704,6 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
         onAddFuel={() => onOpenFuelModal()}
         onAddService={() => onOpenServiceModal('service')}
         onUpdateOdometer={() => setIsQuickMileageOpen(true)}
-        onScanReceipt={() => setIsReceiptScanOpen(true)}
       />
     </div>
   );

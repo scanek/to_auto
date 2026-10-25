@@ -7,7 +7,6 @@ import {
   Plus,
   Fuel,
   Gauge,
-  Receipt,
   Wrench,
   X,
 } from 'lucide-react';
@@ -21,7 +20,6 @@ interface BottomNavProps {
   onAddFuel?: () => void;
   onAddService?: () => void;
   onUpdateOdometer?: () => void;
-  onScanReceipt?: () => void;
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({
@@ -31,7 +29,6 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   onAddFuel,
   onAddService,
   onUpdateOdometer,
-  onScanReceipt,
 }) => {
   const [isQuickOpen, setIsQuickOpen] = useState(false);
 
@@ -120,25 +117,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               </div>
             </button>
           )}
-
-          {onScanReceipt && (
-            <button
-              type="button"
-              onClick={() => {
-                setIsQuickOpen(false);
-                onScanReceipt();
-              }}
-              className="w-full flex items-center space-x-3 p-2 rounded-2xl hover:bg-slate-100 dark:hover:bg-[#1a243b] text-left transition-colors active:scale-95"
-            >
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-500 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-purple-500/20 flex-shrink-0">
-                <Receipt className="w-5 h-5" />
-              </div>
-              <div className="min-w-0">
-                <div className="text-xs font-black text-slate-900 dark:text-white">Скан чека (OCR)</div>
-                <div className="text-[10px] text-slate-500 dark:text-slate-400">Распознать с фото чека</div>
-              </div>
-            </button>
-          )}
+        
         </div>
       )}
 

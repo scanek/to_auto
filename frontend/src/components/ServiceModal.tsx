@@ -4,14 +4,12 @@ import {
   Wrench,
   Plus,
   Trash2,
-  Camera,
   ExternalLink,
   ChevronDown,
   ChevronUp,
   Sparkles,
 } from 'lucide-react';
 import { ServiceRecord, ServiceItem, Vehicle } from '../types';
-import { ReceiptScanModal } from './ReceiptScanModal';
 import { detectStoreFromUrl } from './StoreBadge';
 import { useModalA11y } from '../utils/useModalA11y';
 import { getConsumableItemIcon } from '../utils/consumableIcons';
@@ -63,7 +61,6 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
 
   const [items, setItems] = useState<ServiceItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [expandedItems, setExpandedItems] = useState<Record<number, boolean>>({});
   const [isNotesExpanded, setIsNotesExpanded] = useState(false);
 
@@ -291,15 +288,6 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
           </div>
 
           <div className="flex items-center space-x-1.5 flex-shrink-0">
-            <button
-              type="button"
-              onClick={() => setIsScannerOpen(true)}
-              className="px-2.5 py-1.5 bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/60 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 text-xs font-bold rounded-xl border border-purple-200 dark:border-purple-800/80 flex items-center space-x-1 transition active:scale-95 shadow-2xs"
-              title="Распознать заказ-наряд или чек по фото (OCR)"
-            >
-              <Camera className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
-              <span className="hidden sm:inline">Скан чека</span>
-            </button>
             <button
               type="button"
               onClick={onClose}
@@ -753,35 +741,6 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
           </div>
         </div>
       </div>
-
-      {/* OCR Scanner Modal */}
-      {isScannerOpen && (
-        <ReceiptScanModal
-          isOpen={isScannerOpen}
-          onClose={() => setIsScannerOpen(false)}
-          vehicle={vehicle}
-          onApplyToService={(data) => {
-            setFormData((prev) => ({
-              ...prev,
-              record_type: data.record_type || prev.record_type,
-              date: data.date ? data.date.split('T')[0] : prev.date,
-              odometer: data.odometer ?? prev.odometer,
-              engine_hours: data.engine_hours ?? prev.engine_hours,
-              title: data.title || prev.title,
-              description: data.description || prev.description,
-              store: data.store || prev.store,
-              cost_labor: data.cost_labor ?? prev.cost_labor,
-              cost_parts: data.cost_parts ?? prev.cost_parts,
-              total_cost: data.total_cost ?? prev.total_cost,
-              notes: data.notes || prev.notes,
-            }));
-            if (Array.isArray(data.items) && data.items.length > 0) {
-              setItems(data.items);
-            }
-          }}
-          onApplyToFuel={() => {}}
-        />
-      )}
     </div>
   );
 };
