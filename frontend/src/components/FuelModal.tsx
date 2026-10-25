@@ -237,9 +237,9 @@ export const FuelModal: React.FC<FuelModalProps> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="fuel-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-sm animate-fadeIn"
     >
-      <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl transition-colors">
+      <div className="bg-white dark:bg-dark-850 border-t sm:border border-slate-200 dark:border-dark-750 rounded-t-3xl sm:rounded-2xl w-full sm:max-w-lg overflow-hidden shadow-2xl transition-colors max-h-[92vh] flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-dark-750">
           <div className="flex items-center space-x-2">
             <Fuel className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />

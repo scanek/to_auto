@@ -1,9 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { X, Wrench, Plus, Trash2, Tag, ExternalLink, Sparkles, Camera } from 'lucide-react';
+import {
+  X,
+  Wrench,
+  Plus,
+  Trash2,
+  Camera,
+  ExternalLink,
+  ChevronDown,
+  ChevronUp,
+  Sparkles,
+  Layers,
+  FileText,
+} from 'lucide-react';
 import { ServiceRecord, ServiceItem, Vehicle } from '../types';
 import { ReceiptScanModal } from './ReceiptScanModal';
 import { detectStoreFromUrl } from './StoreBadge';
 import { useModalA11y } from '../utils/useModalA11y';
+import { getConsumableItemIcon } from '../utils/consumableIcons';
 
 interface ServiceModalProps {
   isOpen: boolean;
@@ -15,7 +28,7 @@ interface ServiceModalProps {
 }
 
 const POPULAR_STORES = ['Ozon', 'Wildberries', 'Exist', 'Автодок', 'Emex', 'Авито', 'Дилер'];
-const ITEM_UNITS = ['шт', 'л', 'компл', 'кан', 'уп', 'кг', 'г', 'м'];
+const ITEM_UNITS = ['шт', 'л', 'компл', 'кан', 'уп', 'кг', 'м'];
 
 const QUICK_PART_PRESETS = [
   { name: 'Масло моторное', brand: '', unit: 'л', quantity: 4 },
@@ -53,13 +66,14 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
   const [items, setItems] = useState<ServiceItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [expandedItems, setExpandedItems] = useState<Record<number, boolean>>({});
+  const [isNotesExpanded, setIsNotesExpanded] = useState(false);
 
   useModalA11y({ isOpen, onClose });
 
   useEffect(() => {
     if (record) {
       let recordItems = record.items ? [...record.items] : [];
-      // If record has no items, but has url/store/cost_parts, convert into an initial item
       if (recordItems.length === 0 && (record.url || record.store || (record.cost_parts && record.cost_parts > 0))) {
         recordItems = [
           {
@@ -97,7 +111,7 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
         date: record.date.split('T')[0],
         odometer: record.odometer,
         engine_hours: record.engine_hours || 0,
-        title: record.title,
+        title: record.title || '',
         description: record.description || '',
         store: record.store || '',
         url: record.url || '',
@@ -107,6 +121,9 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
         notes: record.notes || '',
       });
       setItems(recordItems);
+      if (record.description || record.notes || record.store || record.url) {
+        setIsNotesExpanded(true);
+      }
     } else {
       setFormData({
         record_type: defaultType,
@@ -124,32 +141,29 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
         notes: '',
       });
       setItems([]);
+      setExpandedItems({});
+      setIsNotesExpanded(false);
     }
   }, [record, isOpen, vehicle, defaultType]);
 
   if (!isOpen) return null;
 
-  const updateItemsAndCosts = (
-    newItems: ServiceItem[],
-    customLabor?: number,
-    customParts?: number
-  ) => {
-    setItems(newItems);
-    const partsSum = newItems
+  const calculatePartsSum = (itemList: ServiceItem[]) => {
+    return itemList
       .filter((it) => it.category !== 'labor')
-      .reduce((sum, it) => sum + (it.total_price || ((it.quantity || 1) * (it.unit_price || 0))), 0);
-    const laborSum = newItems
-      .filter((it) => it.category === 'labor')
-      .reduce((sum, it) => sum + (it.total_price || ((it.quantity || 1) * (it.unit_price || 0))), 0);
+      .reduce((sum, it) => sum + (Number(it.total_price) || ((Number(it.quantity) || 1) * (Number(it.unit_price) || 0))), 0);
+  };
 
-    const parts = customParts !== undefined ? customParts : (partsSum > 0 ? partsSum : (newItems.length === 0 ? formData.cost_parts : partsSum));
-    const labor = customLabor !== undefined ? customLabor : (laborSum > 0 ? laborSum : formData.cost_labor);
+  const updateItemsAndCosts = (newItems: ServiceItem[], customLabor?: number) => {
+    setItems(newItems);
+    const partsSum = calculatePartsSum(newItems);
+    const labor = customLabor !== undefined ? customLabor : formData.cost_labor;
 
     setFormData((prev) => ({
       ...prev,
-      cost_parts: parts,
+      cost_parts: partsSum,
       cost_labor: labor,
-      total_cost: parts + labor,
+      total_cost: partsSum + labor,
     }));
   };
 
@@ -166,7 +180,7 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
       unit_price: 0,
       total_price: 0,
     };
-    const newItems = [newItem, ...items];
+    const newItems = [...items, newItem];
     updateItemsAndCosts(newItems);
   };
 
@@ -175,9 +189,14 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
     next[index] = { ...next[index], [field]: value };
 
     if (field === 'quantity' || field === 'unit_price') {
-      const q = field === 'quantity' ? parseFloat(value) || 0 : next[index].quantity;
-      const u = field === 'unit_price' ? parseFloat(value) || 0 : next[index].unit_price;
+      const q = field === 'quantity' ? parseFloat(value) || 0 : (next[index].quantity || 1);
+      const u = field === 'unit_price' ? parseFloat(value) || 0 : (next[index].unit_price || 0);
       next[index].total_price = q * u;
+    } else if (field === 'total_price') {
+      const total = parseFloat(value) || 0;
+      next[index].total_price = total;
+      const q = next[index].quantity || 1;
+      next[index].unit_price = q > 0 ? Math.round(total / q) : total;
     }
 
     if (field === 'url' && value && !next[index].store) {
@@ -195,28 +214,43 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
     updateItemsAndCosts(next);
   };
 
+  const toggleItemExpanded = (index: number) => {
+    setExpandedItems((prev) => ({ ...prev, [index]: !prev[index] }));
+  };
+
+  const handleLaborChange = (val: string) => {
+    const labor = parseFloat(val) || 0;
+    const partsSum = calculatePartsSum(items);
+    setFormData((prev) => ({
+      ...prev,
+      cost_labor: labor,
+      total_cost: partsSum + labor,
+    }));
+  };
+
+  const handleTotalChange = (val: string) => {
+    const total = parseFloat(val) || 0;
+    setFormData((prev) => ({
+      ...prev,
+      total_cost: total,
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const partsSum = items
-        .filter((it) => it.category !== 'labor')
-        .reduce((sum, it) => sum + (it.total_price || ((it.quantity || 1) * (it.unit_price || 0))), 0);
-      const laborSum = items
-        .filter((it) => it.category === 'labor')
-        .reduce((sum, it) => sum + (it.total_price || ((it.quantity || 1) * (it.unit_price || 0))), 0);
-
-      const resolvedParts = partsSum > 0 ? partsSum : (formData.cost_parts || 0);
-      const resolvedLabor = laborSum > 0 ? laborSum : (formData.cost_labor || 0);
-      const minTotal = resolvedParts + resolvedLabor;
-      const finalTotal = formData.total_cost > 0 && formData.total_cost >= minTotal
+      const partsSum = calculatePartsSum(items);
+      const labor = Number(formData.cost_labor) || 0;
+      const minTotal = partsSum + labor;
+      const finalTotal = formData.total_cost >= minTotal && formData.total_cost > 0
         ? formData.total_cost
         : minTotal;
 
       await onSave({
         ...formData,
-        cost_parts: resolvedParts,
-        cost_labor: resolvedLabor,
+        cost_parts: partsSum,
+        cost_labor: labor,
         total_cost: finalTotal,
         date: new Date(formData.date).toISOString(),
         engine_hours: formData.engine_hours > 0 ? formData.engine_hours : undefined,
@@ -236,65 +270,81 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
     upgrade: 'Тюнинг / Дооснащение',
   };
 
+  const partsSum = calculatePartsSum(items);
+  const laborSum = Number(formData.cost_labor) || 0;
+  const currentTotal = formData.total_cost > 0 ? formData.total_cost : (partsSum + laborSum);
+
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="service-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-sm animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-sm animate-fadeIn p-0 sm:p-4"
     >
-      <div className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl transition-colors">
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-dark-750">
-          <div className="flex items-center space-x-2">
-            <Wrench className="w-5 h-5 text-brand-500" />
-            <h2 id="service-modal-title" className="text-base font-bold text-slate-900 dark:text-white">
-              {record ? 'Редактировать запись' : `Новая запись: ${typeLabels[formData.record_type]}`}
-            </h2>
+      <div className="bg-white dark:bg-dark-850 border-t sm:border border-slate-200 dark:border-dark-750 rounded-t-3xl sm:rounded-3xl w-full sm:max-w-2xl h-[94vh] sm:h-auto sm:max-h-[90vh] flex flex-col shadow-2xl overflow-hidden transition-colors">
+        {/* 1. STICKY TOP HEADER */}
+        <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-3.5 border-b border-slate-200 dark:border-dark-750 bg-white/95 dark:bg-dark-850/95 backdrop-blur-md flex-shrink-0 z-10">
+          <div className="flex items-center space-x-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center flex-shrink-0 shadow-2xs">
+              <Wrench className="w-4 h-4 stroke-[2.2]" />
+            </div>
+            <div className="min-w-0">
+              <h2 id="service-modal-title" className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white truncate leading-tight">
+                {record
+                  ? (record.to_tag ? `Редактирование: ${record.to_tag}` : 'Редактировать запись')
+                  : `Новая запись: ${typeLabels[formData.record_type]}`}
+              </h2>
+              <span className="text-[10px] text-slate-400 font-mono block">
+                {vehicle.make} {vehicle.model}
+              </span>
+            </div>
           </div>
-          <div className="flex items-center space-x-2">
+
+          <div className="flex items-center space-x-1.5 flex-shrink-0">
             <button
               type="button"
               onClick={() => setIsScannerOpen(true)}
-              className="px-2.5 py-1 bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/60 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 text-xs font-bold rounded-lg border border-purple-200 dark:border-purple-800/80 flex items-center space-x-1.5 transition active:scale-95 shadow-xs"
-              title="Распознать заказ-наряд или чек по фото с помощью нейросети"
+              className="px-2.5 py-1.5 bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/60 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 text-xs font-bold rounded-xl border border-purple-200 dark:border-purple-800/80 flex items-center space-x-1 transition active:scale-95 shadow-2xs"
+              title="Распознать заказ-наряд или чек по фото (OCR)"
             >
               <Camera className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
-              <span className="hidden sm:inline">Скан чека (OCR)</span>
+              <span className="hidden sm:inline">Скан чека</span>
             </button>
             <button
+              type="button"
               onClick={onClose}
               aria-label="Закрыть"
-              className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-dark-800 transition-colors"
+              className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-dark-800 transition active:scale-90"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 max-h-[82vh] overflow-y-auto">
-          {/* Type Selector */}
-          <div className="grid grid-cols-3 gap-2 p-1 bg-slate-100 dark:bg-dark-900 rounded-xl border border-slate-200 dark:border-dark-750">
+        {/* 2. SCROLLABLE FORM BODY */}
+        <form id="service-record-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+          {/* A. Type Selector (Pill Segments) */}
+          <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-dark-900 rounded-2xl border border-slate-200/80 dark:border-dark-750">
             {(['service', 'repair', 'upgrade'] as const).map((t) => (
               <button
                 key={t}
                 type="button"
                 onClick={() => setFormData({ ...formData, record_type: t })}
-                className={`py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                className={`py-2 text-xs font-bold rounded-xl transition-all ${
                   formData.record_type === t
-                    ? 'bg-brand-500 text-white shadow-md'
+                    ? 'bg-gradient-to-r from-brand-500 to-brand-600 text-white shadow-md shadow-brand-500/20'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
-                {typeLabels[t]}
+                {t === 'service' ? 'Плановое ТО' : t === 'repair' ? 'Ремонт' : 'Тюнинг'}
               </button>
             ))}
           </div>
 
-          {/* Date, Mileage, Engine Hours */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* B. Key Metrics: Date, Mileage, Hours */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
                 Дата *
               </label>
               <input
@@ -302,12 +352,12 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
                 required
                 value={formData.date}
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
+                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white font-medium focus:outline-none focus:border-brand-500"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Пробег ({vehicle.distance_unit}) *
+              <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                Пробег ({vehicle.distance_unit || 'км'}) *
               </label>
               <input
                 type="number"
@@ -317,138 +367,119 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
                 onChange={(e) =>
                   setFormData({ ...formData, odometer: parseFloat(e.target.value) || 0 })
                 }
-                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white font-mono focus:outline-none focus:border-brand-500"
+                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white font-mono font-bold focus:outline-none focus:border-brand-500"
               />
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+            <div className="col-span-2 sm:col-span-1">
+              <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
                 Моточасы (м/ч)
               </label>
               <input
                 type="number"
                 step="any"
-                placeholder="Не указано"
+                placeholder="Опция"
                 value={formData.engine_hours || ''}
                 onChange={(e) =>
                   setFormData({ ...formData, engine_hours: parseFloat(e.target.value) || 0 })
                 }
-                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white font-mono focus:outline-none focus:border-brand-500"
+                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:border-brand-500"
               />
             </div>
           </div>
 
-          {/* Title & Tag */}
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-            <div className="sm:col-span-3">
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Название / Тема обслуживания *
-              </label>
-              <textarea
-                rows={formData.title && formData.title.length > 50 ? 2 : 1}
-                required
-                placeholder={
-                  formData.record_type === 'service'
-                    ? 'Замена масла ДВС и фильтров, ТО-4...'
-                    : formData.record_type === 'repair'
-                    ? 'Замена передних тормозных колодок...'
-                    : 'Полочка в подлокотник, шумоизоляция дверей, накладки...'
-                }
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-medium resize-none transition-all"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                {formData.record_type === 'service'
-                  ? 'Тег ТО (опция)'
-                  : formData.record_type === 'upgrade'
-                  ? 'Категория тюнинга'
-                  : 'Категория ремонта'}
-              </label>
-              <input
-                type="text"
-                placeholder={
-                  formData.record_type === 'service'
-                    ? 'ТО-1, ТО-2...'
-                    : formData.record_type === 'upgrade'
-                    ? 'Стайлинг, Допы...'
-                    : 'Ходовая, Тормоза...'
-                }
-                value={formData.to_tag}
-                onChange={(e) => setFormData({ ...formData, to_tag: e.target.value })}
-                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white font-mono focus:outline-none focus:border-brand-500"
-              />
-            </div>
-          </div>
-
-          {/* Quick Tag Presets */}
-          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-            <span className="text-[11px] text-slate-500 dark:text-slate-400 mr-1">Быстрый тег:</span>
-            {(formData.record_type === 'service'
-              ? ['ТО-0', 'ТО-1', 'ТО-2', 'ТО-3', 'ТО-4', 'ТО-5', 'ТО-6', 'Вне ТО']
-              : formData.record_type === 'upgrade'
-              ? ['Допы', 'Стайлинг', 'Шумоизоляция', 'Свет', 'Салон', 'Защита', 'Аудио', 'Вне ТО']
-              : ['Ходовая', 'Тормоза', 'ДВС', 'Электрика', 'Кузов', 'Вне ТО']
-            ).map((tag) => (
-              <button
-                key={tag}
-                type="button"
-                onClick={() => setFormData({ ...formData, to_tag: formData.to_tag === tag ? '' : tag })}
-                className={`text-[10px] font-semibold px-2 py-0.5 rounded-lg transition-all ${
-                  formData.to_tag === tag
-                    ? formData.record_type === 'upgrade'
-                      ? 'bg-amber-500 text-white shadow-sm'
-                      : formData.record_type === 'repair'
-                      ? 'bg-rose-500 text-white shadow-sm'
-                      : 'bg-brand-500 text-white shadow-sm'
-                    : 'bg-slate-100 dark:bg-dark-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-dark-700 border border-slate-200 dark:border-dark-700'
-                }`}
-              >
-                {tag}
-              </button>
-            ))}
-          </div>
-
-          {/* MAIN SECTION: PARTS, CONSUMABLES & DETAILS */}
-          <div className="bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-2xl p-4 space-y-3.5 shadow-sm">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div className="flex items-center space-x-2">
-                <div className="w-6 h-6 rounded-lg bg-brand-500/10 text-brand-500 flex items-center justify-center">
-                  <Tag className="w-3.5 h-3.5" />
-                </div>
-                <div>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
-                    Купленные расходники и запчасти ({items.length})
-                  </h3>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Артикулы, бренды, цены, количество и ссылки на Ozon / Exist / Автодок
-                  </p>
-                </div>
+          {/* C. Tag & Title */}
+          <div className="space-y-2 bg-slate-50 dark:bg-dark-900/60 p-3 sm:p-3.5 rounded-2xl border border-slate-200/80 dark:border-dark-750">
+            <div className="flex items-center space-x-2">
+              <div className="w-24 sm:w-28 flex-shrink-0">
+                <label className="block text-[10px] font-extrabold uppercase text-slate-400 mb-0.5">
+                  Тег / Этап
+                </label>
+                <input
+                  type="text"
+                  placeholder="ТО-1, ТО-2..."
+                  value={formData.to_tag}
+                  onChange={(e) => setFormData({ ...formData, to_tag: e.target.value })}
+                  className="w-full bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-700 rounded-xl px-2.5 py-1.5 text-xs text-brand-600 dark:text-brand-400 font-mono font-black focus:outline-none focus:border-brand-500"
+                />
               </div>
 
+              <div className="flex-1 min-w-0">
+                <label className="block text-[10px] font-extrabold uppercase text-slate-400 mb-0.5 truncate">
+                  Название / Тема обслуживания *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Замена масла и фильтров, ТО..."
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  className="w-full bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-700 rounded-xl px-3 py-1.5 text-xs text-slate-900 dark:text-white font-bold focus:outline-none focus:border-brand-500"
+                />
+              </div>
+            </div>
+
+            {/* Quick Tag Presets Horizontal Scroll */}
+            <div className="flex items-center space-x-1.5 overflow-x-auto pb-0.5 scrollbar-none pt-0.5">
+              <span className="text-[10px] font-bold text-slate-400 flex-shrink-0">Быстро:</span>
+              {(formData.record_type === 'service'
+                ? ['ТО-0', 'ТО-1', 'ТО-2', 'ТО-3', 'ТО-4', 'ТО-5', 'Вне ТО']
+                : formData.record_type === 'upgrade'
+                ? ['Допы', 'Стайлинг', 'Шумоизоляция', 'Свет', 'Салон', 'Защита']
+                : ['Ходовая', 'Тормоза', 'ДВС', 'Электрика', 'Кузов', 'Вне ТО']
+              ).map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => {
+                    const nextTag = formData.to_tag === tag ? '' : tag;
+                    const nextTitle = !formData.title || /^ТО-\d+/i.test(formData.title)
+                      ? (nextTag ? `${nextTag}: Плановое обслуживание` : formData.title)
+                      : formData.title;
+                    setFormData({ ...formData, to_tag: nextTag, title: nextTitle });
+                  }}
+                  className={`text-[10.5px] font-bold px-2.5 py-1 rounded-lg transition-all flex-shrink-0 whitespace-nowrap ${
+                    formData.to_tag === tag
+                      ? 'bg-brand-500 text-white shadow-xs'
+                      : 'bg-white dark:bg-dark-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-dark-700 hover:bg-slate-100'
+                  }`}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* D. PARTS & CONSUMABLES (The Star Component) */}
+          <div className="bg-slate-50 dark:bg-dark-900/60 p-3 sm:p-4 rounded-2xl border border-slate-200/80 dark:border-dark-750 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center space-x-2">
+                <span className="text-base">📦</span>
+                <span className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                  Запчасти и расходники ({items.length})
+                </span>
+              </div>
               <button
                 type="button"
                 onClick={() => handleAddItem()}
-                className="flex items-center space-x-1.5 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 px-3 py-1.5 rounded-xl transition shadow-sm self-start sm:self-auto"
+                className="flex items-center space-x-1 text-xs font-bold text-white bg-gradient-to-r from-brand-600 to-sky-600 hover:from-brand-500 hover:to-sky-500 px-3 py-1.5 rounded-xl shadow-xs active:scale-95 transition"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>+ Добавить позицию</span>
+                <span>+ Деталь</span>
               </button>
             </div>
 
-            {/* Quick Preset Chips */}
-            <div className="flex flex-wrap items-center gap-1.5 pt-1">
-              <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 flex items-center gap-1 mr-1">
+            {/* Quick Preset Chips Row */}
+            <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 scrollbar-none">
+              <span className="text-[10px] uppercase font-bold text-slate-400 flex items-center gap-1 flex-shrink-0">
                 <Sparkles className="w-3 h-3 text-amber-500" />
-                Быстро добавить:
+                В 1 клик:
               </span>
               {QUICK_PART_PRESETS.map((preset, pIdx) => (
                 <button
                   key={pIdx}
                   type="button"
                   onClick={() => handleAddItem(preset)}
-                  className="text-[11px] font-semibold px-2 py-1 rounded-lg bg-white dark:bg-dark-850 hover:bg-brand-50 dark:hover:bg-dark-750 hover:text-brand-600 dark:hover:text-brand-400 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-dark-700 transition shadow-2xs"
+                  className="text-[11px] font-bold px-2.5 py-1 rounded-xl bg-white dark:bg-dark-800 hover:bg-brand-50 dark:hover:bg-dark-750 hover:text-brand-600 dark:hover:text-brand-400 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-dark-700 transition flex-shrink-0 whitespace-nowrap shadow-2xs active:scale-95"
                 >
                   + {preset.name}
                 </button>
@@ -457,371 +488,305 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
 
             {/* Items List */}
             {items.length === 0 ? (
-              <div className="text-center py-6 px-4 text-xs text-slate-500 dark:text-slate-400 border border-dashed border-slate-300 dark:border-dark-750 rounded-xl bg-white/50 dark:bg-dark-850/50 space-y-1.5">
-                <div className="font-semibold text-slate-700 dark:text-slate-300">Пока нет добавленных запчастей</div>
-                <div>Нажмите на кнопки выше, чтобы добавить масло, фильтры или другие детали с артикулами и ссылками на покупку.</div>
+              <div className="text-center py-5 px-3 text-xs text-slate-400 border border-dashed border-slate-200 dark:border-dark-700 rounded-xl bg-white/40 dark:bg-dark-850/40">
+                <p className="font-semibold text-slate-600 dark:text-slate-300">Список запчастей пуст</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Нажмите на кнопки выше, чтобы добавить масло или фильтры с ценой и артикулом.
+                </p>
               </div>
             ) : (
-              <div className="space-y-3 pt-1">
-                {items.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="bg-white dark:bg-dark-850 p-3.5 rounded-xl border border-slate-200 dark:border-dark-750 shadow-sm space-y-3 text-xs transition-all hover:border-slate-300 dark:hover:border-dark-700"
-                  >
-                    {/* Line 1: Item Name (spacious adaptive textarea) + Delete button */}
-                    <div className="flex items-start gap-2">
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-1">
-                          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                            Наименование запчасти / товара / аксессуара *
-                          </label>
-                          {item.name && item.name.length > 30 && (
-                            <span className="text-[10px] text-slate-400 font-mono">
-                              {item.name.length} симв.
-                            </span>
-                          )}
+              <div className="space-y-2.5">
+                {items.map((item, idx) => {
+                  const itemIcon = getConsumableItemIcon(item.name, item.category);
+                  const isExpanded = Boolean(expandedItems[idx]);
+
+                  return (
+                    <div
+                      key={idx}
+                      className="bg-white dark:bg-dark-850 p-3 rounded-2xl border border-slate-200/90 dark:border-dark-700/90 shadow-xs space-y-2 text-xs transition-all"
+                    >
+                      {/* Row 1: Icon + Name + Delete */}
+                      <div className="flex items-center gap-2">
+                        <div className={`w-8 h-8 rounded-xl ${itemIcon.bg} flex items-center justify-center text-base flex-shrink-0`}>
+                          {itemIcon.icon}
                         </div>
-                        <textarea
-                          rows={item.name && item.name.length > 45 ? 2 : 1}
+                        <input
+                          type="text"
                           required
-                          placeholder="Наименование (например: Полочка в подлокотник для Changan CS55Plus...)"
+                          placeholder="Наименование (напр: Масло моторное ZIC 5W-40)"
                           value={item.name}
                           onChange={(e) => handleUpdateItem(idx, 'name', e.target.value)}
-                          className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white font-semibold text-xs focus:outline-none focus:border-brand-500 resize-none transition-all leading-relaxed"
+                          className="flex-1 min-w-0 bg-transparent text-slate-900 dark:text-white font-bold text-xs sm:text-sm focus:outline-none focus:border-b border-brand-500 py-1"
                         />
-                      </div>
-                      <div className="pt-5 shrink-0">
                         <button
                           type="button"
                           onClick={() => handleRemoveItem(idx)}
-                          className="text-slate-400 hover:text-rose-500 p-1.5 rounded-lg hover:bg-rose-500/10 transition"
+                          className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition flex-shrink-0"
                           title="Удалить позицию"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
-                    </div>
 
-                    {/* Line 2: Brand, Part Number, Store, URL */}
-                    <div className="grid grid-cols-12 gap-2.5 items-start pt-2 border-t border-slate-100 dark:border-dark-750">
-                      <div className="col-span-6 sm:col-span-3">
-                        <label className="block text-[10px] font-semibold text-slate-400 mb-0.5">
-                          Бренд
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="Бренд (VIC, Lukoil...)"
-                          value={item.brand || ''}
-                          onChange={(e) => handleUpdateItem(idx, 'brand', e.target.value)}
-                          className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white text-xs focus:outline-none focus:border-brand-500"
-                        />
-                      </div>
-
-                      <div className="col-span-6 sm:col-span-3">
-                        <label className="block text-[10px] font-semibold text-slate-400 mb-0.5">
-                          Артикул / Код
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="Артикул (C-933...)"
-                          value={item.part_number || ''}
-                          onChange={(e) => handleUpdateItem(idx, 'part_number', e.target.value)}
-                          className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white font-mono text-xs focus:outline-none focus:border-brand-500"
-                        />
-                      </div>
-
-                      <div className="col-span-12 sm:col-span-3 space-y-1">
-                        <label className="block text-[10px] font-semibold text-slate-400">
-                          Магазин / Сервис
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="Ozon, Exist, WB..."
-                          value={item.store || ''}
-                          onChange={(e) => handleUpdateItem(idx, 'store', e.target.value)}
-                          className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-lg px-2.5 py-1.5 text-slate-800 dark:text-slate-200 text-xs focus:outline-none focus:border-brand-500"
-                        />
-                        <div className="flex flex-wrap gap-1">
-                          {POPULAR_STORES.slice(0, 5).map((st) => (
-                            <button
-                              key={st}
-                              type="button"
-                              onClick={() => handleUpdateItem(idx, 'store', st)}
-                              className="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-dark-800 hover:bg-brand-500 hover:text-white text-slate-600 dark:text-slate-400 transition"
-                            >
-                              {st}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="col-span-12 sm:col-span-3 space-y-1">
-                        <div className="flex items-center justify-between">
-                          <label className="block text-[10px] font-semibold text-slate-400">
-                            Ссылка на товар (URL)
-                          </label>
-                          {item.url && (
-                            <a
-                              href={item.url.startsWith('http') ? item.url : `https://${item.url}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-[10px] text-brand-500 hover:underline flex items-center gap-0.5"
-                              title="Открыть ссылку в новой вкладке"
-                            >
-                              <span>Открыть</span>
-                              <ExternalLink className="w-2.5 h-2.5 inline" />
-                            </a>
-                          )}
-                        </div>
-                        <input
-                          type="url"
-                          placeholder="https://..."
-                          value={item.url || ''}
-                          onChange={(e) => handleUpdateItem(idx, 'url', e.target.value)}
-                          className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-lg px-2.5 py-1.5 text-slate-700 dark:text-slate-300 font-mono text-xs focus:outline-none focus:border-brand-500"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Line 3: Quantity, Unit, Price, Total */}
-                    <div className="grid grid-cols-12 gap-2 items-center pt-2 border-t border-slate-100 dark:border-dark-750">
-                      <div className="col-span-6 sm:col-span-4 flex items-center space-x-1.5">
-                        <span className="text-[10px] font-semibold text-slate-400 shrink-0">Кол-во:</span>
-                        <input
-                          type="number"
-                          min="0.01"
-                          step="any"
-                          placeholder="Кол-во"
-                          value={item.quantity}
-                          onChange={(e) =>
-                            handleUpdateItem(idx, 'quantity', parseFloat(e.target.value) || 0)
-                          }
-                          className="w-16 bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-lg px-2 py-1 text-slate-900 dark:text-white text-xs text-center font-mono focus:outline-none focus:border-brand-500"
-                          title="Количество"
-                        />
-                        <select
-                          value={item.unit || 'шт'}
-                          onChange={(e) => handleUpdateItem(idx, 'unit', e.target.value)}
-                          className="bg-slate-100 dark:bg-dark-800 border border-slate-200 dark:border-dark-700 rounded-lg px-2 py-1 text-slate-700 dark:text-slate-300 text-xs font-semibold focus:outline-none focus:border-brand-500 cursor-pointer"
-                          title="Единица измерения"
-                        >
-                          {ITEM_UNITS.map((u) => (
-                            <option key={u} value={u}>
-                              {u}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="col-span-6 sm:col-span-4 flex items-center space-x-1.5">
-                        <span className="text-[10px] font-semibold text-slate-400 shrink-0">Цена/{item.unit || 'ед'}:</span>
-                        <input
-                          type="number"
-                          step="any"
-                          placeholder="0"
-                          value={item.unit_price}
-                          onChange={(e) =>
-                            handleUpdateItem(idx, 'unit_price', parseFloat(e.target.value) || 0)
-                          }
-                          className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-lg px-2 py-1 text-slate-900 dark:text-white text-xs text-right font-mono focus:outline-none focus:border-brand-500"
-                          title={`Цена за 1 ${item.unit || 'ед.'}`}
-                        />
-                      </div>
-
-                      <div className="col-span-12 sm:col-span-4 flex items-center justify-between sm:justify-end text-right">
-                        <span className="text-[10px] font-semibold text-slate-400 sm:hidden">Итого за позицию:</span>
+                      {/* Row 2: 2 Clean Balanced Columns (Price & Article/Brand) */}
+                      <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100 dark:border-dark-800">
+                        {/* Cost Input */}
                         <div>
-                          <span className="font-mono font-bold text-brand-600 dark:text-brand-400 text-xs sm:text-sm block" title={`${item.quantity} ${item.unit || 'шт'} × ${item.unit_price} ₽ = ${Math.round(item.total_price || 0)} ₽`}>
-                            {Math.round(item.total_price || 0).toLocaleString('ru-RU')} ₽
-                          </span>
-                          {item.quantity > 1 && item.unit_price > 0 && (
-                            <span className="text-[9.5px] text-slate-400 font-mono block">
-                              {item.quantity} × {Math.round(item.unit_price)} ₽
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-0.5">
+                            Стоимость (₽)
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              step="any"
+                              placeholder="0"
+                              value={item.total_price || ''}
+                              onChange={(e) => handleUpdateItem(idx, 'total_price', e.target.value)}
+                              className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-xl px-2.5 py-1.5 text-emerald-600 dark:text-emerald-400 font-mono font-black text-xs sm:text-sm focus:outline-none focus:border-emerald-500"
+                            />
+                            <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 pointer-events-none">
+                              ₽
                             </span>
-                          )}
+                          </div>
+                        </div>
+
+                        {/* Article & Brand */}
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-0.5">
+                            Артикул / Бренд
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Арт: C-933 / VIC"
+                            value={item.part_number || item.brand || ''}
+                            onChange={(e) => handleUpdateItem(idx, 'part_number', e.target.value)}
+                            className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-700 rounded-xl px-2.5 py-1.5 text-slate-900 dark:text-white font-mono text-xs focus:outline-none focus:border-brand-500"
+                          />
                         </div>
                       </div>
+
+                      {/* Optional Expand Toggle (Store, URL, Quantity) */}
+                      <div className="pt-1 flex items-center justify-between">
+                        <button
+                          type="button"
+                          onClick={() => toggleItemExpanded(idx)}
+                          className="text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:underline flex items-center space-x-1"
+                        >
+                          <span>{isExpanded ? 'Скрыть параметры' : 'Магазин, ссылка, кол-во'}</span>
+                          {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                        </button>
+
+                        {item.url && (
+                          <a
+                            href={item.url.startsWith('http') ? item.url : `https://${item.url}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-[10px] text-brand-500 hover:underline flex items-center space-x-0.5"
+                          >
+                            <span>Открыть ссылку</span>
+                            <ExternalLink className="w-2.5 h-2.5" />
+                          </a>
+                        )}
+                      </div>
+
+                      {/* Expanded Section (Keeps UI uncluttered unless explicitly needed) */}
+                      {isExpanded && (
+                        <div className="space-y-2 p-2.5 bg-slate-50 dark:bg-dark-900 rounded-xl border border-slate-200/80 dark:border-dark-750 text-xs animate-fadeIn">
+                          {/* Qty & Unit */}
+                          <div className="flex items-center space-x-2">
+                            <span className="text-[10px] font-bold text-slate-400 w-16 flex-shrink-0">Количество:</span>
+                            <input
+                              type="number"
+                              min="0.01"
+                              step="any"
+                              value={item.quantity || 1}
+                              onChange={(e) => handleUpdateItem(idx, 'quantity', e.target.value)}
+                              className="w-20 bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-xs"
+                            />
+                            <select
+                              value={item.unit || 'шт'}
+                              onChange={(e) => handleUpdateItem(idx, 'unit', e.target.value)}
+                              className="bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-700 rounded-lg px-2 py-1 text-xs font-bold"
+                            >
+                              {ITEM_UNITS.map((u) => (
+                                <option key={u} value={u}>{u}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {/* Store Name & Chips */}
+                          <div>
+                            <div className="flex items-center space-x-2">
+                              <span className="text-[10px] font-bold text-slate-400 w-16 flex-shrink-0">Магазин:</span>
+                              <input
+                                type="text"
+                                placeholder="Ozon, Exist, Автодок..."
+                                value={item.store || ''}
+                                onChange={(e) => handleUpdateItem(idx, 'store', e.target.value)}
+                                className="flex-1 bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-700 rounded-lg px-2 py-1 text-xs"
+                              />
+                            </div>
+                            <div className="flex items-center space-x-1 mt-1.5 ml-18 overflow-x-auto pb-0.5 scrollbar-none">
+                              {POPULAR_STORES.map((st) => (
+                                <button
+                                  key={st}
+                                  type="button"
+                                  onClick={() => handleUpdateItem(idx, 'store', st)}
+                                  className="text-[9.5px] px-2 py-0.5 rounded-md bg-white dark:bg-dark-800 hover:bg-brand-500 hover:text-white text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-dark-700 transition flex-shrink-0"
+                                >
+                                  {st}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* URL */}
+                          <div className="flex items-center space-x-2">
+                            <span className="text-[10px] font-bold text-slate-400 w-16 flex-shrink-0">Ссылка:</span>
+                            <input
+                              type="url"
+                              placeholder="https://..."
+                              value={item.url || ''}
+                              onChange={(e) => handleUpdateItem(idx, 'url', e.target.value)}
+                              className="flex-1 bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-700 rounded-lg px-2 py-1 text-xs font-mono"
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
 
-          {/* Costs Breakdown */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 dark:bg-dark-900 p-3.5 rounded-2xl border border-slate-200 dark:border-dark-750">
+          {/* E. SERVICE LABOR & WORKSHOP NOTES */}
+          <div className="bg-slate-50 dark:bg-dark-900/60 p-3 sm:p-3.5 rounded-2xl border border-slate-200/80 dark:border-dark-750 space-y-2.5">
             <div>
-              <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                Стоимость деталей ({vehicle.currency})
+              <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                🛠️ Стоимость работ автосервиса / СТО ({vehicle.currency || '₽'})
               </label>
-              <input
-                type="number"
-                step="any"
-                value={formData.cost_parts}
-                onChange={(e) => {
-                  const parts = parseFloat(e.target.value) || 0;
-                  setFormData({
-                    ...formData,
-                    cost_parts: parts,
-                    total_cost: parts + (formData.cost_labor || 0),
-                  });
-                }}
-                className="w-full bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-mono font-semibold"
-              />
-            </div>
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                Стоимость работ / сервиса ({vehicle.currency})
-              </label>
-              <input
-                type="number"
-                step="any"
-                value={formData.cost_labor}
-                onChange={(e) => {
-                  const labor = parseFloat(e.target.value) || 0;
-                  setFormData({
-                    ...formData,
-                    cost_labor: labor,
-                    total_cost: (formData.cost_parts || 0) + labor,
-                  });
-                }}
-                className="w-full bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-mono font-semibold"
-              />
-            </div>
-            <div>
-              <label className="block text-[11px] font-bold text-brand-600 dark:text-brand-400 mb-1">
-                ИТОГО ({vehicle.currency}) *
-              </label>
-              <input
-                type="number"
-                step="any"
-                required
-                value={formData.total_cost}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    total_cost: parseFloat(e.target.value) || 0,
-                  })
-                }
-                className="w-full bg-white dark:bg-dark-850 border border-brand-500/60 rounded-xl px-3 py-2 text-xs sm:text-sm text-brand-600 dark:text-brand-400 font-extrabold focus:outline-none focus:border-brand-500 font-mono"
-              />
-            </div>
-          </div>
-
-          {/* Description & Additional Workshop Notes */}
-          <div className="space-y-3 pt-1">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Описание выполненных работ / комментарий
-              </label>
-              <textarea
-                rows={2}
-                placeholder="Детали обслуживания, сервис, замечания, диагностика..."
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  {formData.record_type === 'upgrade'
-                    ? 'Магазин / Сервис / Место установки'
-                    : 'Автосервис / СТО / Место'}
-                </label>
+              <div className="relative">
                 <input
-                  type="text"
-                  placeholder={
-                    formData.record_type === 'upgrade'
-                      ? 'Ozon, AliExpress, Дилер, Гараж...'
-                      : 'Дилер Changan, Гараж, FIT Service...'
-                  }
-                  value={formData.store}
-                  onChange={(e) => setFormData({ ...formData, store: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
+                  type="number"
+                  step="any"
+                  placeholder="0 (если работы бесплатные или делали сами)"
+                  value={formData.cost_labor || ''}
+                  onChange={(e) => handleLaborChange(e.target.value)}
+                  className="w-full bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white font-mono font-bold focus:outline-none focus:border-brand-500"
                 />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 pointer-events-none">
+                  {vehicle.currency || '₽'}
+                </span>
               </div>
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                    Ссылка на страницу / магазин (URL)
-                  </label>
-                  {formData.url && (
-                    <a
-                      href={formData.url.startsWith('http') ? formData.url : `https://${formData.url}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[11px] text-brand-500 hover:underline flex items-center gap-0.5"
-                      title="Открыть ссылку в новой вкладке"
-                    >
-                      <span>Открыть</span>
-                      <ExternalLink className="w-2.5 h-2.5 inline" />
-                    </a>
-                  )}
+            </div>
+
+            {/* Spoiler: Workshop notes, Station name, Order # */}
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => setIsNotesExpanded(!isNotesExpanded)}
+                className="text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-brand-500 flex items-center space-x-1"
+              >
+                <span>{isNotesExpanded ? '▲ Скрыть детали СТО и заметки' : '▼ Заказ-наряд, СТО и комментарии (опция)'}</span>
+              </button>
+
+              {isNotesExpanded && (
+                <div className="space-y-2.5 pt-2.5 animate-fadeIn">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-0.5">
+                      Автосервис / СТО / Место
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Дилер, Гараж, FIT Service..."
+                      value={formData.store}
+                      onChange={(e) => setFormData({ ...formData, store: e.target.value })}
+                      className="w-full bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-700 rounded-xl px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-0.5">
+                      Номер заказ-наряда / чека
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Заказ-наряд №4512..."
+                      value={formData.notes}
+                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                      className="w-full bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-700 rounded-xl px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-0.5">
+                      Комментарий / описание выполненных работ
+                    </label>
+                    <textarea
+                      rows={2}
+                      placeholder="Особенности, зазоры, диагностика..."
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      className="w-full bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-700 rounded-xl px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 resize-none"
+                    />
+                  </div>
                 </div>
-                <input
-                  type="url"
-                  placeholder="https://..."
-                  value={formData.url}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    const detected = detectStoreFromUrl(val);
-                    setFormData((prev) => ({
-                      ...prev,
-                      url: val,
-                      store: prev.store || detected || '',
-                    }));
-                  }}
-                  className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white font-mono focus:outline-none focus:border-brand-500"
-                />
-              </div>
+              )}
             </div>
+          </div>
+        </form>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Заметки / Номер заказ-наряда
-              </label>
-              <input
-                type="text"
-                placeholder="Заказ-наряд №4512, гарантия 6 мес..."
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                className="w-full bg-slate-50 dark:bg-dark-900 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
-              />
+        {/* 3. STICKY BOTTOM FOOTER (Always Visible, Never Lost) */}
+        <div className="px-4 py-3 sm:px-6 sm:py-3.5 border-t border-slate-200 dark:border-dark-750 bg-white/95 dark:bg-dark-850/95 backdrop-blur-md flex items-center justify-between gap-3 flex-shrink-0 z-20 shadow-lg">
+          {/* Total Sum Display */}
+          <div className="min-w-0">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              ИТОГО К ОПЛАТЕ:
+            </div>
+            <div className="flex items-baseline space-x-1">
+              <span className="text-lg sm:text-xl font-black font-mono text-emerald-600 dark:text-emerald-400 leading-tight">
+                {Math.round(currentTotal).toLocaleString('ru-RU')}
+              </span>
+              <span className="text-xs font-bold text-slate-500">{vehicle.currency || '₽'}</span>
+            </div>
+            <div className="text-[9.5px] text-slate-400 font-mono truncate">
+              Детали: {Math.round(partsSum).toLocaleString('ru-RU')} ₽ • Работы: {Math.round(laborSum).toLocaleString('ru-RU')} ₽
             </div>
           </div>
 
-          {/* Footer Buttons */}
-          <div className="pt-3 border-t border-slate-200 dark:border-dark-750 flex items-center justify-end space-x-3">
+          {/* Action Buttons */}
+          <div className="flex items-center space-x-2 flex-shrink-0">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-dark-800 transition-colors"
+              className="hidden sm:inline-block px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-dark-800 transition"
             >
               Отмена
             </button>
             <button
               type="submit"
+              form="service-record-form"
               disabled={loading}
-              className="px-5 py-2.5 rounded-xl text-xs font-bold bg-brand-500 hover:bg-brand-600 active:scale-95 text-white transition-all shadow-md shadow-brand-500/20 disabled:opacity-50"
+              className="px-5 sm:px-6 py-2.5 rounded-xl text-xs sm:text-sm font-black text-white bg-gradient-to-r from-brand-600 via-sky-600 to-brand-500 hover:from-brand-500 hover:to-sky-400 active:scale-95 shadow-md shadow-brand-500/30 transition-all disabled:opacity-50 flex items-center space-x-1.5"
             >
-              {loading ? 'Сохранение...' : record ? 'Сохранить изменения' : 'Добавить запись'}
+              <span>{loading ? 'Сохранение...' : 'Сохранить запись'}</span>
             </button>
           </div>
-        </form>
+        </div>
       </div>
 
+      {/* OCR Scanner Modal */}
       {isScannerOpen && (
         <ReceiptScanModal
           isOpen={isScannerOpen}
           onClose={() => setIsScannerOpen(false)}
           vehicle={vehicle}
-          onApplyToService={(data, attachUrl) => {
-            setFormData(prev => ({
+          onApplyToService={(data) => {
+            setFormData((prev) => ({
               ...prev,
               record_type: data.record_type || prev.record_type,
-              date: data.date || prev.date,
+              date: data.date ? data.date.split('T')[0] : prev.date,
               odometer: data.odometer ?? prev.odometer,
               engine_hours: data.engine_hours ?? prev.engine_hours,
               title: data.title || prev.title,
@@ -842,3 +807,5 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
     </div>
   );
 };
+
+export default ServiceModal;
