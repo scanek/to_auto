@@ -32,6 +32,8 @@ class TyreSetBase(BaseModel):
     quantity: float = 4.0
     price_per_unit: float = 0.0
     total_price: float = 0.0
+    service_cost: float = 0.0
+    storage_cost: float = 0.0
     last_rotation_km: Optional[float] = None
     rotation_interval_km: float = 10000.0
     is_directional: bool = False
@@ -69,6 +71,8 @@ class TyreSetUpdate(BaseModel):
     quantity: Optional[float] = None
     price_per_unit: Optional[float] = None
     total_price: Optional[float] = None
+    service_cost: Optional[float] = None
+    storage_cost: Optional[float] = None
     last_rotation_km: Optional[float] = None
     rotation_interval_km: Optional[float] = None
     is_directional: Optional[bool] = None
@@ -77,6 +81,14 @@ class TyreRotatePayload(BaseModel):
     current_odometer: float
     swap_tpms: bool = True
     drive_type: str = "fwd" # fwd, awd, rwd, directional
+
+class TyreActivatePayload(BaseModel):
+    install_date: Optional[datetime] = None
+    install_mileage: Optional[float] = None
+    service_cost: Optional[float] = 0.0
+    storage_cost: Optional[float] = 0.0
+    tread_depth_mm: Optional[float] = None
+    create_service_record: bool = False
 
 class TyreSetResponse(TyreSetBase):
     id: int

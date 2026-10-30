@@ -7,6 +7,7 @@ import { StarLineModal } from '../components/StarLineModal';
 import { ConsumablesTab } from '../components/ConsumablesTab';
 import { ConsumableModal } from '../components/ConsumableModal';
 import { TyreRotationWidget } from '../components/TyreRotationWidget';
+import { TyreSwapModal } from '../components/TyreSwapModal';
 import { PublicShareModal } from '../components/PublicShareModal';
 import { StoreBadge } from '../components/StoreBadge';
 import { PartArticleBadge } from '../components/PartArticleBadge';
@@ -216,11 +217,14 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   const [copiedTpmsId, setCopiedTpmsId] = useState<number | null>(null);
   const [expandedTpmsId, setExpandedTpmsId] = useState<number | null>(null);
   const [isRotationWidgetOpen, setIsRotationWidgetOpen] = useState<boolean>(false);
+  const [swappingTyre, setSwappingTyre] = useState<TyreSet | null>(null);
+  const [isSwapModalOpen, setIsSwapModalOpen] = useState(false);
 
   // Intercept physical / browser Back Button: returns to car hub instead of exiting the app
   useEffect(() => {
     const onPopState = () => {
       // 1. Close modals if any are open
+      if (isSwapModalOpen) { setIsSwapModalOpen(false); setSwappingTyre(null); return; }
       if (isToolsModalOpen) { setIsToolsModalOpen(false); return; }
       if (isQuickMileageOpen) { setIsQuickMileageOpen(false); return; }
       if (isQrModalOpen) { setIsQrModalOpen(false); return; }
@@ -3667,6 +3671,21 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
           onSave={handleSaveConsumable}
           consumable={editingConsumable}
           vehicle={vehicle}
+        />
+      )}
+
+
+      {/* Tyre Swap Modal */}
+      {isSwapModalOpen && swappingTyre && (
+        <TyreSwapModal
+          isOpen={isSwapModalOpen}
+          onClose={() => {
+            setIsSwapModalOpen(false);
+            setSwappingTyre(null);
+          }}
+          targetTyre={swappingTyre}
+          vehicle={vehicle}
+          onConfirm={handleConfirmTyreSwap}
         />
       )}
 

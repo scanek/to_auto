@@ -155,6 +155,8 @@ async def auto_migrate_sqlite(conn):
             ("last_rotation_km", "FLOAT"),
             ("rotation_interval_km", "FLOAT DEFAULT 10000.0"),
             ("is_directional", "BOOLEAN DEFAULT 0"),
+            ("service_cost", "FLOAT DEFAULT 0.0"),
+            ("storage_cost", "FLOAT DEFAULT 0.0"),
         ],
         "vehicle_consumables": [
             ("specification", "VARCHAR(255)"),

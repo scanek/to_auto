@@ -1,13 +1,20 @@
 import datetime
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.db.session import get_db
 from app.models.user import User
 from app.models.vehicle import Vehicle
 from app.models.tyre import TyreSet
-from app.schemas.tyre import TyreSetCreate, TyreSetUpdate, TyreSetResponse, TyreRotatePayload
+from app.models.service import ServiceRecord, ServiceItem
+from app.schemas.tyre import (
+    TyreSetCreate,
+    TyreSetUpdate,
+    TyreSetResponse,
+    TyreRotatePayload,
+    TyreActivatePayload,
+)
 from app.core.security import get_current_user, get_optional_current_user
 from app.services.auth_helper import verify_vehicle_access
 
@@ -80,7 +87,8 @@ async def update_tyre_set(
 @router.post("/{tyre_id}/activate", response_model=TyreSetResponse)
 async def activate_tyre_set(
     tyre_id: int,
-    mileage: float = Query(None),
+    mileage: Optional[float] = Query(None),
+    payload: Optional[TyreActivatePayload] = Body(None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -97,9 +105,75 @@ async def activate_tyre_set(
     for o in others_res.scalars().all():
         o.is_active = (o.id == tyre.id)
 
-    tyre.install_date = datetime.datetime.utcnow()
-    if mileage is not None:
-        tyre.install_mileage = mileage
+    install_date = datetime.datetime.utcnow()
+    install_mileage = mileage
+
+    if payload:
+        if payload.install_date:
+            install_date = payload.install_date
+        if payload.install_mileage is not None:
+            install_mileage = payload.install_mileage
+        if payload.service_cost is not None:
+            tyre.service_cost = payload.service_cost
+        if payload.storage_cost is not None:
+            tyre.storage_cost = payload.storage_cost
+        if payload.tread_depth_mm is not None:
+            tyre.tread_depth_mm = payload.tread_depth_mm
+
+    tyre.install_date = install_date
+    if install_mileage is not None:
+        tyre.install_mileage = install_mileage
+
+    # Optional: Automatically create a ServiceRecord for seasonal tire change expense
+    if payload and payload.create_service_record and (payload.service_cost or 0) > 0:
+        cost_service = float(payload.service_cost or 0.0)
+        cost_storage = float(payload.storage_cost or 0.0)
+        total_rec_cost = cost_service + cost_storage
+        season_title = "Зимний" if tyre.season == "winter" else "Летний"
+        rec_title = f"Сезонный шиномонтаж ({season_title} комплект)"
+        rec_desc = f"Сезонная смена резины на комплект «{tyre.name}»."
+        if tyre.brand_model or tyre.size:
+            rec_desc += f" {tyre.brand_model or ''} {tyre.size or ''}."
+
+        srv_record = ServiceRecord(
+            vehicle_id=tyre.vehicle_id,
+            record_type="service",
+            to_tag="Шиномонтаж",
+            date=install_date,
+            odometer=install_mileage if install_mileage is not None else 0.0,
+            title=rec_title,
+            description=rec_desc,
+            cost_labor=cost_service,
+            cost_parts=cost_storage,
+            total_cost=total_rec_cost,
+            store=tyre.storage_location or "Шиномонтаж",
+            notes=f"Остаток протектора: {tyre.tread_depth_mm} мм.",
+        )
+        db.add(srv_record)
+        await db.flush()
+
+        labor_item = ServiceItem(
+            service_record_id=srv_record.id,
+            name="Сезонный шиномонтаж и балансировка",
+            category="labor",
+            quantity=1.0,
+            unit="компл",
+            unit_price=cost_service,
+            total_price=cost_service,
+        )
+        db.add(labor_item)
+
+        if cost_storage > 0:
+            storage_item = ServiceItem(
+                service_record_id=srv_record.id,
+                name="Сезонное хранение шин",
+                category="part",
+                quantity=1.0,
+                unit="сезон",
+                unit_price=cost_storage,
+                total_price=cost_storage,
+            )
+            db.add(storage_item)
 
     await db.commit()
     await db.refresh(tyre)

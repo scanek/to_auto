@@ -197,6 +197,15 @@ export interface MaintenancePlan {
   progress_percentage: number;
 }
 
+
+export interface TyreActivatePayload {
+  install_date?: string;
+  install_mileage?: number | null;
+  service_cost?: number;
+  storage_cost?: number;
+  tread_depth_mm?: number;
+  create_service_record?: boolean;
+}
 export interface TyreSet {
   id: number;
   vehicle_id: number;

@@ -187,7 +187,20 @@ def generate_service_booklet_html(
                 rims_size = f" ({t.rims_size})" if t.rims_size else ""
                 rims_line = f'<div style="grid-column: span 2; margin-top: 4px; padding-top: 4px; border-top: 1px dashed #e2e8f0; color: #475569;">🔘 <strong>Диски:</strong> {rims_model}{rims_size}</div>'
 
-            total_set_cost = (t.total_price or 0.0) + (t.rims_price or 0.0 if t.has_separate_rims else 0.0)
+            # Service cost info
+            install_info = ""
+            if t.install_date or (t.service_cost and t.service_cost > 0):
+                inst_parts = []
+                if t.install_date and hasattr(t.install_date, "strftime"):
+                    inst_parts.append(f"Смена: {t.install_date.strftime('%d.%m.%Y')}")
+                if t.install_mileage:
+                    inst_parts.append(f"на {int(t.install_mileage):,} км".replace(",", " "))
+                if not hide_costs and t.service_cost and t.service_cost > 0:
+                    inst_parts.append(f"Шиномонтаж: {t.service_cost:,.0f} {vehicle.currency}".replace(",", " "))
+                if inst_parts:
+                    install_info = f"<div>🛠️ <strong>{' • '.join(inst_parts)}</strong></div>"
+
+            total_set_cost = (t.total_price or 0.0) + (t.rims_price or 0.0 if t.has_separate_rims else 0.0) + (t.service_cost or 0.0 if not hide_costs else 0.0)
             total_cost_line = f'<div style="grid-column: span 2; font-weight: 700; color: #0284c7; margin-top: 2px;">💰 Итого за комплект: {total_set_cost:,.0f} {vehicle.currency}</div>'.replace(",", " ") if (not hide_costs and total_set_cost > 0) else ""
 
             tyre_brand_display = t.brand_model if t.brand_model else "Шины"
@@ -207,6 +220,7 @@ def generate_service_booklet_html(
                     <div>Остаток протектора: <strong>{t.tread_depth_mm or 0} мм</strong></div>
                     {t_purchase_line}
                     {rot_info_str}
+                    {install_info}
                     {tpms_info_str}
                     {tyre_price_str}
                     {f'<div>Хранение: <em>{t.storage_location}</em></div>' if t.storage_location else ''}

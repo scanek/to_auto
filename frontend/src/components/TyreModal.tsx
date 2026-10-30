@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, CircleDot, ShieldCheck, DollarSign, Copy, Check } from 'lucide-react';
+import { X, Calendar, CircleDot, ShieldCheck, DollarSign, Copy, Check, Wrench } from 'lucide-react';
 import { TireIcon } from './TireIcon';
 import { TyreSet, Vehicle } from '../types';
 import { useModalA11y } from '../utils/useModalA11y';
@@ -670,6 +670,76 @@ export const TyreModal: React.FC<TyreModalProps> = ({
                 onChange={(e) => setFormData({ ...formData, storage_location: e.target.value })}
                 className="w-full bg-white dark:bg-dark-850 border border-slate-200 dark:border-dark-750 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
               />
+            </div>
+          </div>
+
+          
+          {/* Section 4: Установка на авто и шиномонтаж */}
+          <div className="bg-slate-50 dark:bg-dark-900/80 border border-slate-200 dark:border-dark-750 p-3.5 sm:p-4 rounded-2xl space-y-3">
+            <div className="flex items-center space-x-2">
+              <Wrench className="w-4 h-4 text-brand-500" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                Установка на авто и шиномонтаж
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Дата последней смены / установки
+                </label>
+                <input
+                  type="date"
+                  value={formData.install_date}
+                  onChange={(e) => setFormData({ ...formData, install_date: e.target.value })}
+                  className="w-full bg-white dark:bg-dark-850 border border-slate-300 dark:border-dark-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 font-medium"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Пробег при установке ({vehicle.distance_unit || 'км'})
+                </label>
+                <input
+                  type="number"
+                  step="any"
+                  value={formData.install_mileage || ''}
+                  onChange={(e) =>
+                    setFormData({ ...formData, install_mileage: parseFloat(e.target.value) || 0 })
+                  }
+                  className="w-full bg-white dark:bg-dark-850 border border-slate-300 dark:border-dark-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white font-mono focus:outline-none focus:border-brand-500 font-semibold"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Стоимость шиномонтажа ({vehicle.currency || '₽'})
+                </label>
+                <input
+                  type="number"
+                  step="any"
+                  value={formData.service_cost || ''}
+                  onChange={(e) =>
+                    setFormData({ ...formData, service_cost: parseFloat(e.target.value) || 0 })
+                  }
+                  className="w-full bg-white dark:bg-dark-850 border border-slate-300 dark:border-dark-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white font-mono focus:outline-none focus:border-brand-500 font-semibold"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Стоимость сезонного хранения ({vehicle.currency || '₽'})
+                </label>
+                <input
+                  type="number"
+                  step="any"
+                  value={formData.storage_cost || ''}
+                  onChange={(e) =>
+                    setFormData({ ...formData, storage_cost: parseFloat(e.target.value) || 0 })
+                  }
+                  className="w-full bg-white dark:bg-dark-850 border border-slate-300 dark:border-dark-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white font-mono focus:outline-none focus:border-brand-500 font-semibold"
+                />
+              </div>
             </div>
           </div>
 

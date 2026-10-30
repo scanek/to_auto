@@ -7,6 +7,7 @@ import {
   VehicleAnalytics,
   TyreSet,
   TyreRotatePayload,
+  TyreActivatePayload,
   PublicBookletData,
   VehicleConsumable,
   User,
@@ -743,14 +744,21 @@ export const api = {
     );
     await localDB.deleteTyreSet(id).catch(() => {});
   },
-  activateTyreSet: async (id: number, mileage?: number) => {
+    activateTyreSet: async (id: number, payloadOrMileage?: TyreActivatePayload | number) => {
+    const payload: TyreActivatePayload = typeof payloadOrMileage === 'number'
+      ? { install_mileage: payloadOrMileage }
+      : (payloadOrMileage || {});
+    const mileage = payload.install_mileage;
+    const qs = mileage !== undefined && mileage !== null ? `?mileage=${encodeURIComponent(String(mileage))}` : '';
     if (localDB.isStandalone()) {
       return localDB.activateTyreSet(id, mileage);
     }
-    const qs = mileage !== undefined ? `?mileage=${encodeURIComponent(String(mileage))}` : '';
     const res = await request<TyreSet>(
       `${API_BASE}/tyres/${id}/activate${qs}`,
-      { method: 'POST' },
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      },
       {
         description: `Смена комплекта шин #${id}`,
         entityType: 'tyre',

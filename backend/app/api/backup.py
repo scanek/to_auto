@@ -172,6 +172,8 @@ def serialize_vehicle_dict(
                 "quantity": t.quantity,
                 "price_per_unit": t.price_per_unit,
                 "total_price": t.total_price,
+                "service_cost": t.service_cost or 0.0,
+                "storage_cost": t.storage_cost or 0.0,
             }
             for t in tyres
         ],
@@ -1020,6 +1022,8 @@ async def import_backup(
                                 quantity=q,
                                 unit_price=up,
                                 total_price=tp,
+                        service_cost=safe_float(t.get("service_cost"), 0.0),
+                        storage_cost=safe_float(t.get("storage_cost"), 0.0),
                                 store=str(it.get("store") or s.get("store") or ""),
                                 url=str(it.get("url") or s.get("url") or ""),
                             )

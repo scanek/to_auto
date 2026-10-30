@@ -15,6 +15,7 @@ import {
   VehicleConsumable,
   VehicleAnalytics,
   TyreRotatePayload,
+  TyreActivatePayload,
   FuelEconomyPoint,
 } from '../types';
 import { Capacitor } from '@capacitor/core';
